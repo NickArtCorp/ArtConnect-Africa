@@ -79,16 +79,17 @@ export function Navbar() {
             )}
 
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
               onClick={toggleTheme}
-              className="rounded-full"
+              className="rounded-full border-border/50 hover:bg-accent/10 hover:border-accent/50"
               data-testid="theme-toggle"
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {theme === 'dark' ? (
-                <Sun className="w-4 h-4" />
+                <Sun className="w-4 h-4 text-yellow-400" />
               ) : (
-                <Moon className="w-4 h-4" />
+                <Moon className="w-4 h-4 text-accent" />
               )}
             </Button>
           </div>
@@ -96,16 +97,17 @@ export function Navbar() {
           {/* Mobile menu button */}
           <div className="flex md:hidden items-center gap-2">
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
               onClick={toggleTheme}
-              className="rounded-full"
+              className="rounded-full border-border/50 hover:bg-accent/10"
               data-testid="theme-toggle-mobile"
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {theme === 'dark' ? (
-                <Sun className="w-4 h-4" />
+                <Sun className="w-4 h-4 text-yellow-400" />
               ) : (
-                <Moon className="w-4 h-4" />
+                <Moon className="w-4 h-4 text-accent" />
               )}
             </Button>
             <Button

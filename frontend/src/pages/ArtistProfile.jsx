@@ -35,7 +35,7 @@ export default function ArtistProfile() {
       toast.success('Message sent!');
       setMessageContent('');
       setMessageOpen(false);
-      navigate('/messages');
+      navigate(`/messages/${id}`);
     } else {
       toast.error(result.error || 'Failed to send message');
     }
