@@ -84,12 +84,12 @@ export default function Discover() {
 
           {/* Filter dropdowns */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <Select value={filters.subregion} onValueChange={(v) => setFilters({ subregion: v })}>
+            <Select value={filters.subregion || 'all'} onValueChange={(v) => setFilters({ subregion: v === 'all' ? '' : v })}>
               <SelectTrigger data-testid="filter-subregion">
                 <SelectValue placeholder={language === 'fr' ? 'Sous-région' : 'Subregion'} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">{t.common.all}</SelectItem>
                 {subregions.map((s) => (
                   <SelectItem key={s.name} value={s.name}>
                     {language === 'fr' ? s.name_fr : s.name}
@@ -98,12 +98,12 @@ export default function Discover() {
               </SelectContent>
             </Select>
 
-            <Select value={filters.country} onValueChange={(v) => setFilters({ country: v })}>
+            <Select value={filters.country || 'all'} onValueChange={(v) => setFilters({ country: v === 'all' ? '' : v })}>
               <SelectTrigger data-testid="filter-country">
                 <SelectValue placeholder={t.auth.country} />
               </SelectTrigger>
               <SelectContent className="max-h-60">
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">{t.common.all}</SelectItem>
                 {countries.map((c) => (
                   <SelectItem key={c.name} value={c.name}>
                     {language === 'fr' ? c.name_fr : c.name}
@@ -112,12 +112,12 @@ export default function Discover() {
               </SelectContent>
             </Select>
 
-            <Select value={filters.sector} onValueChange={(v) => setFilters({ sector: v, domain: '' })}>
+            <Select value={filters.sector || 'all'} onValueChange={(v) => setFilters({ sector: v === 'all' ? '' : v, domain: '' })}>
               <SelectTrigger data-testid="filter-sector">
                 <SelectValue placeholder={t.auth.sector} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">{t.common.all}</SelectItem>
                 {sectors.map((s) => (
                   <SelectItem key={s.name} value={s.name}>
                     {language === 'fr' ? s.name_fr : s.name}
@@ -127,15 +127,15 @@ export default function Discover() {
             </Select>
 
             <Select 
-              value={filters.domain} 
-              onValueChange={(v) => setFilters({ domain: v })}
+              value={filters.domain || 'all'} 
+              onValueChange={(v) => setFilters({ domain: v === 'all' ? '' : v })}
               disabled={!filters.sector}
             >
               <SelectTrigger data-testid="filter-domain">
                 <SelectValue placeholder={t.auth.domain} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">{t.common.all}</SelectItem>
                 {currentDomains.map((d) => (
                   <SelectItem key={d.name} value={d.name}>
                     {language === 'fr' ? d.name_fr : d.name}
@@ -144,12 +144,12 @@ export default function Discover() {
               </SelectContent>
             </Select>
 
-            <Select value={filters.gender} onValueChange={(v) => setFilters({ gender: v })}>
+            <Select value={filters.gender || 'all'} onValueChange={(v) => setFilters({ gender: v === 'all' ? '' : v })}>
               <SelectTrigger data-testid="filter-gender">
                 <SelectValue placeholder={t.auth.gender} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">{t.common.all}</SelectItem>
                 {genders.map((g) => (
                   <SelectItem key={g.name} value={g.name}>
                     {language === 'fr' ? g.name_fr : g.name}
