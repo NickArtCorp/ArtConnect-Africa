@@ -3,7 +3,7 @@ import sys
 import json
 from datetime import datetime
 
-class ArtSyncAPITester:
+class ArtConnectAfricaAPITester:
     def __init__(self, base_url="https://artist-messaging.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
@@ -83,11 +83,18 @@ class ArtSyncAPITester:
     def test_register_user(self):
         """Test user registration"""
         test_user_data = {
-            "email": f"test_user_{datetime.now().strftime('%H%M%S')}@test.com",
+            "email": f"test_user_{datetime.now().strftime('%H%M%S')}@artconnect.africa",
             "password": "testpass123",
-            "name": "Test Artist",
-            "artist_type": "Digital Artist",
-            "bio": "Test bio for automated testing"
+            "first_name": "Test",
+            "last_name": "Artist",
+            "country": "Nigeria",
+            "subregion": "West Africa",
+            "gender": "Female",
+            "sector": "Visual Arts",
+            "domain": "Painting",
+            "year_started": 2020,
+            "bio": "Test bio for automated testing",
+            "additional_info": "Test additional info"
         }
         
         success, response = self.run_test(
@@ -108,7 +115,7 @@ class ArtSyncAPITester:
     def test_login_seeded_user(self):
         """Test login with seeded user"""
         login_data = {
-            "email": "luna@artsync.com",
+            "email": "amara.diallo@artconnect.africa",
             "password": "password123"
         }
         
@@ -141,18 +148,18 @@ class ArtSyncAPITester:
 
     def test_search_artists(self):
         """Test searching artists"""
-        return self.run_test("Search Artists", "GET", "artists?search=Luna", 200)
+        return self.run_test("Search Artists", "GET", "artists?search=Amara", 200)
 
     def test_filter_artists(self):
-        """Test filtering artists by type"""
-        return self.run_test("Filter Artists", "GET", "artists?artist_type=Digital Artist", 200)
+        """Test filtering artists by sector"""
+        return self.run_test("Filter Artists", "GET", "artists?sector=Visual Arts", 200)
 
     def test_get_artist_by_id(self):
         """Test getting specific artist"""
         # First get artists to find an ID
         success, response = self.run_test("Get Artists for ID Test", "GET", "artists", 200)
-        if success and response and len(response) > 0:
-            artist_id = response[0]['id']
+        if success and response and 'artists' in response and len(response['artists']) > 0:
+            artist_id = response['artists'][0]['id']
             return self.run_test("Get Artist by ID", "GET", f"artists/{artist_id}", 200)
         return False
 
@@ -167,10 +174,10 @@ class ArtSyncAPITester:
         """Test sending a message"""
         # First get artists to find someone to message
         success, response = self.run_test("Get Artists for Messaging", "GET", "artists", 200)
-        if success and response and len(response) > 0:
+        if success and response and 'artists' in response and len(response['artists']) > 0:
             # Find an artist that's not the current user
             target_artist = None
-            for artist in response:
+            for artist in response['artists']:
                 if artist['id'] != self.user_id:
                     target_artist = artist
                     break
@@ -225,16 +232,43 @@ class ArtSyncAPITester:
         self.token = temp_token
         return success
 
+    def test_reference_data(self):
+        """Test reference data endpoints"""
+        tests = [
+            ("Get Countries", "GET", "reference/countries", 200),
+            ("Get Subregions", "GET", "reference/subregions", 200),
+            ("Get Sectors", "GET", "reference/sectors", 200),
+            ("Get Domains", "GET", "reference/domains", 200),
+            ("Get Genders", "GET", "reference/genders", 200),
+        ]
+        
+        all_passed = True
+        for name, method, endpoint, expected_status in tests:
+            success, _ = self.run_test(name, method, endpoint, expected_status)
+            if not success:
+                all_passed = False
+        
+        return all_passed
+
+    def test_statistics(self):
+        """Test statistics endpoints"""
+        return self.run_test("Get Statistics Overview", "GET", "statistics/overview", 200)
+
+    def test_projects(self):
+        """Test projects endpoints"""
+        return self.run_test("Get Projects", "GET", "projects", 200)
+
 def main():
-    print("🚀 Starting ArtSync API Testing...")
+    print("🚀 Starting Art Connect Africa API Testing...")
     print("=" * 50)
     
-    tester = ArtSyncAPITester()
+    tester = ArtConnectAfricaAPITester()
     
     # Test sequence
     tests = [
         ("Health Check", tester.test_health_check),
         ("Seed Data", tester.test_seed_data),
+        ("Reference Data", tester.test_reference_data),
         ("User Registration", tester.test_register_user),
         ("Get Current User", tester.test_get_current_user),
         ("Get Artists", tester.test_get_artists),
@@ -246,6 +280,8 @@ def main():
         ("Send Message", tester.test_send_message),
         ("Get Conversations", tester.test_get_conversations),
         ("Get Messages", tester.test_get_messages),
+        ("Statistics", tester.test_statistics),
+        ("Projects", tester.test_projects),
         ("Logout", tester.test_logout),
         ("Login Seeded User", tester.test_login_seeded_user),
         ("Invalid Login", tester.test_invalid_login),

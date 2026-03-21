@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAuthStore, useThemeStore } from "@/store";
+import { useAuthStore, useThemeStore, useReferenceStore } from "@/store";
 import { Navbar } from "@/components/Navbar";
 import { Toaster } from "sonner";
 
@@ -14,6 +14,8 @@ import ArtistProfile from "@/pages/ArtistProfile";
 import Dashboard from "@/pages/Dashboard";
 import Messages from "@/pages/Messages";
 import Settings from "@/pages/Settings";
+import Projects from "@/pages/Projects";
+import Statistics from "@/pages/Statistics";
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -27,6 +29,7 @@ function ProtectedRoute({ children }) {
 function App() {
   const { fetchUser, token } = useAuthStore();
   const { theme } = useThemeStore();
+  const { fetchReferenceData } = useReferenceStore();
 
   useEffect(() => {
     if (token) {
@@ -43,8 +46,10 @@ function App() {
     }
   }, [theme]);
 
-  // Seed data on first load (for demo purposes)
+  // Fetch reference data and seed on first load
   useEffect(() => {
+    fetchReferenceData();
+    
     const seedData = async () => {
       try {
         const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -54,7 +59,7 @@ function App() {
       }
     };
     seedData();
-  }, []);
+  }, [fetchReferenceData]);
 
   return (
     <div className={`App min-h-screen bg-background text-foreground`}>
@@ -66,6 +71,8 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/discover" element={<Discover />} />
           <Route path="/artist/:id" element={<ArtistProfile />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/statistics" element={<Statistics />} />
           <Route 
             path="/dashboard" 
             element={

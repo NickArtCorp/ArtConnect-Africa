@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store';
+import { useAuthStore, useLanguageStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, isLoading, error } = useAuthStore();
+  const { language, t } = useLanguageStore();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -22,7 +23,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 py-32">
+    <div className="min-h-screen flex items-center justify-center px-4 py-28">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -30,11 +31,15 @@ export default function Login() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold tracking-tighter mb-2">Welcome back</h1>
-          <p className="text-muted-foreground">Sign in to your ArtSync account</p>
+          <h1 className="text-4xl font-bold tracking-tight mb-2">
+            {language === 'fr' ? 'Bon retour' : 'Welcome back'}
+          </h1>
+          <p className="text-muted-foreground">
+            {language === 'fr' ? 'Connectez-vous à Art Connect Africa' : 'Sign in to Art Connect Africa'}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6" data-testid="login-form">
+        <form onSubmit={handleSubmit} className="space-y-6 bg-card p-8 rounded-2xl border border-border/50" data-testid="login-form">
           {error && (
             <div className="p-4 rounded-lg bg-destructive/10 text-destructive text-sm" data-testid="login-error">
               {error}
@@ -42,7 +47,7 @@ export default function Login() {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t.auth.email}</Label>
             <Input
               id="email"
               type="email"
@@ -50,13 +55,12 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="artist@example.com"
               required
-              className="bg-transparent border-b border-border focus:border-primary rounded-none px-0"
               data-testid="login-email"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t.auth.password}</Label>
             <Input
               id="password"
               type="password"
@@ -64,7 +68,6 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="bg-transparent border-b border-border focus:border-primary rounded-none px-0"
               data-testid="login-password"
             />
           </div>
@@ -78,20 +81,27 @@ export default function Login() {
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Signing in...
+                {language === 'fr' ? 'Connexion...' : 'Signing in...'}
               </>
             ) : (
-              'Sign In'
+              t.auth.login
             )}
           </Button>
         </form>
 
         <p className="text-center mt-6 text-sm text-muted-foreground">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-accent hover:underline" data-testid="register-link">
-            Create one
+          {t.auth.noAccount}{' '}
+          <Link to="/register" className="text-primary hover:underline" data-testid="register-link">
+            {t.auth.createOne}
           </Link>
         </p>
+
+        {/* Demo credentials */}
+        <div className="mt-6 p-4 bg-secondary/50 rounded-lg text-sm">
+          <p className="font-medium mb-2">{language === 'fr' ? 'Compte de démonstration :' : 'Demo account:'}</p>
+          <p className="text-muted-foreground">Email: amara.diallo@artconnect.africa</p>
+          <p className="text-muted-foreground">Password: password123</p>
+        </div>
       </motion.div>
     </div>
   );
