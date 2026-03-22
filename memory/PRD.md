@@ -54,6 +54,9 @@ Créer une plateforme numérique pour l'écosystème artistique africain avec tr
 - ✅ **Protection des endpoints**: Middleware de vérification des rôles
 - ✅ **UI conditionnelle**: Boutons/actions masqués selon le rôle
 - ✅ Comptes de test créés: 1 Admin, 1 Institution, 8 Artistes
+- ✅ **Upload de photo de profil**: Endpoint POST /api/artists/me/avatar
+- ✅ **Correction affichage images**: getMediaUrl() gère les URLs locales et externes
+- ✅ **Routing corrigé**: Uploads servis via /api/uploads/ pour le routage Kubernetes
 
 ## Matrice des Permissions RBAC
 
@@ -73,9 +76,9 @@ Créer une plateforme numérique pour l'écosystème artistique africain avec tr
 - Aucun item restant
 
 ### P1 - Important
-- Upload de médias vers stockage cloud (actuellement serveur local)
+- Configurer stockage cloud (S3/Cloudinary) pour les uploads de médias
 - Filtres avancés sur la page Découvrir (pays, région, type d'art)
-- Notifications en temps réel pour les messages
+- Notifications en temps réel pour les messages (WebSocket)
 
 ### P2 - Nice to Have
 - Recherche full-text avancée
