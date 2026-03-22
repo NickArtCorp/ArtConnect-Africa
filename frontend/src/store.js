@@ -10,6 +10,7 @@ export const translations = {
     nav: {
       home: 'Home',
       discover: 'Discover',
+      feed: 'Feed',
       projects: 'Projects',
       messages: 'Messages',
       dashboard: 'Dashboard',
@@ -142,6 +143,7 @@ export const translations = {
     nav: {
       home: 'Accueil',
       discover: 'Découvrir',
+      feed: 'Fil',
       projects: 'Projets',
       messages: 'Messages',
       dashboard: 'Tableau de bord',
@@ -652,6 +654,202 @@ export const useStatisticsStore = create((set) => ({
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Payment failed' };
+    }
+  }
+}));
+
+// Feed/Posts Store
+export const useFeedStore = create((set, get) => ({
+  posts: [],
+  isLoading: false,
+  hasMore: true,
+
+  fetchPosts: async (reset = false) => {
+    const { posts } = get();
+    if (!reset && !get().hasMore) return;
+    
+    set({ isLoading: true });
+    
+    try {
+      const before = reset ? '' : posts[posts.length - 1]?.created_at || '';
+      const params = before ? `?before=${before}&limit=10` : '?limit=10';
+      const token = useAuthStore.getState().token;
+      
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await axios.get(`${API}/posts${params}`, { headers });
+      
+      const newPosts = response.data;
+      
+      set({
+        posts: reset ? newPosts : [...posts, ...newPosts],
+        hasMore: newPosts.length === 10,
+        isLoading: false
+      });
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  createPost: async (postData) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return { success: false, error: 'Not authenticated' };
+
+    try {
+      const response = await axios.post(`${API}/posts`, postData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Add to beginning of posts
+      set((state) => ({
+        posts: [response.data, ...state.posts]
+      }));
+      
+      return { success: true, post: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || 'Failed to create post' };
+    }
+  },
+
+  uploadPost: async (file, contentType, textContent) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return { success: false, error: 'Not authenticated' };
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('content_type', contentType);
+    formData.append('text_content', textContent);
+
+    try {
+      const response = await axios.post(`${API}/posts/upload`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      set((state) => ({
+        posts: [response.data, ...state.posts]
+      }));
+      
+      return { success: true, post: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || 'Failed to upload post' };
+    }
+  },
+
+  toggleLike: async (postId) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return { success: false, error: 'Not authenticated' };
+
+    try {
+      const response = await axios.post(`${API}/posts/${postId}/like`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Update post in state
+      set((state) => ({
+        posts: state.posts.map(post => 
+          post.id === postId 
+            ? { ...post, is_liked: response.data.liked, likes_count: response.data.likes_count }
+            : post
+        )
+      }));
+      
+      return { success: true, ...response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || 'Failed to toggle like' };
+    }
+  },
+
+  deletePost: async (postId) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return { success: false };
+
+    try {
+      await axios.delete(`${API}/posts/${postId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      set((state) => ({
+        posts: state.posts.filter(post => post.id !== postId)
+      }));
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || 'Failed to delete post' };
+    }
+  },
+
+  resetPosts: () => set({ posts: [], hasMore: true })
+}));
+
+// Comments Store
+export const useCommentsStore = create((set, get) => ({
+  comments: {},
+  isLoading: false,
+
+  fetchComments: async (postId) => {
+    set({ isLoading: true });
+    
+    try {
+      const response = await axios.get(`${API}/posts/${postId}/comments`);
+      
+      set((state) => ({
+        comments: { ...state.comments, [postId]: response.data },
+        isLoading: false
+      }));
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      set({ isLoading: false });
+      return [];
+    }
+  },
+
+  addComment: async (postId, content) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return { success: false, error: 'Not authenticated' };
+
+    try {
+      const response = await axios.post(`${API}/posts/${postId}/comments`, 
+        { content },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      set((state) => ({
+        comments: {
+          ...state.comments,
+          [postId]: [...(state.comments[postId] || []), response.data]
+        }
+      }));
+      
+      return { success: true, comment: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || 'Failed to add comment' };
+    }
+  },
+
+  deleteComment: async (postId, commentId) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return { success: false };
+
+    try {
+      await axios.delete(`${API}/comments/${commentId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      set((state) => ({
+        comments: {
+          ...state.comments,
+          [postId]: (state.comments[postId] || []).filter(c => c.id !== commentId)
+        }
+      }));
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || 'Failed to delete comment' };
     }
   }
 }));

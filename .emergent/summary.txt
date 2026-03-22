@@ -1,0 +1,201 @@
+<analysis>**original_problem_statement:**
+The user wants to structure and implement a sophisticated cultural platform named Art Connect Africa with three distinct user roles: , , and .
+
+PRODUCT REQUIREMENTS:
+1.  **Module 1 - Access Control & Roles:**
+    *   Implement a strict role-based system:  (full access),  (content creation),  (read-only access to data and statistics).
+    *   Institutions must be strictly prohibited from publishing, commenting, or liking.
+
+2.  **Module 2 - Artist Social Feed:**
+    *   Create a social feed where artists can create posts (image, video, text).
+    *   All users can view posts.
+    *   Artists can interact by liking (toggle) and commenting.
+    *   Institutions cannot interact with the feed.
+
+3.  **Module 3 - Artist Discovery:**
+    *   A Discovery section to browse artist profiles, their works, and posts.
+    *   Include simple filters for country, region, and art type.
+
+4.  **Module 4 - Institution Dashboard:**
+    *   A secure, dedicated dashboard for  accounts.
+    *   Display global statistics: total artists, breakdown by country/region, gender ratio, and overall platform activity.
+    *   Must not expose any sensitive user data.
+
+5.  **Module 5 - Data Architecture:**
+    *   Define and implement data models for Posts, Comments, and Likes, with correct relationships to users.
+
+6.  **Module 6 - Global Constraints:**
+    *   Adhere to the existing dark mode, premium, and minimalist UI.
+    *   Ensure the architecture is clean and extensible.
+    *   The agent should add the new functionalities without changing the existing graphic charter.
+
+**User's preferred language**: French (fr)
+
+**what currently exists?**
+The project is a React (with Zustand) and FastAPI application named Art Connect Africa. It has a functional user registration system with detailed fields (country, sub-region, etc.), an artist discovery page, and a multi-language setup (EN/FR).
+
+The agent has just started implementing the new features. The backend  has been updated with new data models and API endpoints for a social feed (posts, comments, likes). The frontend  has been updated, and a new but empty  page has been created. The  file has been overwritten to serve as the new institution dashboard.
+
+**Last working item**:
+- Last item agent was working: The agent was creating the frontend for the **Institution Dashboard** by overwriting the file .
+- Status: IN PROGRESS
+- Agent Testing Done: N
+- Which testing method agent to use? both
+- User Testing Done: N
+
+**All Pending/In progress Issue list**:
+-   Issue 1: The screenshot tool is unreliable and consistently fails with timeout errors or browser crashes. This prevents visual verification of the frontend.
+
+Issues Detail:
+-   Issue 1:
+    -   Attempted fixes: The agent tried re-running the tool multiple times, but it failed repeatedly.
+    -   Next debug checklist: This seems to be an environment-level issue with the screenshot tool itself rather than a code issue. The agent should rely on  for frontend validation or proceed with backend testing via  if the UI is blocked.
+    -   Why fix this issue and what will be achieved with the fix?: Fixing this would allow for quick visual confirmation of UI changes. However, given the repeated failures, it's better to bypass it for now to avoid getting blocked.
+    -   Status: BLOCKED
+    -   Is recurring issue?: Y
+    -   Should Test frontend/backend/both after fix?: frontend
+    -   Blocked on other issue: None
+
+**In progress Task List**:
+-   Task 1: Implement Role-Based Access Control (RBAC) (P0)
+-   Task 2: Complete Social Feed Feature (P1)
+-   Task 3: Complete Institution Dashboard (P1)
+
+Task Detail:
+-   Task 1:
+    -   Where to resume: The backend models now include a  field. This logic needs to be enforced across both backend and frontend.
+        -   **Backend**: Secure all relevant API endpoints to check the user's role from the JWT token.
+        -   **Frontend**: Create a custom hook  or similar to get the current user's role. Use this hook to conditionally render UI elements (e.g., hide post creation for non-artists) and protect routes (e.g., redirect non-institutions from ).
+    -   What will be achieved with this?: This is a critical security and business logic requirement from the user. It ensures that different user types have the correct permissions.
+    -   Status: IN PROGRESS
+    -   Should Test frontend/backend/both after fix?: both
+    -   Blocked on something: No
+
+-   Task 2:
+    -   Where to resume: The backend API endpoints and frontend  page exist.
+        -   Implement the UI in  to fetch and display posts.
+        -   Create components for a single , including like and comment sections.
+        -   Implement a form for artists to create new posts.
+        -   Wire up the state management in  to handle likes, comments, and new posts.
+        -   Add  to the router in  and a link in .
+    -   What will be achieved with this?: Fulfills the Social Feed requirement.
+    -   Status: IN PROGRESS
+    -   Should Test frontend/backend/both after fix?: both
+    -   Blocked on something: No
+
+-   Task 3:
+    -   Where to resume: The  file has been overwritten.
+        -   Verify the content of the new  file.
+        -   Implement the UI to display the required statistics (artist counts by country, region, gender ratio).
+        -   Ensure it calls the correct backend endpoints to fetch the data.
+        -   Implement the RBAC to ensure only  roles can access this page.
+    -   What will be achieved with this?: Fulfills the Institution Dashboard requirement.
+    -   Status: IN PROGRESS
+    -   Should Test frontend/backend/both after fix?: both
+    -   Blocked on something: Task 1 (RBAC)
+
+**Upcoming and Future Tasks**
+-   **Upcoming Tasks:**
+    -   (P2) Enhance the Discovery section with the requested filters (Module 3).
+    -   (P2) Perform a full end-to-end test of all new features (Roles, Feed, Dashboard) using .
+
+**Completed work in this session**
+-   Pivoted the application from a generic ArtSync project to the specific Art Connect Africa platform.
+-   Implemented a comprehensive user registration system with fields for country, sub-region, artistic sector, etc.
+-   Built an artist discovery page ().
+-   Fixed a critical frontend rendering bug on the discovery page caused by Radix UI  components.
+-   Created a high-level architecture document for the new role-based features ().
+-   Updated the backend data models and API to support posts, comments, and likes.
+
+**Earlier issues found/mentioned but not fixed**
+-   Issue 1: The screenshot tool () is consistently failing with timeouts or browser crashes. This has been a recurring problem throughout the session.
+    -   Debug checklist: Avoid using this tool. Rely on the  which uses its own browser instance for validation.
+    -   Why to solve this issue and what will be achieved with this?: It would provide quick visual feedback, but it's currently a blocker.
+    -   Should Test frontend/backend/both after fix: frontend
+    -   Is recurring issue?: Y
+
+**Known issue recurrence from previous fork**
+-   None.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+-   **Backend**: FastAPI, MongoDB (via ), Pydantic models, JWT for authentication.
+-   **Frontend**: React, , Zustand for state management, TailwindCSS, Shadcn UI components.
+-   **Architecture**: Full-stack monolith, REST API, Role-Based Access Control (RBAC).
+
+**key DB schema**
+-   : 
+-   : 
+-   : 
+-   :  (uniqueness on  + )
+
+**changes in tech stack**
+-   None.
+
+**All files of reference**
+-   : Updated to include models and routes for Posts, Comments, Likes, and role-based logic.
+-   : Updated to include state for the new social feed.
+-   : Newly created page for the social feed feature.
+-   : Overwritten to become the new Institution Dashboard.
+-   : New architecture document detailing the current implementation plan.
+
+**Areas that need refactoring**:
+- None at the moment, but once RBAC is implemented, several components will need to be updated to use the new access control logic.
+
+**key api endpoints**
+-   , 
+-   , 
+-   
+-    (GET, POST)
+-    (POST)
+-    (POST)
+-   
+
+**Critical Info for New Agent**
+-   **Main Priority:** The highest priority is to implement the **Role-Based Access Control (RBAC)** across the entire application. The backend has the basic fields, but neither the frontend nor the backend API endpoints are properly secured yet. This is a critical un-finished task.
+-   **Project Pivot:** The project has pivoted twice. The current set of requirements for a role-based social platform is the source of truth.
+-   **Unreliable Tool:** The  is broken. Do not use it. Rely on  for UI verification.
+-   **Language:** The user's primary language for requests is **French**. All user-facing communication should be in French.
+
+**documents and test reports created in this job**
+-   
+-   
+-   
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **User:** Provided a detailed specification for a new platform structure with , , and  roles, a social feed, and an institution dashboard. Stressed focusing on structure and not changing the existing UI theme.
+2.  **Agent:** Acknowledged the request and created an architecture document ().
+3.  **Agent:** Started implementation by overwriting the backend .
+4.  **Agent:** Updated the frontend .
+5.  **Agent:** Created the new  page.
+6.  **Agent:** Overwrote the  page to serve as the institution dashboard. (This was the last action).
+7.  **Previous User:** Approved the Art Connect Africa implementation and marked it as complete.
+8.  **Previous User:** Provided final choices for the Art Connect Africa implementation (lists, regions, language, auth, data simulation).
+9.  **Previous Agent:** Asked clarifying questions about the Art Connect Africa pivot.
+10. **Previous User:** Provided a completely new problem statement in French, pivoting the project from ArtSync to Art Connect Africa.
+
+**Project Health Check:**
+-   **Broken:**
+    -   Role-Based Access Control (RBAC) is not implemented, making the app insecure and not compliant with requirements.
+    -   The Social Feed () is not functional.
+    -   The Institution Dashboard () is not functional.
+    -   The screenshot tool.
+-   **Mocked:**
+    -   User data is currently simulated via a seeding script.
+
+**3rd Party Integrations**
+- None.
+
+**Testing status**
+-   Testing agent used after significant changes: YES (for the previous Art Connect Africa implementation)
+-   Troubleshoot agent used after agent stuck in loop: NO
+-   Test files created:  (created by testing agent in a previous iteration)
+-   Known regressions: None.
+
+**Credentials to test flow:**
+The login page displays demo credentials for an  and an  account. These can be used for manual testing.
+
+**What agent forgot to execute**
+- The agent has not yet implemented the strict Role-Based Access Control (RBAC) that was a core part of the user's latest request. It has created the backend models and started on the UI pages, but the critical step of securing endpoints and conditionally rendering UI based on roles is missing. This should be the immediate next step.</analysis>

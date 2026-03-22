@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore, useThemeStore, useLanguageStore } from '@/store';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, MessageCircle, User, LogOut, Menu, X, Globe, BarChart3, Briefcase } from 'lucide-react';
+import { Moon, Sun, MessageCircle, User, LogOut, Menu, X, Globe, BarChart3, Briefcase, Newspaper } from 'lucide-react';
 import { useState } from 'react';
 
 export function Navbar() {
@@ -45,6 +45,14 @@ export function Navbar() {
               data-testid="discover-link"
             >
               {t.nav.discover}
+            </Link>
+            <Link 
+              to="/feed" 
+              className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1"
+              data-testid="feed-link"
+            >
+              <Newspaper className="w-4 h-4" />
+              {t.nav.feed || 'Feed'}
             </Link>
             <Link 
               to="/projects" 
@@ -169,6 +177,13 @@ export function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {t.nav.discover}
+              </Link>
+              <Link 
+                to="/feed" 
+                className="text-sm font-medium hover:text-primary transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t.nav.feed || 'Feed'}
               </Link>
               <Link 
                 to="/projects" 

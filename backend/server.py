@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -8,7 +8,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 import uuid
 from datetime import datetime, timezone
 import hashlib
@@ -23,6 +23,7 @@ UPLOADS_DIR = ROOT_DIR / 'uploads'
 UPLOADS_DIR.mkdir(exist_ok=True)
 (UPLOADS_DIR / 'documents').mkdir(exist_ok=True)
 (UPLOADS_DIR / 'images').mkdir(exist_ok=True)
+(UPLOADS_DIR / 'posts').mkdir(exist_ok=True)
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -39,9 +40,11 @@ api_router = APIRouter(prefix="/api")
 security = HTTPBearer(auto_error=False)
 active_tokens = {}
 
-# Constants
+# ============== CONSTANTS ==============
+
+ROLES = ['admin', 'artist', 'institution']
+
 AFRICAN_COUNTRIES = [
-    # North Africa
     {"name": "Algeria", "name_fr": "Algérie", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
     {"name": "Egypt", "name_fr": "Égypte", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
     {"name": "Libya", "name_fr": "Libye", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
@@ -49,7 +52,6 @@ AFRICAN_COUNTRIES = [
     {"name": "Tunisia", "name_fr": "Tunisie", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
     {"name": "Western Sahara", "name_fr": "Sahara Occidental", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
     {"name": "Sudan", "name_fr": "Soudan", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
-    # West Africa
     {"name": "Benin", "name_fr": "Bénin", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
     {"name": "Burkina Faso", "name_fr": "Burkina Faso", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
     {"name": "Cape Verde", "name_fr": "Cap-Vert", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
@@ -66,7 +68,6 @@ AFRICAN_COUNTRIES = [
     {"name": "Senegal", "name_fr": "Sénégal", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
     {"name": "Sierra Leone", "name_fr": "Sierra Leone", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
     {"name": "Togo", "name_fr": "Togo", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
-    # Central Africa
     {"name": "Angola", "name_fr": "Angola", "subregion": "Central Africa", "subregion_fr": "Afrique Centrale"},
     {"name": "Cameroon", "name_fr": "Cameroun", "subregion": "Central Africa", "subregion_fr": "Afrique Centrale"},
     {"name": "Central African Republic", "name_fr": "République Centrafricaine", "subregion": "Central Africa", "subregion_fr": "Afrique Centrale"},
@@ -76,7 +77,6 @@ AFRICAN_COUNTRIES = [
     {"name": "Equatorial Guinea", "name_fr": "Guinée Équatoriale", "subregion": "Central Africa", "subregion_fr": "Afrique Centrale"},
     {"name": "Gabon", "name_fr": "Gabon", "subregion": "Central Africa", "subregion_fr": "Afrique Centrale"},
     {"name": "São Tomé and Príncipe", "name_fr": "São Tomé-et-Príncipe", "subregion": "Central Africa", "subregion_fr": "Afrique Centrale"},
-    # East Africa
     {"name": "Burundi", "name_fr": "Burundi", "subregion": "East Africa", "subregion_fr": "Afrique de l'Est"},
     {"name": "Comoros", "name_fr": "Comores", "subregion": "East Africa", "subregion_fr": "Afrique de l'Est"},
     {"name": "Djibouti", "name_fr": "Djibouti", "subregion": "East Africa", "subregion_fr": "Afrique de l'Est"},
@@ -95,7 +95,6 @@ AFRICAN_COUNTRIES = [
     {"name": "Uganda", "name_fr": "Ouganda", "subregion": "East Africa", "subregion_fr": "Afrique de l'Est"},
     {"name": "Zambia", "name_fr": "Zambie", "subregion": "East Africa", "subregion_fr": "Afrique de l'Est"},
     {"name": "Zimbabwe", "name_fr": "Zimbabwe", "subregion": "East Africa", "subregion_fr": "Afrique de l'Est"},
-    # Southern Africa
     {"name": "Botswana", "name_fr": "Botswana", "subregion": "Southern Africa", "subregion_fr": "Afrique Australe"},
     {"name": "Eswatini", "name_fr": "Eswatini", "subregion": "Southern Africa", "subregion_fr": "Afrique Australe"},
     {"name": "Lesotho", "name_fr": "Lesotho", "subregion": "Southern Africa", "subregion_fr": "Afrique Australe"},
@@ -214,12 +213,22 @@ GENDERS = [
     {"name": "Prefer not to say", "name_fr": "Préfère ne pas préciser"},
 ]
 
-# Helper functions
+# ============== HELPER FUNCTIONS ==============
+
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 def generate_token() -> str:
     return secrets.token_urlsafe(32)
+
+def sanitize_user(user: dict) -> dict:
+    """Remove sensitive fields from user data"""
+    safe_fields = ['id', 'first_name', 'last_name', 'country', 'subregion', 'gender', 
+                   'sector', 'domain', 'year_started', 'bio', 'additional_info', 
+                   'website', 'avatar', 'role', 'is_featured', 'is_verified', 'created_at']
+    return {k: v for k, v in user.items() if k in safe_fields}
+
+# ============== AUTH DEPENDENCIES ==============
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if not credentials:
@@ -243,13 +252,26 @@ async def get_optional_user(credentials: HTTPAuthorizationCredentials = Depends(
     user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     return user
 
-async def get_admin_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    user = await get_current_user(credentials)
-    if user.get("role") != "admin" and user.get("role") != "institution":
-        raise HTTPException(status_code=403, detail="Access denied")
+async def require_artist_or_admin(user = Depends(get_current_user)):
+    """Only artists and admins can create content"""
+    if user.get("role") not in ["artist", "admin"]:
+        raise HTTPException(status_code=403, detail="Only artists can perform this action")
     return user
 
-# Models
+async def require_institution_or_admin(user = Depends(get_current_user)):
+    """Only institutions and admins can access detailed stats"""
+    if user.get("role") not in ["institution", "admin"]:
+        raise HTTPException(status_code=403, detail="Institutional access required")
+    return user
+
+async def require_admin(user = Depends(get_current_user)):
+    """Admin only actions"""
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+# ============== PYDANTIC MODELS ==============
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
@@ -264,7 +286,8 @@ class UserCreate(BaseModel):
     bio: Optional[str] = ""
     additional_info: Optional[str] = ""
     website: Optional[str] = ""
-    social_links: Optional[Dict[str, str]] = {}
+    role: Literal['artist', 'institution'] = 'artist'
+    organization_name: Optional[str] = None  # For institutions
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -282,8 +305,15 @@ class UserUpdate(BaseModel):
     bio: Optional[str] = None
     additional_info: Optional[str] = None
     website: Optional[str] = None
-    social_links: Optional[Dict[str, str]] = None
     avatar: Optional[str] = None
+
+class PostCreate(BaseModel):
+    content_type: Literal['text', 'image', 'video']
+    text_content: Optional[str] = None
+    media_url: Optional[str] = None
+
+class CommentCreate(BaseModel):
+    content: str
 
 class MessageCreate(BaseModel):
     receiver_id: str
@@ -293,24 +323,11 @@ class ProjectCreate(BaseModel):
     title: str
     description: str
     sector: str
-    looking_for: List[str]  # Domains needed
-    status: str = "open"  # open, in_progress, completed
+    looking_for: List[str]
+    status: str = "open"
 
-class ProjectUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    looking_for: Optional[List[str]] = None
-    status: Optional[str] = None
+# ============== REFERENCE DATA ROUTES ==============
 
-class InstitutionAccessRequest(BaseModel):
-    organization_name: str
-    organization_type: str  # ministry, ngo, university, research, other
-    contact_name: str
-    contact_email: EmailStr
-    purpose: str
-    data_needed: List[str]  # types of data requested
-
-# Reference Data Endpoints
 @api_router.get("/reference/countries")
 async def get_countries():
     return AFRICAN_COUNTRIES
@@ -333,7 +350,8 @@ async def get_domains(sector: Optional[str] = None):
 async def get_genders():
     return GENDERS
 
-# Auth Routes
+# ============== AUTH ROUTES ==============
+
 @api_router.post("/auth/register")
 async def register(user_data: UserCreate):
     existing = await db.users.find_one({"email": user_data.email})
@@ -356,11 +374,11 @@ async def register(user_data: UserCreate):
         "bio": user_data.bio or "",
         "additional_info": user_data.additional_info or "",
         "website": user_data.website or "",
-        "social_links": user_data.social_links or {},
         "avatar": f"https://api.dicebear.com/7.x/initials/svg?seed={user_data.first_name}%20{user_data.last_name}",
         "portfolio": {"documents": [], "images": [], "videos": []},
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "role": "artist",
+        "role": user_data.role,
+        "organization_name": user_data.organization_name if user_data.role == 'institution' else None,
         "is_verified": False,
         "is_featured": False
     }
@@ -399,7 +417,8 @@ async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
 async def get_me(user = Depends(get_current_user)):
     return user
 
-# Artist/User Routes
+# ============== ARTIST ROUTES ==============
+
 @api_router.get("/artists")
 async def get_artists(
     search: Optional[str] = None,
@@ -411,6 +430,7 @@ async def get_artists(
     limit: int = 50,
     skip: int = 0
 ):
+    # Only show artists, not institutions or admins
     query = {"role": "artist"}
     
     if search:
@@ -430,7 +450,7 @@ async def get_artists(
     if gender:
         query["gender"] = gender
     
-    artists = await db.users.find(query, {"_id": 0, "password": 0}).skip(skip).limit(limit).to_list(limit)
+    artists = await db.users.find(query, {"_id": 0, "password": 0, "email": 0}).skip(skip).limit(limit).to_list(limit)
     total = await db.users.count_documents(query)
     
     return {"artists": artists, "total": total}
@@ -439,13 +459,13 @@ async def get_artists(
 async def get_featured_artists(limit: int = 6):
     artists = await db.users.find(
         {"is_featured": True, "role": "artist"}, 
-        {"_id": 0, "password": 0}
+        {"_id": 0, "password": 0, "email": 0}
     ).limit(limit).to_list(limit)
     return artists
 
 @api_router.get("/artists/{artist_id}")
 async def get_artist(artist_id: str):
-    artist = await db.users.find_one({"id": artist_id}, {"_id": 0, "password": 0})
+    artist = await db.users.find_one({"id": artist_id, "role": "artist"}, {"_id": 0, "password": 0, "email": 0})
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
     return artist
@@ -459,92 +479,229 @@ async def update_profile(update_data: UserUpdate, user = Depends(get_current_use
     updated_user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password": 0})
     return updated_user
 
-# Portfolio/File Upload Routes
-@api_router.post("/portfolio/upload")
-async def upload_file(
+# ============== FEED / POSTS ROUTES ==============
+
+@api_router.post("/posts")
+async def create_post(post_data: PostCreate, user = Depends(require_artist_or_admin)):
+    """Create a new post - Artists and Admins only"""
+    post_doc = {
+        "id": str(uuid.uuid4()),
+        "author_id": user["id"],
+        "content_type": post_data.content_type,
+        "text_content": post_data.text_content,
+        "media_url": post_data.media_url,
+        "likes_count": 0,
+        "comments_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "is_active": True
+    }
+    
+    await db.posts.insert_one(post_doc)
+    post_doc.pop("_id", None)
+    
+    # Add author info
+    post_doc["author"] = sanitize_user(user)
+    
+    return post_doc
+
+@api_router.post("/posts/upload")
+async def upload_post_media(
     file: UploadFile = File(...),
-    file_type: str = Form(...),  # document, image
-    title: str = Form(""),
-    description: str = Form(""),
-    user = Depends(get_current_user)
+    content_type: str = Form(...),
+    text_content: str = Form(""),
+    user = Depends(require_artist_or_admin)
 ):
-    # Validate file type
-    allowed_doc_types = [".pdf", ".doc", ".docx"]
-    allowed_img_types = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+    """Upload media and create post - Artists and Admins only"""
+    allowed_image_types = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+    allowed_video_types = [".mp4", ".mov", ".avi", ".webm"]
     
     file_ext = Path(file.filename).suffix.lower()
     
-    if file_type == "document" and file_ext not in allowed_doc_types:
-        raise HTTPException(status_code=400, detail="Invalid document type")
-    if file_type == "image" and file_ext not in allowed_img_types:
+    if content_type == "image" and file_ext not in allowed_image_types:
         raise HTTPException(status_code=400, detail="Invalid image type")
+    if content_type == "video" and file_ext not in allowed_video_types:
+        raise HTTPException(status_code=400, detail="Invalid video type")
     
     # Save file
     file_id = str(uuid.uuid4())
-    folder = "documents" if file_type == "document" else "images"
-    file_path = UPLOADS_DIR / folder / f"{file_id}{file_ext}"
+    file_path = UPLOADS_DIR / 'posts' / f"{file_id}{file_ext}"
     
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    # Create file record
-    file_record = {
-        "id": file_id,
-        "filename": file.filename,
-        "file_type": file_type,
-        "file_ext": file_ext,
-        "title": title or file.filename,
-        "description": description,
-        "url": f"/uploads/{folder}/{file_id}{file_ext}",
-        "uploaded_at": datetime.now(timezone.utc).isoformat()
-    }
+    media_url = f"/uploads/posts/{file_id}{file_ext}"
     
-    # Update user portfolio
-    portfolio_key = f"portfolio.{file_type}s"
-    await db.users.update_one(
-        {"id": user["id"]},
-        {"$push": {portfolio_key: file_record}}
-    )
-    
-    return file_record
-
-@api_router.post("/portfolio/video")
-async def add_video_link(
-    url: str = Form(...),
-    title: str = Form(""),
-    description: str = Form(""),
-    user = Depends(get_current_user)
-):
-    video_record = {
+    # Create post
+    post_doc = {
         "id": str(uuid.uuid4()),
-        "url": url,
-        "title": title,
-        "description": description,
-        "added_at": datetime.now(timezone.utc).isoformat()
+        "author_id": user["id"],
+        "content_type": content_type,
+        "text_content": text_content,
+        "media_url": media_url,
+        "likes_count": 0,
+        "comments_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "is_active": True
     }
     
-    await db.users.update_one(
-        {"id": user["id"]},
-        {"$push": {"portfolio.videos": video_record}}
-    )
+    await db.posts.insert_one(post_doc)
+    post_doc.pop("_id", None)
+    post_doc["author"] = sanitize_user(user)
     
-    return video_record
+    return post_doc
 
-@api_router.delete("/portfolio/{item_type}/{item_id}")
-async def delete_portfolio_item(item_type: str, item_id: str, user = Depends(get_current_user)):
-    if item_type not in ["documents", "images", "videos"]:
-        raise HTTPException(status_code=400, detail="Invalid item type")
+@api_router.get("/posts")
+async def get_posts(
+    limit: int = 20,
+    before: Optional[str] = None,  # Cursor-based pagination
+    author_id: Optional[str] = None,
+    user = Depends(get_optional_user)
+):
+    """Get feed posts - All users can view"""
+    query = {"is_active": True}
     
-    await db.users.update_one(
-        {"id": user["id"]},
-        {"$pull": {f"portfolio.{item_type}": {"id": item_id}}}
-    )
+    if before:
+        query["created_at"] = {"$lt": before}
+    if author_id:
+        query["author_id"] = author_id
     
-    return {"message": "Item deleted"}
+    posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Enrich with author data and like status
+    for post in posts:
+        author = await db.users.find_one({"id": post["author_id"]}, {"_id": 0, "password": 0, "email": 0})
+        post["author"] = author
+        
+        # Check if current user liked the post
+        if user:
+            like = await db.likes.find_one({"post_id": post["id"], "user_id": user["id"]})
+            post["is_liked"] = like is not None
+        else:
+            post["is_liked"] = False
+    
+    return posts
 
-# Message Routes
+@api_router.get("/posts/{post_id}")
+async def get_post(post_id: str, user = Depends(get_optional_user)):
+    """Get single post with details"""
+    post = await db.posts.find_one({"id": post_id, "is_active": True}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    author = await db.users.find_one({"id": post["author_id"]}, {"_id": 0, "password": 0, "email": 0})
+    post["author"] = author
+    
+    if user:
+        like = await db.likes.find_one({"post_id": post_id, "user_id": user["id"]})
+        post["is_liked"] = like is not None
+    else:
+        post["is_liked"] = False
+    
+    return post
+
+@api_router.delete("/posts/{post_id}")
+async def delete_post(post_id: str, user = Depends(get_current_user)):
+    """Delete a post - Owner or Admin only"""
+    post = await db.posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    if post["author_id"] != user["id"] and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.posts.update_one({"id": post_id}, {"$set": {"is_active": False}})
+    return {"message": "Post deleted"}
+
+# ============== LIKES ROUTES ==============
+
+@api_router.post("/posts/{post_id}/like")
+async def toggle_like(post_id: str, user = Depends(require_artist_or_admin)):
+    """Toggle like on a post - Artists and Admins only"""
+    post = await db.posts.find_one({"id": post_id, "is_active": True})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    existing_like = await db.likes.find_one({"post_id": post_id, "user_id": user["id"]})
+    
+    if existing_like:
+        # Unlike
+        await db.likes.delete_one({"id": existing_like["id"]})
+        await db.posts.update_one({"id": post_id}, {"$inc": {"likes_count": -1}})
+        return {"liked": False, "likes_count": post["likes_count"] - 1}
+    else:
+        # Like
+        like_doc = {
+            "id": str(uuid.uuid4()),
+            "post_id": post_id,
+            "user_id": user["id"],
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.likes.insert_one(like_doc)
+        await db.posts.update_one({"id": post_id}, {"$inc": {"likes_count": 1}})
+        return {"liked": True, "likes_count": post["likes_count"] + 1}
+
+# ============== COMMENTS ROUTES ==============
+
+@api_router.post("/posts/{post_id}/comments")
+async def create_comment(post_id: str, comment_data: CommentCreate, user = Depends(require_artist_or_admin)):
+    """Create a comment - Artists and Admins only"""
+    post = await db.posts.find_one({"id": post_id, "is_active": True})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    comment_doc = {
+        "id": str(uuid.uuid4()),
+        "post_id": post_id,
+        "author_id": user["id"],
+        "content": comment_data.content,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "is_active": True
+    }
+    
+    await db.comments.insert_one(comment_doc)
+    await db.posts.update_one({"id": post_id}, {"$inc": {"comments_count": 1}})
+    
+    comment_doc.pop("_id", None)
+    comment_doc["author"] = sanitize_user(user)
+    
+    return comment_doc
+
+@api_router.get("/posts/{post_id}/comments")
+async def get_comments(post_id: str, limit: int = 50):
+    """Get comments for a post - All users can view"""
+    comments = await db.comments.find(
+        {"post_id": post_id, "is_active": True}, 
+        {"_id": 0}
+    ).sort("created_at", 1).limit(limit).to_list(limit)
+    
+    for comment in comments:
+        author = await db.users.find_one({"id": comment["author_id"]}, {"_id": 0, "password": 0, "email": 0})
+        comment["author"] = author
+    
+    return comments
+
+@api_router.delete("/comments/{comment_id}")
+async def delete_comment(comment_id: str, user = Depends(get_current_user)):
+    """Delete a comment - Owner or Admin only"""
+    comment = await db.comments.find_one({"id": comment_id})
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    if comment["author_id"] != user["id"] and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.comments.update_one({"id": comment_id}, {"$set": {"is_active": False}})
+    await db.posts.update_one({"id": comment["post_id"]}, {"$inc": {"comments_count": -1}})
+    
+    return {"message": "Comment deleted"}
+
+# ============== MESSAGES ROUTES ==============
+
 @api_router.post("/messages")
-async def send_message(message_data: MessageCreate, user = Depends(get_current_user)):
+async def send_message(message_data: MessageCreate, user = Depends(require_artist_or_admin)):
+    """Send a message - Artists and Admins only (Institutions cannot message)"""
     receiver = await db.users.find_one({"id": message_data.receiver_id})
     if not receiver:
         raise HTTPException(status_code=404, detail="Recipient not found")
@@ -602,7 +759,7 @@ async def get_conversations(user = Depends(get_current_user)):
     conversations = []
     for conv in conversations_raw:
         other_user_id = conv["_id"]
-        other_user = await db.users.find_one({"id": other_user_id}, {"_id": 0, "password": 0})
+        other_user = await db.users.find_one({"id": other_user_id}, {"_id": 0, "password": 0, "email": 0})
         if other_user:
             last_msg = conv["last_message"]
             last_msg.pop("_id", None)
@@ -635,9 +792,90 @@ async def get_messages(other_user_id: str, user = Depends(get_current_user)):
     
     return messages
 
-# Collaboration Projects Routes
+# ============== PORTFOLIO ROUTES ==============
+
+@api_router.post("/portfolio/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    file_type: str = Form(...),
+    title: str = Form(""),
+    description: str = Form(""),
+    user = Depends(require_artist_or_admin)
+):
+    allowed_doc_types = [".pdf", ".doc", ".docx"]
+    allowed_img_types = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+    
+    file_ext = Path(file.filename).suffix.lower()
+    
+    if file_type == "document" and file_ext not in allowed_doc_types:
+        raise HTTPException(status_code=400, detail="Invalid document type")
+    if file_type == "image" and file_ext not in allowed_img_types:
+        raise HTTPException(status_code=400, detail="Invalid image type")
+    
+    file_id = str(uuid.uuid4())
+    folder = "documents" if file_type == "document" else "images"
+    file_path = UPLOADS_DIR / folder / f"{file_id}{file_ext}"
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    file_record = {
+        "id": file_id,
+        "filename": file.filename,
+        "file_type": file_type,
+        "file_ext": file_ext,
+        "title": title or file.filename,
+        "description": description,
+        "url": f"/uploads/{folder}/{file_id}{file_ext}",
+        "uploaded_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    portfolio_key = f"portfolio.{file_type}s"
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$push": {portfolio_key: file_record}}
+    )
+    
+    return file_record
+
+@api_router.post("/portfolio/video")
+async def add_video_link(
+    url: str = Form(...),
+    title: str = Form(""),
+    description: str = Form(""),
+    user = Depends(require_artist_or_admin)
+):
+    video_record = {
+        "id": str(uuid.uuid4()),
+        "url": url,
+        "title": title,
+        "description": description,
+        "added_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$push": {"portfolio.videos": video_record}}
+    )
+    
+    return video_record
+
+@api_router.delete("/portfolio/{item_type}/{item_id}")
+async def delete_portfolio_item(item_type: str, item_id: str, user = Depends(get_current_user)):
+    if item_type not in ["documents", "images", "videos"]:
+        raise HTTPException(status_code=400, detail="Invalid item type")
+    
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$pull": {f"portfolio.{item_type}": {"id": item_id}}}
+    )
+    
+    return {"message": "Item deleted"}
+
+# ============== PROJECTS ROUTES ==============
+
 @api_router.post("/projects")
-async def create_project(project_data: ProjectCreate, user = Depends(get_current_user)):
+async def create_project(project_data: ProjectCreate, user = Depends(require_artist_or_admin)):
     project_doc = {
         "id": str(uuid.uuid4()),
         "creator_id": user["id"],
@@ -669,15 +907,14 @@ async def get_projects(
     
     projects = await db.projects.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     
-    # Enrich with creator info
     for project in projects:
-        creator = await db.users.find_one({"id": project["creator_id"]}, {"_id": 0, "password": 0})
+        creator = await db.users.find_one({"id": project["creator_id"]}, {"_id": 0, "password": 0, "email": 0})
         project["creator"] = creator
     
     return projects
 
 @api_router.post("/projects/{project_id}/apply")
-async def apply_to_project(project_id: str, message: str = "", user = Depends(get_current_user)):
+async def apply_to_project(project_id: str, message: str = "", user = Depends(require_artist_or_admin)):
     project = await db.projects.find_one({"id": project_id})
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -699,21 +936,27 @@ async def apply_to_project(project_id: str, message: str = "", user = Depends(ge
     
     return {"message": "Application submitted"}
 
-# Statistics Routes
+# ============== STATISTICS ROUTES ==============
+
 @api_router.get("/statistics/overview")
 async def get_statistics_overview(user = Depends(get_optional_user)):
-    # Public basic stats
+    """Public overview statistics"""
     total_artists = await db.users.count_documents({"role": "artist"})
+    total_posts = await db.posts.count_documents({"is_active": True})
     total_projects = await db.projects.count_documents({})
     
-    # Get counts by sector
+    # Interactions
+    total_likes = await db.likes.count_documents({})
+    total_comments = await db.comments.count_documents({"is_active": True})
+    
+    # By sector
     sector_pipeline = [
         {"$match": {"role": "artist"}},
         {"$group": {"_id": "$sector", "count": {"$sum": 1}}}
     ]
     sectors = await db.users.aggregate(sector_pipeline).to_list(20)
     
-    # Get counts by subregion
+    # By subregion
     subregion_pipeline = [
         {"$match": {"role": "artist"}},
         {"$group": {"_id": "$subregion", "count": {"$sum": 1}}}
@@ -722,14 +965,16 @@ async def get_statistics_overview(user = Depends(get_optional_user)):
     
     return {
         "total_artists": total_artists,
+        "total_posts": total_posts,
         "total_projects": total_projects,
+        "total_interactions": total_likes + total_comments,
         "by_sector": {s["_id"]: s["count"] for s in sectors if s["_id"]},
         "by_subregion": {s["_id"]: s["count"] for s in subregions if s["_id"]}
     }
 
 @api_router.get("/statistics/detailed")
-async def get_detailed_statistics(user = Depends(get_admin_user)):
-    # Detailed stats for institutions
+async def get_detailed_statistics(user = Depends(require_institution_or_admin)):
+    """Detailed statistics - Institutions and Admins only"""
     
     # Gender distribution
     gender_pipeline = [
@@ -774,56 +1019,72 @@ async def get_detailed_statistics(user = Depends(get_admin_user)):
     ]
     gender_by_subregion = await db.users.aggregate(gender_subregion_pipeline).to_list(50)
     
+    # Activity metrics
+    total_posts = await db.posts.count_documents({"is_active": True})
+    total_likes = await db.likes.count_documents({})
+    total_comments = await db.comments.count_documents({"is_active": True})
+    
     return {
         "by_gender": {g["_id"]: g["count"] for g in genders if g["_id"]},
         "by_country": {c["_id"]: c["count"] for c in countries if c["_id"]},
         "by_domain": {d["_id"]: d["count"] for d in domains if d["_id"]},
         "gender_by_country": gender_by_country,
-        "gender_by_subregion": gender_by_subregion
+        "gender_by_subregion": gender_by_subregion,
+        "activity": {
+            "total_posts": total_posts,
+            "total_likes": total_likes,
+            "total_comments": total_comments
+        }
     }
 
-# Institution Access Routes
-@api_router.post("/institution/request-access")
-async def request_institution_access(request: InstitutionAccessRequest):
-    access_request = {
-        "id": str(uuid.uuid4()),
-        "organization_name": request.organization_name,
-        "organization_type": request.organization_type,
-        "contact_name": request.contact_name,
-        "contact_email": request.contact_email,
-        "purpose": request.purpose,
-        "data_needed": request.data_needed,
-        "status": "pending",
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    
-    await db.access_requests.insert_one(access_request)
-    access_request.pop("_id", None)
-    
-    return {"message": "Access request submitted. We will contact you soon.", "request_id": access_request["id"]}
+# ============== ADMIN ROUTES ==============
 
-@api_router.post("/institution/simulate-payment")
-async def simulate_payment(request_id: str, user = Depends(get_current_user)):
-    # Simulate payment - in production, integrate with payment gateway
-    access_request = await db.access_requests.find_one({"id": request_id})
-    if not access_request:
-        raise HTTPException(status_code=404, detail="Request not found")
+@api_router.get("/admin/users")
+async def admin_get_users(
+    role: Optional[str] = None,
+    limit: int = 50,
+    skip: int = 0,
+    user = Depends(require_admin)
+):
+    """Admin: Get all users"""
+    query = {}
+    if role:
+        query["role"] = role
     
-    # Update user role to institution
-    await db.users.update_one(
-        {"id": user["id"]},
-        {"$set": {"role": "institution", "institution_access": True}}
-    )
+    users = await db.users.find(query, {"_id": 0, "password": 0}).skip(skip).limit(limit).to_list(limit)
+    total = await db.users.count_documents(query)
     
-    # Update request status
-    await db.access_requests.update_one(
-        {"id": request_id},
-        {"$set": {"status": "approved", "approved_at": datetime.now(timezone.utc).isoformat()}}
-    )
-    
-    return {"message": "Payment simulated. You now have institutional access.", "access_granted": True}
+    return {"users": users, "total": total}
 
-# Seed data
+@api_router.put("/admin/users/{user_id}/role")
+async def admin_update_role(user_id: str, role: str, user = Depends(require_admin)):
+    """Admin: Update user role"""
+    if role not in ROLES:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    
+    await db.users.update_one({"id": user_id}, {"$set": {"role": role}})
+    return {"message": "Role updated"}
+
+@api_router.put("/admin/users/{user_id}/featured")
+async def admin_toggle_featured(user_id: str, user = Depends(require_admin)):
+    """Admin: Toggle featured status"""
+    target = await db.users.find_one({"id": user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    new_status = not target.get("is_featured", False)
+    await db.users.update_one({"id": user_id}, {"$set": {"is_featured": new_status}})
+    
+    return {"is_featured": new_status}
+
+@api_router.delete("/admin/posts/{post_id}")
+async def admin_delete_post(post_id: str, user = Depends(require_admin)):
+    """Admin: Force delete any post"""
+    await db.posts.update_one({"id": post_id}, {"$set": {"is_active": False}})
+    return {"message": "Post deleted"}
+
+# ============== SEED DATA ==============
+
 @api_router.post("/seed")
 async def seed_data():
     existing = await db.users.count_documents({})
@@ -998,15 +1259,111 @@ async def seed_data():
             "role": "artist",
             "is_featured": False,
             "is_verified": True
+        },
+        # Institution account
+        {
+            "id": str(uuid.uuid4()),
+            "email": "culture@gov.sn",
+            "password": hash_password("institution123"),
+            "first_name": "Ministère",
+            "last_name": "Culture Sénégal",
+            "country": "Senegal",
+            "subregion": "West Africa",
+            "gender": "Prefer not to say",
+            "sector": "Cultural Heritage",
+            "domain": "Museum Curation",
+            "year_started": 2020,
+            "bio": "Ministère de la Culture et de la Communication du Sénégal",
+            "additional_info": "",
+            "organization_name": "Ministère de la Culture du Sénégal",
+            "avatar": "https://api.dicebear.com/7.x/initials/svg?seed=MC",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "institution",
+            "is_featured": False,
+            "is_verified": True
+        },
+        # Admin account
+        {
+            "id": str(uuid.uuid4()),
+            "email": "admin@artconnect.africa",
+            "password": hash_password("admin123"),
+            "first_name": "Admin",
+            "last_name": "ArtConnect",
+            "country": "Senegal",
+            "subregion": "West Africa",
+            "gender": "Prefer not to say",
+            "sector": "Digital Arts",
+            "domain": "Web Design",
+            "year_started": 2024,
+            "bio": "Administrateur de la plateforme Art Connect Africa",
+            "additional_info": "",
+            "avatar": "https://api.dicebear.com/7.x/initials/svg?seed=AA",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "admin",
+            "is_featured": False,
+            "is_verified": True
         }
     ]
     
     await db.users.insert_many(sample_artists)
     
+    # Create sample posts
+    artist_ids = [a["id"] for a in sample_artists if a["role"] == "artist"]
+    sample_posts = [
+        {
+            "id": str(uuid.uuid4()),
+            "author_id": artist_ids[0],  # Amara
+            "content_type": "image",
+            "text_content": "Nouvelle toile terminée aujourd'hui ! 🎨 Inspirée par les couleurs du marché de Dakar.",
+            "media_url": "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=800",
+            "likes_count": 24,
+            "comments_count": 5,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_active": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "author_id": artist_ids[1],  # Kwame
+            "content_type": "video",
+            "text_content": "Session studio d'hier soir. Nouveau track Afrobeat en préparation ! 🎵",
+            "media_url": "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800",
+            "likes_count": 45,
+            "comments_count": 12,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_active": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "author_id": artist_ids[2],  # Fatou
+            "content_type": "image",
+            "text_content": "Sneak peek de la nouvelle collection ! Wax meets modernité. 👗",
+            "media_url": "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=800",
+            "likes_count": 67,
+            "comments_count": 8,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_active": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "author_id": artist_ids[4],  # Amina
+            "content_type": "text",
+            "text_content": "\"L'Afrique n'est pas un pays, c'est un univers de cultures, de langues, de rêves et de possibilités infinies.\"\n\n- Extrait de mon nouveau recueil 📚",
+            "media_url": None,
+            "likes_count": 89,
+            "comments_count": 15,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_active": True
+        }
+    ]
+    
+    await db.posts.insert_many(sample_posts)
+    
     # Create sample project
     sample_project = {
         "id": str(uuid.uuid4()),
-        "creator_id": sample_artists[0]["id"],
+        "creator_id": artist_ids[0],
         "title": "Exposition Panafricaine 2026",
         "description": "Recherche artistes pour une exposition collective célébrant l'art contemporain africain.",
         "sector": "Visual Arts",
@@ -1018,21 +1375,21 @@ async def seed_data():
     }
     await db.projects.insert_one(sample_project)
     
-    return {"message": "Sample data seeded successfully", "count": len(sample_artists)}
+    return {"message": "Sample data seeded successfully", "artists": len(sample_artists), "posts": len(sample_posts)}
 
-# Health check
+# ============== HEALTH CHECK ==============
+
 @api_router.get("/")
 async def root():
-    return {"message": "Art Connect Africa API is running"}
+    return {"message": "Art Connect Africa API is running", "version": "2.0"}
 
 @api_router.get("/health")
 async def health():
     return {"status": "healthy"}
 
-# Include the router
-app.include_router(api_router)
+# ============== APP SETUP ==============
 
-# Mount static files for uploads
+app.include_router(api_router)
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 app.add_middleware(

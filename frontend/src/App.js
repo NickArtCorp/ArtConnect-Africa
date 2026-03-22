@@ -16,6 +16,7 @@ import Messages from "@/pages/Messages";
 import Settings from "@/pages/Settings";
 import Projects from "@/pages/Projects";
 import Statistics from "@/pages/Statistics";
+import Feed from "@/pages/Feed";
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -73,6 +74,7 @@ function App() {
           <Route path="/artist/:id" element={<ArtistProfile />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/statistics" element={<Statistics />} />
+          <Route path="/feed" element={<Feed />} />
           <Route 
             path="/dashboard" 
             element={
