@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageCircle, Users, Settings, ArrowRight, Loader2, Upload, Plus, FileText, Image, Video, Trash2, MapPin, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { getMediaUrl } from '@/lib/utils';
 
 export default function Dashboard() {
   const { user, updateProfile, fetchUser } = useAuthStore();
@@ -42,6 +43,7 @@ export default function Dashboard() {
   const unreadCount = conversations.reduce((acc, conv) => acc + conv.unread_count, 0);
   const yearsExperience = new Date().getFullYear() - (user.year_started || 2020);
   const portfolio = user.portfolio || { documents: [], images: [], videos: [] };
+  const avatarUrl = getMediaUrl(user.avatar);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -119,7 +121,7 @@ export default function Dashboard() {
             <div className="bg-card rounded-2xl border border-border/50 p-6" data-testid="profile-card">
               <div className="text-center mb-6">
                 <Avatar className="w-24 h-24 mx-auto mb-4">
-                  <AvatarImage src={user.avatar} alt={fullName} />
+                  <AvatarImage src={avatarUrl} alt={fullName} />
                   <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
                 </Avatar>
                 <h2 className="font-bold text-xl">{fullName}</h2>
@@ -318,21 +320,32 @@ export default function Dashboard() {
                 <TabsContent value="images">
                   {portfolio.images?.length > 0 ? (
                     <div className="grid grid-cols-3 gap-3">
-                      {portfolio.images.map((img) => (
-                        <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border border-border/50">
-                          <img
-                            src={`${process.env.REACT_APP_BACKEND_URL}${img.url}`}
-                            alt={img.title}
-                            className="w-full h-full object-cover"
-                          />
-                          <button
-                            onClick={() => handleDelete('images', img.id)}
-                            className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
+                      {portfolio.images.map((img) => {
+                        const imgUrl = getMediaUrl(img.url);
+                        return (
+                          <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border border-border/50">
+                            <img
+                              src={imgUrl}
+                              alt={img.title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentElement.classList.add('bg-muted', 'flex', 'items-center', 'justify-center');
+                                const placeholder = document.createElement('span');
+                                placeholder.className = 'text-muted-foreground text-xs';
+                                placeholder.textContent = 'Image not found';
+                                e.target.parentElement.appendChild(placeholder);
+                              }}
+                            />
+                            <button
+                              onClick={() => handleDelete('images', img.id)}
+                              className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-muted-foreground text-sm text-center py-8">
@@ -429,6 +442,7 @@ export default function Dashboard() {
                   {conversations.slice(0, 3).map((conv) => {
                     const convName = `${conv.user.first_name} ${conv.user.last_name}`;
                     const convInitials = `${conv.user.first_name?.[0] || ''}${conv.user.last_name?.[0] || ''}`.toUpperCase();
+                    const convAvatarUrl = getMediaUrl(conv.user.avatar);
                     return (
                       <Link
                         key={conv.user.id}
@@ -436,7 +450,7 @@ export default function Dashboard() {
                         className="flex items-center gap-4 p-3 rounded-xl hover:bg-secondary/50 transition-colors"
                       >
                         <Avatar className="w-12 h-12">
-                          <AvatarImage src={conv.user.avatar} alt={convName} />
+                          <AvatarImage src={convAvatarUrl} alt={convName} />
                           <AvatarFallback>{convInitials}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">

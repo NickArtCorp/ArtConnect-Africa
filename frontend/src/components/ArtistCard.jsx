@@ -4,12 +4,15 @@ import { Badge } from '@/components/ui/badge';
 import { useLanguageStore } from '@/store';
 import { motion } from 'framer-motion';
 import { MapPin, Calendar } from 'lucide-react';
+import { getMediaUrl } from '@/lib/utils';
 
 export function ArtistCard({ artist, featured = false }) {
   const { language } = useLanguageStore();
   const initials = `${artist.first_name?.[0] || ''}${artist.last_name?.[0] || ''}`.toUpperCase();
   const fullName = `${artist.first_name} ${artist.last_name}`;
   const yearsActive = new Date().getFullYear() - (artist.year_started || 2020);
+  const avatarUrl = getMediaUrl(artist.avatar);
+  const fallbackUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${fullName}`;
 
   return (
     <motion.div
@@ -26,10 +29,10 @@ export function ArtistCard({ artist, featured = false }) {
         {/* Background Image */}
         <div className="absolute inset-0">
           <img
-            src={artist.avatar}
+            src={avatarUrl || fallbackUrl}
             alt={fullName}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-            onError={(e) => { e.target.src = `https://api.dicebear.com/7.x/initials/svg?seed=${fullName}`; }}
+            onError={(e) => { e.target.src = fallbackUrl; }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         </div>
@@ -70,6 +73,7 @@ export function ArtistCard({ artist, featured = false }) {
 export function ArtistCardCompact({ artist, onClick }) {
   const initials = `${artist.first_name?.[0] || ''}${artist.last_name?.[0] || ''}`.toUpperCase();
   const fullName = `${artist.first_name} ${artist.last_name}`;
+  const avatarUrl = getMediaUrl(artist.avatar);
 
   return (
     <button
@@ -78,7 +82,7 @@ export function ArtistCardCompact({ artist, onClick }) {
       data-testid={`artist-compact-${artist.id}`}
     >
       <Avatar className="h-12 w-12">
-        <AvatarImage src={artist.avatar} alt={fullName} />
+        <AvatarImage src={avatarUrl} alt={fullName} />
         <AvatarFallback>{initials}</AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">

@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
+import { getMediaUrl } from '@/lib/utils';
 
 function PostCard({ post, onLike, onComment, onDelete, currentUser, language }) {
   const [showComments, setShowComments] = useState(false);
@@ -27,6 +28,8 @@ function PostCard({ post, onLike, onComment, onDelete, currentUser, language }) 
   const initials = `${author.first_name?.[0] || ''}${author.last_name?.[0] || ''}`.toUpperCase();
   const isOwner = currentUser?.id === post.author_id;
   const canInteract = currentUser && currentUser.role !== 'institution';
+  const avatarUrl = getMediaUrl(author.avatar);
+  const mediaUrl = getMediaUrl(post.media_url);
 
   const handleToggleComments = async () => {
     if (!showComments && postComments.length === 0) {
@@ -66,7 +69,7 @@ function PostCard({ post, onLike, onComment, onDelete, currentUser, language }) 
       <div className="flex items-center justify-between p-4">
         <Link to={`/artist/${post.author_id}`} className="flex items-center gap-3 hover:opacity-80">
           <Avatar className="w-10 h-10">
-            <AvatarImage src={author.avatar} alt={fullName} />
+            <AvatarImage src={avatarUrl} alt={fullName} />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div>
@@ -95,19 +98,22 @@ function PostCard({ post, onLike, onComment, onDelete, currentUser, language }) 
       )}
 
       {/* Media */}
-      {post.media_url && (
+      {post.media_url && mediaUrl && (
         <div className="relative">
           {post.content_type === 'video' ? (
             <video
-              src={post.media_url.startsWith('http') ? post.media_url : `${process.env.REACT_APP_BACKEND_URL}${post.media_url}`}
+              src={mediaUrl}
               controls
               className="w-full max-h-[500px] object-cover"
             />
           ) : (
             <img
-              src={post.media_url.startsWith('http') ? post.media_url : `${process.env.REACT_APP_BACKEND_URL}${post.media_url}`}
+              src={mediaUrl}
               alt="Post media"
               className="w-full max-h-[500px] object-cover"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
             />
           )}
         </div>
@@ -162,11 +168,12 @@ function PostCard({ post, onLike, onComment, onDelete, currentUser, language }) 
                     const commentAuthor = comment.author || {};
                     const commentName = `${commentAuthor.first_name || ''} ${commentAuthor.last_name || ''}`.trim();
                     const commentInitials = `${commentAuthor.first_name?.[0] || ''}${commentAuthor.last_name?.[0] || ''}`.toUpperCase();
+                    const commentAvatarUrl = getMediaUrl(commentAuthor.avatar);
                     
                     return (
                       <div key={comment.id} className="flex gap-3">
                         <Avatar className="w-8 h-8">
-                          <AvatarImage src={commentAuthor.avatar} alt={commentName} />
+                          <AvatarImage src={commentAvatarUrl} alt={commentName} />
                           <AvatarFallback className="text-xs">{commentInitials}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 bg-secondary/50 rounded-xl px-3 py-2">

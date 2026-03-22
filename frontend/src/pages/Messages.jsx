@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, ArrowLeft, Loader2, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { getMediaUrl } from '@/lib/utils';
 
 export default function Messages() {
   const { id: activeUserId } = useParams();
@@ -93,6 +94,7 @@ export default function Messages() {
                   const fullName = `${conv.user.first_name} ${conv.user.last_name}`;
                   const initials = `${conv.user.first_name?.[0] || ''}${conv.user.last_name?.[0] || ''}`.toUpperCase();
                   const isActive = conv.user.id === activeUserId;
+                  const convAvatarUrl = getMediaUrl(conv.user.avatar);
 
                   return (
                     <Link
@@ -105,7 +107,7 @@ export default function Messages() {
                     >
                       <div className="relative">
                         <Avatar className="w-12 h-12">
-                          <AvatarImage src={conv.user.avatar} alt={fullName} />
+                          <AvatarImage src={convAvatarUrl} alt={fullName} />
                           <AvatarFallback>{initials}</AvatarFallback>
                         </Avatar>
                         {conv.unread_count > 0 && (
@@ -145,7 +147,7 @@ export default function Messages() {
                 </Link>
                 <Link to={`/artist/${chatUser.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                   <Avatar className="w-10 h-10">
-                    <AvatarImage src={chatUser.avatar} alt={`${chatUser.first_name} ${chatUser.last_name}`} />
+                    <AvatarImage src={getMediaUrl(chatUser.avatar)} alt={`${chatUser.first_name} ${chatUser.last_name}`} />
                     <AvatarFallback>
                       {`${chatUser.first_name?.[0] || ''}${chatUser.last_name?.[0] || ''}`.toUpperCase()}
                     </AvatarFallback>

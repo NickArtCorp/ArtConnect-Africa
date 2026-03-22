@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageCircle, ArrowLeft, Loader2, Send, MapPin, Calendar, Globe, FileText, Image, Video } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { getMediaUrl } from '@/lib/utils';
 
 export default function ArtistProfile() {
   const { id } = useParams();
@@ -56,6 +57,7 @@ export default function ArtistProfile() {
   const isOwnProfile = user?.id === currentArtist.id;
   const yearsExperience = new Date().getFullYear() - (currentArtist.year_started || 2020);
   const portfolio = currentArtist.portfolio || { documents: [], images: [], videos: [] };
+  const avatarUrl = getMediaUrl(currentArtist.avatar);
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-4 md:px-8">
@@ -84,7 +86,7 @@ export default function ArtistProfile() {
             <div className="px-6 md:px-8 pb-8">
               <div className="flex flex-col md:flex-row md:items-end gap-6 -mt-16 md:-mt-20">
                 <Avatar className="w-32 h-32 md:w-40 md:h-40 border-4 border-background shadow-xl">
-                  <AvatarImage src={currentArtist.avatar} alt={fullName} />
+                  <AvatarImage src={avatarUrl} alt={fullName} />
                   <AvatarFallback className="text-4xl">{initials}</AvatarFallback>
                 </Avatar>
 
@@ -219,21 +221,24 @@ export default function ArtistProfile() {
                         {t.profile.documents}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {portfolio.documents.map((doc) => (
-                          <a
-                            key={doc.id}
-                            href={`${process.env.REACT_APP_BACKEND_URL}${doc.url}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border/50 hover:border-primary/50 transition-colors"
-                          >
-                            <FileText className="w-8 h-8 text-primary" />
-                            <div>
-                              <p className="font-medium">{doc.title}</p>
-                              <p className="text-sm text-muted-foreground">{doc.description}</p>
-                            </div>
-                          </a>
-                        ))}
+                        {portfolio.documents.map((doc) => {
+                          const docUrl = getMediaUrl(doc.url);
+                          return (
+                            <a
+                              key={doc.id}
+                              href={docUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border/50 hover:border-primary/50 transition-colors"
+                            >
+                              <FileText className="w-8 h-8 text-primary" />
+                              <div>
+                                <p className="font-medium">{doc.title}</p>
+                                <p className="text-sm text-muted-foreground">{doc.description}</p>
+                              </div>
+                            </a>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -246,21 +251,27 @@ export default function ArtistProfile() {
                         {t.profile.images}
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {portfolio.images.map((img) => (
-                          <a
-                            key={img.id}
-                            href={`${process.env.REACT_APP_BACKEND_URL}${img.url}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="aspect-square rounded-xl overflow-hidden border border-border/50 hover:border-primary/50 transition-colors"
-                          >
-                            <img
-                              src={`${process.env.REACT_APP_BACKEND_URL}${img.url}`}
-                              alt={img.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </a>
-                        ))}
+                        {portfolio.images.map((img) => {
+                          const imgUrl = getMediaUrl(img.url);
+                          return (
+                            <a
+                              key={img.id}
+                              href={imgUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="aspect-square rounded-xl overflow-hidden border border-border/50 hover:border-primary/50 transition-colors"
+                            >
+                              <img
+                                src={imgUrl}
+                                alt={img.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            </a>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

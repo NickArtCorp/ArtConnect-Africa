@@ -370,6 +370,27 @@ export const useAuthStore = create((set, get) => ({
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Update failed' };
     }
+  },
+
+  uploadAvatar: async (file) => {
+    const { token } = get();
+    if (!token) return { success: false, error: 'Not authenticated' };
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post(`${API}/artists/me/avatar`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      set({ user: response.data });
+      return { success: true, user: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.detail || 'Upload failed' };
+    }
   }
 }));
 

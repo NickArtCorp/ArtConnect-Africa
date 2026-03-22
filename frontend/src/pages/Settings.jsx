@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore, useLanguageStore, useReferenceStore } from '@/store';
 import { Button } from '@/components/ui/button';
@@ -7,16 +7,19 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Check } from 'lucide-react';
+import { Loader2, Check, Camera, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { getMediaUrl } from '@/lib/utils';
 
 export default function Settings() {
-  const { user, updateProfile } = useAuthStore();
+  const { user, updateProfile, uploadAvatar } = useAuthStore();
   const { countries, sectors, domains, fetchReferenceData } = useReferenceStore();
   const { language, t } = useLanguageStore();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -26,8 +29,7 @@ export default function Settings() {
     domain: '',
     bio: '',
     additional_info: '',
-    website: '',
-    avatar: ''
+    website: ''
   });
 
   useEffect(() => {
@@ -45,8 +47,7 @@ export default function Settings() {
       domain: user.domain || '',
       bio: user.bio || '',
       additional_info: user.additional_info || '',
-      website: user.website || '',
-      avatar: user.avatar || ''
+      website: user.website || ''
     });
   }, [user, navigate, fetchReferenceData]);
 
@@ -67,6 +68,34 @@ export default function Settings() {
     setFormData({ ...formData, sector: value, domain: '' });
   };
 
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error(language === 'fr' ? 'Type de fichier invalide. Utilisez JPG, PNG, GIF ou WebP' : 'Invalid file type. Use JPG, PNG, GIF or WebP');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(language === 'fr' ? 'Fichier trop volumineux. Maximum 5MB' : 'File too large. Maximum 5MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    const result = await uploadAvatar(file);
+    setUploadingAvatar(false);
+
+    if (result.success) {
+      toast.success(language === 'fr' ? 'Photo de profil mise à jour !' : 'Profile photo updated!');
+    } else {
+      toast.error(result.error || (language === 'fr' ? 'Échec de l\'upload' : 'Upload failed'));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -85,6 +114,7 @@ export default function Settings() {
   const fullName = `${formData.first_name} ${formData.last_name}`;
   const initials = `${formData.first_name?.[0] || ''}${formData.last_name?.[0] || ''}`.toUpperCase();
   const currentDomains = formData.sector ? (domains[formData.sector] || []) : [];
+  const avatarUrl = getMediaUrl(user.avatar);
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-4 md:px-8">
@@ -102,24 +132,59 @@ export default function Settings() {
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-6 bg-card p-8 rounded-2xl border border-border/50" data-testid="settings-form">
-            {/* Avatar Preview */}
-            <div className="flex items-center gap-6">
-              <Avatar className="w-24 h-24">
-                <AvatarImage src={formData.avatar} alt={fullName} />
-                <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <Label htmlFor="avatar">{language === 'fr' ? 'URL de l\'avatar' : 'Avatar URL'}</Label>
-                <Input
-                  id="avatar"
-                  name="avatar"
-                  value={formData.avatar}
-                  onChange={handleChange}
-                  placeholder="https://example.com/avatar.jpg"
-                  className="mt-2"
-                  data-testid="settings-avatar"
+            {/* Avatar Upload */}
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative group">
+                <Avatar className="w-32 h-32 border-4 border-primary/20">
+                  <AvatarImage src={avatarUrl} alt={fullName} />
+                  <AvatarFallback className="text-3xl bg-primary/10">{initials}</AvatarFallback>
+                </Avatar>
+                
+                {/* Upload overlay */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  data-testid="avatar-upload-button"
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  ) : (
+                    <Camera className="w-8 h-8 text-white" />
+                  )}
+                </button>
+                
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleAvatarUpload}
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  className="hidden"
                 />
               </div>
+              
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="rounded-full gap-2"
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {language === 'fr' ? 'Changer la photo' : 'Change photo'}
+              </Button>
+              
+              <p className="text-xs text-muted-foreground text-center">
+                {language === 'fr' 
+                  ? 'JPG, PNG, GIF ou WebP. Max 5MB.' 
+                  : 'JPG, PNG, GIF or WebP. Max 5MB.'}
+              </p>
             </div>
 
             {/* Name row */}

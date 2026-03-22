@@ -24,6 +24,7 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 (UPLOADS_DIR / 'documents').mkdir(exist_ok=True)
 (UPLOADS_DIR / 'images').mkdir(exist_ok=True)
 (UPLOADS_DIR / 'posts').mkdir(exist_ok=True)
+(UPLOADS_DIR / 'avatars').mkdir(exist_ok=True)
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -475,6 +476,38 @@ async def update_profile(update_data: UserUpdate, user = Depends(get_current_use
     update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if update_dict:
         await db.users.update_one({"id": user["id"]}, {"$set": update_dict})
+    
+    updated_user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password": 0})
+    return updated_user
+
+@api_router.post("/artists/me/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    user = Depends(get_current_user)
+):
+    """Upload profile avatar image"""
+    allowed_types = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+    file_ext = Path(file.filename).suffix.lower()
+    
+    if file_ext not in allowed_types:
+        raise HTTPException(status_code=400, detail="Invalid image type. Allowed: jpg, jpeg, png, gif, webp")
+    
+    # Check file size (max 5MB)
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Maximum 5MB")
+    
+    # Save file
+    file_id = str(uuid.uuid4())
+    file_path = UPLOADS_DIR / 'avatars' / f"{file_id}{file_ext}"
+    
+    with open(file_path, "wb") as buffer:
+        buffer.write(contents)
+    
+    avatar_url = f"/uploads/avatars/{file_id}{file_ext}"
+    
+    # Update user avatar
+    await db.users.update_one({"id": user["id"]}, {"$set": {"avatar": avatar_url}})
     
     updated_user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password": 0})
     return updated_user
@@ -1390,7 +1423,8 @@ async def health():
 # ============== APP SETUP ==============
 
 app.include_router(api_router)
-app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+# Mount uploads under /api/uploads so it goes through the API routing
+app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
