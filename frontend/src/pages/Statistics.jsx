@@ -1,32 +1,37 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStatisticsStore, useLanguageStore, useAuthStore } from '@/store';
+import { useInstitutionStore } from '../store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Globe, BarChart3, Lock, TrendingUp, Heart, MessageCircle, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Loader2, Users, Globe, BarChart3, Lock, TrendingUp, Heart, MessageCircle, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Statistics() {
   const { overview, detailed, fetchOverview, fetchDetailed, isLoading } = useStatisticsStore();
   const { user } = useAuthStore();
+  const { has_paid } = useInstitutionStore();
   const { language, t } = useLanguageStore();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchOverview();
-    if (user && (user.role === 'institution' || user.role === 'admin')) {
-      fetchDetailed();
-    }
-  }, [fetchOverview, fetchDetailed, user]);
-
   const isInstitution = user?.role === 'institution';
   const isAdmin = user?.role === 'admin';
-  const hasDetailedAccess = isInstitution || isAdmin;
+  // Institution must have paid. Admins always have access.
+  const hasDetailedAccess = isAdmin || (isInstitution && has_paid);
 
-  // Calculate percentages for gender distribution
-  const genderTotal = detailed?.by_gender ? Object.values(detailed.by_gender).reduce((a, b) => a + b, 0) : 0;
+  useEffect(() => {
+    fetchOverview();
+    if (hasDetailedAccess) {
+      fetchDetailed();
+    }
+  }, [fetchOverview, fetchDetailed, hasDetailedAccess]);
+
+  const genderTotal = detailed?.by_gender
+    ? Object.values(detailed.by_gender).reduce((a, b) => a + b, 0)
+    : 0;
+
   const getGenderPercent = (gender) => {
     if (!detailed?.by_gender || !genderTotal) return 0;
     return ((detailed.by_gender[gender] || 0) / genderTotal * 100).toFixed(1);
@@ -35,6 +40,7 @@ export default function Statistics() {
   return (
     <div className="min-h-screen pt-24 pb-16 px-4 md:px-8">
       <div className="max-w-7xl mx-auto">
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -54,16 +60,16 @@ export default function Statistics() {
             )}
           </div>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-            {hasDetailedAccess 
+            {hasDetailedAccess
               ? (language === 'fr' ? 'Dashboard Statistiques' : 'Statistics Dashboard')
               : t.statistics.title}
           </h1>
           <p className="text-muted-foreground max-w-xl">
             {hasDetailedAccess
-              ? (language === 'fr' 
+              ? (language === 'fr'
                   ? 'Accès complet aux données démographiques et analytiques de la communauté artistique.'
                   : 'Full access to demographic and analytical data of the artistic community.')
-              : (language === 'fr' 
+              : (language === 'fr'
                   ? 'Explorez les données démographiques de la communauté artistique africaine'
                   : 'Explore demographic data of the African artistic community')}
           </p>
@@ -75,7 +81,7 @@ export default function Statistics() {
           </div>
         ) : (
           <>
-            {/* Overview Stats - Visible to all */}
+            {/* Overview Stats — visible to everyone */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -113,7 +119,7 @@ export default function Statistics() {
             </motion.div>
 
             {hasDetailedAccess ? (
-              /* ===== INSTITUTION/ADMIN DASHBOARD ===== */
+              /* ── INSTITUTION / ADMIN DASHBOARD ── */
               <Tabs defaultValue="demographics" className="space-y-6">
                 <TabsList className="bg-card border border-border/50">
                   <TabsTrigger value="demographics">
@@ -127,10 +133,9 @@ export default function Statistics() {
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Demographics Tab */}
+                {/* Demographics */}
                 <TabsContent value="demographics" className="space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Gender Distribution */}
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -150,9 +155,9 @@ export default function Statistics() {
                                 <span className="font-medium">{count} ({getGenderPercent(gender)}%)</span>
                               </div>
                               <div className="w-full h-3 bg-secondary rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className={`h-full rounded-full transition-all ${
-                                    gender === 'Female' ? 'bg-pink-500' : 
+                                    gender === 'Female' ? 'bg-pink-500' :
                                     gender === 'Male' ? 'bg-blue-500' : 'bg-purple-500'
                                   }`}
                                   style={{ width: `${getGenderPercent(gender)}%` }}
@@ -164,7 +169,6 @@ export default function Statistics() {
                       </CardContent>
                     </Card>
 
-                    {/* By Sector */}
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -182,7 +186,7 @@ export default function Statistics() {
                               <span className="text-sm truncate max-w-[180px]">{sector}</span>
                               <div className="flex items-center gap-2">
                                 <div className="w-20 h-2 bg-secondary rounded-full overflow-hidden">
-                                  <div 
+                                  <div
                                     className="h-full bg-accent rounded-full"
                                     style={{ width: `${(count / (overview?.total_artists || 1)) * 100}%` }}
                                   />
@@ -196,7 +200,6 @@ export default function Statistics() {
                     </Card>
                   </div>
 
-                  {/* Gender by Region */}
                   <Card>
                     <CardHeader>
                       <CardTitle>{language === 'fr' ? 'Genre par Sous-région' : 'Gender by Sub-region'}</CardTitle>
@@ -232,10 +235,9 @@ export default function Statistics() {
                   </Card>
                 </TabsContent>
 
-                {/* Geography Tab */}
+                {/* Geography */}
                 <TabsContent value="geography" className="space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* By Region */}
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -250,7 +252,7 @@ export default function Statistics() {
                               <span className="text-sm">{region}</span>
                               <div className="flex items-center gap-2">
                                 <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
-                                  <div 
+                                  <div
                                     className="h-full bg-primary rounded-full"
                                     style={{ width: `${(count / (overview?.total_artists || 1)) * 100}%` }}
                                   />
@@ -263,7 +265,6 @@ export default function Statistics() {
                       </CardContent>
                     </Card>
 
-                    {/* By Country */}
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -285,7 +286,7 @@ export default function Statistics() {
                   </div>
                 </TabsContent>
 
-                {/* Activity Tab */}
+                {/* Activity */}
                 <TabsContent value="activity" className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card>
@@ -317,7 +318,6 @@ export default function Statistics() {
                     </Card>
                   </div>
 
-                  {/* By Domain */}
                   <Card>
                     <CardHeader>
                       <CardTitle>{language === 'fr' ? 'Artistes par Domaine' : 'Artists by Domain'}</CardTitle>
@@ -335,16 +335,12 @@ export default function Statistics() {
                   </Card>
                 </TabsContent>
               </Tabs>
+
             ) : (
-              /* ===== PUBLIC VIEW (Non-institution) ===== */
+              /* ── PUBLIC VIEW ── */
               <>
-                {/* Public Stats - By Region & Sector */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
-                  >
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}>
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -359,7 +355,7 @@ export default function Statistics() {
                               <span className="text-sm">{region}</span>
                               <div className="flex items-center gap-2">
                                 <div className="w-24 h-2 bg-secondary rounded-full overflow-hidden">
-                                  <div 
+                                  <div
                                     className="h-full bg-primary rounded-full transition-all"
                                     style={{ width: `${(count / (overview?.total_artists || 1)) * 100}%` }}
                                   />
@@ -373,11 +369,7 @@ export default function Statistics() {
                     </Card>
                   </motion.div>
 
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.3 }}
-                  >
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}>
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -392,7 +384,7 @@ export default function Statistics() {
                               <span className="text-sm truncate max-w-[150px]">{sector}</span>
                               <div className="flex items-center gap-2">
                                 <div className="w-24 h-2 bg-secondary rounded-full overflow-hidden">
-                                  <div 
+                                  <div
                                     className="h-full bg-accent rounded-full transition-all"
                                     style={{ width: `${(count / (overview?.total_artists || 1)) * 100}%` }}
                                   />
@@ -407,31 +399,20 @@ export default function Statistics() {
                   </motion.div>
                 </div>
 
-                {/* Institution Access CTA */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.4 }}
-                >
+                {/* CTA for non-institutions */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}>
                   <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
                     <CardContent className="py-12 text-center">
                       <Lock className="w-12 h-12 text-primary mx-auto mb-4" />
                       <h3 className="text-2xl font-bold mb-2">{t.statistics.detailedStats}</h3>
                       <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                        {language === 'fr' 
+                        {language === 'fr'
                           ? 'Accédez aux statistiques détaillées par genre, pays et plus encore. Réservé aux institutions gouvernementales et organisations culturelles.'
                           : 'Access detailed statistics by gender, country and more. Reserved for government institutions and cultural organizations.'}
                       </p>
-                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                        <Button onClick={() => navigate('/register')} className="rounded-full px-8">
-                          {language === 'fr' ? "S'inscrire comme Institution" : 'Register as Institution'}
-                        </Button>
-                        {user && (
-                          <Button variant="outline" onClick={() => navigate('/login')} className="rounded-full px-8">
-                            {language === 'fr' ? 'Se connecter' : 'Sign In'}
-                          </Button>
-                        )}
-                      </div>
+                      <Button onClick={() => navigate('/register')} className="rounded-full px-8">
+                        {language === 'fr' ? "S'inscrire comme Institution" : 'Register as Institution'}
+                      </Button>
                     </CardContent>
                   </Card>
                 </motion.div>

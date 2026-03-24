@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { z } from 'zod';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -356,6 +357,7 @@ export const useAuthStore = create((set, get) => ({
         console.error('Logout error:', e);
       }
     }
+    useInstitutionStore.getState().reset();
     localStorage.removeItem('aca_token');
     set({ user: null, token: null });
   },
@@ -369,6 +371,7 @@ export const useAuthStore = create((set, get) => ({
         headers: { Authorization: `Bearer ${token}` }
       });
       set({ user: response.data });
+      useInstitutionStore.getState().hydrateFromBackend();
     } catch (error) {
       localStorage.removeItem('aca_token');
       set({ user: null, token: null });
@@ -964,4 +967,42 @@ export const usePortfolioStore = create((set) => ({
       return { success: false, error: error.response?.data?.detail || 'Delete failed' };
     }
   }
+  
+}));
+
+export const useInstitutionStore = create((set, get) => ({
+  hasPaid: false,
+  accessCode: null,
+
+  setPayment: (code) => {
+    set({
+      hasPaid: true,
+      accessCode: code,
+    });
+
+    localStorage.setItem("institution_paid", "true");
+    localStorage.setItem("institution_code", code);
+  },
+
+  hydrateFromBackend: () => {
+    const paid = localStorage.getItem("institution_paid");
+    const code = localStorage.getItem("institution_code");
+
+    if (paid && code) {
+      set({
+        hasPaid: true,
+        accessCode: code,
+      });
+    }
+  },
+
+  reset: () => {
+    set({
+      hasPaid: false,
+      accessCode: null,
+    });
+
+    localStorage.removeItem("institution_paid");
+    localStorage.removeItem("institution_code");
+  },
 }));

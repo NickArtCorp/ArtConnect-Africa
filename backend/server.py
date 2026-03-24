@@ -362,11 +362,43 @@ async def require_artist_or_admin(user = Depends(get_current_user)):
     return user
 
 async def require_institution_or_admin(user = Depends(get_current_user)):
+
     """Only institutions and admins can access detailed stats"""
     if user.get("role") not in ["institution", "admin"]:
         raise HTTPException(status_code=403, detail="Institutional access required")
     return user
 
+async def require_paid_institution(user=Depends(get_current_user)):
+    """
+    Dependency Injection — accès stats détaillées.
+    Conditions : role == 'institution' ET has_paid == True ET access_code présent.
+    Les admins contournent la vérification de paiement (accès total).
+    """
+    role = user.get("role")
+ 
+    if role == "admin":
+        return user                                        # Admin bypass
+ 
+    if role != "institution":
+        raise HTTPException(
+            status_code=403,
+            detail="Accès réservé aux institutions."
+        )
+ 
+    if not user.get("has_paid", False):
+        raise HTTPException(
+            status_code=402,                               # Payment Required
+            detail="Paiement requis pour accéder aux statistiques détaillées."
+        )
+ 
+    if not user.get("access_code"):
+        raise HTTPException(
+            status_code=403,
+            detail="Code d'accès manquant. Veuillez contacter le support."
+        )
+ 
+    return user
+ 
 async def require_admin(user = Depends(get_current_user)):
     """Admin only actions"""
     if user.get("role") != "admin":
@@ -374,6 +406,21 @@ async def require_admin(user = Depends(get_current_user)):
     return user
 
 # ============== PYDANTIC MODELS ==============
+class MockCheckoutRequest(BaseModel):
+    """Corps optionnel pour le mock checkout (extensible vers de vrais plans)."""
+    plan: str = "premium"          # "basic" | "premium" | "enterprise"
+    currency: str = "XAF"          # FCFA par défaut
+ 
+ 
+class AccessCodeVerifyRequest(BaseModel):
+    access_code: str
+ 
+ 
+class PaymentStatusResponse(BaseModel):
+    has_paid: bool
+    access_code: Optional[str] = None
+    paid_at: Optional[str] = None
+    plan: Optional[str] = None
 
 class UserCreate(BaseModel):
     email: EmailStr
