@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
@@ -13,11 +14,6 @@ from datetime import datetime, timezone
 import hashlib
 import secrets
 import shutil
-import sqlite3
-import json
-from sqlalchemy import create_engine, Column, String, Integer, Boolean, Text, JSON, DateTime, ForeignKey, Table
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session, relationship
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -30,103 +26,16 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 (UPLOADS_DIR / 'posts').mkdir(exist_ok=True)
 (UPLOADS_DIR / 'avatars').mkdir(exist_ok=True)
 
-# SQLite Connection
-DATABASE_URL = os.environ.get('SQLITE_URL', f"sqlite:///{ROOT_DIR}/artconnect.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+# MongoDB connection
+mongo_url = os.environ['MONGO_URL']
+client = AsyncIOMotorClient(mongo_url)
+db = client[os.environ['DB_NAME']]
 
 # Create the main app
-app = FastAPI(title="Art Connect Africa API (SQLite Mode)")
+app = FastAPI(title="Art Connect Africa API")
+
+# Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
-
-# Dependency to get DB session
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-# ============== SQL MODELS ==============
-
-class User(Base):
-    __tablename__ = "users"
-    id = Column(String, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    password = Column(String)
-    first_name = Column(String)
-    last_name = Column(String)
-    country = Column(String)
-    subregion = Column(String)
-    gender = Column(String)
-    sector = Column(String)
-    domain = Column(String)
-    year_started = Column(Integer)
-    bio = Column(Text, default="")
-    additional_info = Column(Text, default="")
-    website = Column(String, default="")
-    avatar = Column(String)
-    portfolio = Column(JSON, default={"documents": [], "images": [], "videos": []})
-    role = Column(String, default="artist")
-    organization_name = Column(String, nullable=True)
-    is_verified = Column(Boolean, default=False)
-    is_featured = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-class Post(Base):
-    __tablename__ = "posts"
-    id = Column(String, primary_key=True, index=True)
-    author_id = Column(String, ForeignKey("users.id"))
-    content_type = Column(String)
-    text_content = Column(Text, nullable=True)
-    media_url = Column(String, nullable=True)
-    likes_count = Column(Integer, default=0)
-    comments_count = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
-    is_active = Column(Boolean, default=True)
-
-class Like(Base):
-    __tablename__ = "likes"
-    id = Column(String, primary_key=True, index=True)
-    post_id = Column(String, ForeignKey("posts.id"))
-    user_id = Column(String, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-class Comment(Base):
-    __tablename__ = "comments"
-    id = Column(String, primary_key=True, index=True)
-    post_id = Column(String, ForeignKey("posts.id"))
-    author_id = Column(String, ForeignKey("users.id"))
-    content = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    is_active = Column(Boolean, default=True)
-
-class Message(Base):
-    __tablename__ = "messages"
-    id = Column(String, primary_key=True, index=True)
-    sender_id = Column(String, ForeignKey("users.id"))
-    receiver_id = Column(String, ForeignKey("users.id"))
-    content = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    read = Column(Boolean, default=False)
-
-class Project(Base):
-    __tablename__ = "projects"
-    id = Column(String, primary_key=True, index=True)
-    creator_id = Column(String, ForeignKey("users.id"))
-    title = Column(String)
-    description = Column(Text)
-    sector = Column(String)
-    looking_for = Column(JSON, default=[])
-    status = Column(String, default="open")
-    collaborators = Column(JSON, default=[])
-    applications = Column(JSON, default=[])
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-# Create tables
-Base.metadata.create_all(bind=engine)
 
 # Security
 security = HTTPBearer(auto_error=False)
@@ -317,43 +226,32 @@ def sanitize_user(user: dict) -> dict:
     """Remove sensitive fields from user data"""
     safe_fields = ['id', 'first_name', 'last_name', 'country', 'subregion', 'gender', 
                    'sector', 'domain', 'year_started', 'bio', 'additional_info', 
-                   'website', 'avatar', 'role', 'is_featured', 'is_verified', 'created_at', 'organization_name', 'portfolio']
+                   'website', 'avatar', 'role', 'is_featured', 'is_verified', 'created_at']
     return {k: v for k, v in user.items() if k in safe_fields}
 
 # ============== AUTH DEPENDENCIES ==============
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if not credentials:
         raise HTTPException(status_code=401, detail="Not authenticated")
     token = credentials.credentials
     if token not in active_tokens:
         raise HTTPException(status_code=401, detail="Invalid token")
     user_id = active_tokens[token]
-    user = db.query(User).filter(User.id == user_id).first()
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
-    
-    # Convert to dict for compatibility
-    user_dict = {c.name: getattr(user, c.name) for c in user.__table__.columns}
-    if 'password' in user_dict:
-        del user_dict['password']
-    return user_dict
+    return user
 
-async def get_optional_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def get_optional_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if not credentials:
         return None
     token = credentials.credentials
     if token not in active_tokens:
         return None
     user_id = active_tokens[token]
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        return None
-    
-    user_dict = {c.name: getattr(user, c.name) for c in user.__table__.columns}
-    if 'password' in user_dict:
-        del user_dict['password']
-    return user_dict
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    return user
 
 async def require_artist_or_admin(user = Depends(get_current_user)):
     """Only artists and admins can create content"""
@@ -362,43 +260,23 @@ async def require_artist_or_admin(user = Depends(get_current_user)):
     return user
 
 async def require_institution_or_admin(user = Depends(get_current_user)):
-
     """Only institutions and admins can access detailed stats"""
     if user.get("role") not in ["institution", "admin"]:
         raise HTTPException(status_code=403, detail="Institutional access required")
     return user
 
-async def require_paid_institution(user=Depends(get_current_user)):
-    """
-    Dependency Injection — accès stats détaillées.
-    Conditions : role == 'institution' ET has_paid == True ET access_code présent.
-    Les admins contournent la vérification de paiement (accès total).
-    """
-    role = user.get("role")
- 
-    if role == "admin":
-        return user                                        # Admin bypass
- 
-    if role != "institution":
-        raise HTTPException(
-            status_code=403,
-            detail="Accès réservé aux institutions."
-        )
- 
-    if not user.get("has_paid", False):
-        raise HTTPException(
-            status_code=402,                               # Payment Required
-            detail="Paiement requis pour accéder aux statistiques détaillées."
-        )
- 
-    if not user.get("access_code"):
-        raise HTTPException(
-            status_code=403,
-            detail="Code d'accès manquant. Veuillez contacter le support."
-        )
- 
-    return user
- 
+async def require_paid_institution(user = Depends(get_current_user)):
+    """Only institutions that have paid AND have a valid access_code"""
+    if user.get("role") == "admin":
+        return user
+    if user.get("role") != "institution":
+        raise HTTPException(status_code=403, detail="Institutional access required")
+    # Re-fetch fresh data from DB to avoid stale token data
+    fresh_user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password": 0})
+    if not fresh_user or not fresh_user.get("has_paid") or not fresh_user.get("access_code"):
+        raise HTTPException(status_code=403, detail="Payment required to access statistics")
+    return fresh_user
+
 async def require_admin(user = Depends(get_current_user)):
     """Admin only actions"""
     if user.get("role") != "admin":
@@ -406,21 +284,6 @@ async def require_admin(user = Depends(get_current_user)):
     return user
 
 # ============== PYDANTIC MODELS ==============
-class MockCheckoutRequest(BaseModel):
-    """Corps optionnel pour le mock checkout (extensible vers de vrais plans)."""
-    plan: str = "premium"          # "basic" | "premium" | "enterprise"
-    currency: str = "XAF"          # FCFA par défaut
- 
- 
-class AccessCodeVerifyRequest(BaseModel):
-    access_code: str
- 
- 
-class PaymentStatusResponse(BaseModel):
-    has_paid: bool
-    access_code: Optional[str] = None
-    paid_at: Optional[str] = None
-    plan: Optional[str] = None
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -437,7 +300,7 @@ class UserCreate(BaseModel):
     additional_info: Optional[str] = ""
     website: Optional[str] = ""
     role: Literal['artist', 'institution'] = 'artist'
-    organization_name: Optional[str] = None
+    organization_name: Optional[str] = None  # For institutions
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -503,56 +366,62 @@ async def get_genders():
 # ============== AUTH ROUTES ==============
 
 @api_router.post("/auth/register")
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == user_data.email).first()
+async def register(user_data: UserCreate):
+    existing = await db.users.find_one({"email": user_data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
     user_id = str(uuid.uuid4())
-    new_user = User(
-        id=user_id,
-        email=user_data.email,
-        password=hash_password(user_data.password),
-        first_name=user_data.first_name,
-        last_name=user_data.last_name,
-        country=user_data.country,
-        subregion=user_data.subregion,
-        gender=user_data.gender,
-        sector=user_data.sector,
-        domain=user_data.domain,
-        year_started=user_data.year_started,
-        bio=user_data.bio or "",
-        additional_info=user_data.additional_info or "",
-        website=user_data.website or "",
-        avatar=f"https://api.dicebear.com/7.x/initials/svg?seed={user_data.first_name}%20{user_data.last_name}",
-        portfolio={"documents": [], "images": [], "videos": []},
-        role=user_data.role,
-        organization_name=user_data.organization_name if user_data.role == 'institution' else None,
-        is_verified=False,
-        is_featured=False
-    )
+    user_doc = {
+        "id": user_id,
+        "email": user_data.email,
+        "password": hash_password(user_data.password),
+        "first_name": user_data.first_name,
+        "last_name": user_data.last_name,
+        "country": user_data.country,
+        "subregion": user_data.subregion,
+        "gender": user_data.gender,
+        "sector": user_data.sector,
+        "domain": user_data.domain,
+        "year_started": user_data.year_started,
+        "bio": user_data.bio or "",
+        "additional_info": user_data.additional_info or "",
+        "website": user_data.website or "",
+        "avatar": f"https://api.dicebear.com/7.x/initials/svg?seed={user_data.first_name}%20{user_data.last_name}",
+        "portfolio": {"documents": [], "images": [], "videos": []},
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "role": user_data.role,
+        "organization_name": user_data.organization_name if user_data.role == 'institution' else None,
+        "is_verified": False,
+        "is_featured": False,
+        "has_paid": False,
+        "access_code": None,
+        "paid_at": None,
+    }
     
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    await db.users.insert_one(user_doc)
     
     token = generate_token()
     active_tokens[token] = user_id
     
-    user_dict = sanitize_user({c.name: getattr(new_user, c.name) for c in new_user.__table__.columns})
-    return {"token": token, "user": user_dict}
+    user_doc.pop("password")
+    user_doc.pop("_id", None)
+    
+    return {"token": token, "user": user_doc}
 
 @api_router.post("/auth/login")
-async def login(credentials: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == credentials.email).first()
-    if not user or user.password != hash_password(credentials.password):
+async def login(credentials: UserLogin):
+    user = await db.users.find_one({"email": credentials.email})
+    if not user or user["password"] != hash_password(credentials.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     token = generate_token()
-    active_tokens[token] = user.id
+    active_tokens[token] = user["id"]
     
-    user_dict = sanitize_user({c.name: getattr(user, c.name) for c in user.__table__.columns})
-    return {"token": token, "user": user_dict}
+    user.pop("password")
+    user.pop("_id", None)
+    
+    return {"token": token, "user": user}
 
 @api_router.post("/auth/logout")
 async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -575,273 +444,1058 @@ async def get_artists(
     domain: Optional[str] = None,
     gender: Optional[str] = None,
     limit: int = 50,
-    skip: int = 0,
-    db: Session = Depends(get_db)
+    skip: int = 0
 ):
-    query = db.query(User).filter(User.role == "artist")
+    # Only show artists, not institutions or admins
+    query = {"role": "artist"}
     
     if search:
-        s = f"%{search}%"
-        query = query.filter((User.first_name.ilike(s)) | (User.last_name.ilike(s)) | (User.bio.ilike(s)))
-    if country: query = query.filter(User.country == country)
-    if subregion: query = query.filter(User.subregion == subregion)
-    if sector: query = query.filter(User.sector == sector)
-    if domain: query = query.filter(User.domain == domain)
-    if gender: query = query.filter(User.gender == gender)
+        query["$or"] = [
+            {"first_name": {"$regex": search, "$options": "i"}},
+            {"last_name": {"$regex": search, "$options": "i"}},
+            {"bio": {"$regex": search, "$options": "i"}}
+        ]
+    if country:
+        query["country"] = country
+    if subregion:
+        query["subregion"] = subregion
+    if sector:
+        query["sector"] = sector
+    if domain:
+        query["domain"] = domain
+    if gender:
+        query["gender"] = gender
     
-    total = query.count()
-    objs = query.offset(skip).limit(limit).all()
+    artists = await db.users.find(query, {"_id": 0, "password": 0, "email": 0}).skip(skip).limit(limit).to_list(limit)
+    total = await db.users.count_documents(query)
     
-    artists = []
-    for a in objs:
-        d = sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns})
-        artists.append(d)
-        
     return {"artists": artists, "total": total}
 
 @api_router.get("/artists/featured")
-async def get_featured_artists(limit: int = 6, db: Session = Depends(get_db)):
-    objs = db.query(User).filter(User.role == "artist", User.is_featured == True).limit(limit).all()
-    return [sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns}) for a in objs]
+async def get_featured_artists(limit: int = 6):
+    artists = await db.users.find(
+        {"is_featured": True, "role": "artist"}, 
+        {"_id": 0, "password": 0, "email": 0}
+    ).limit(limit).to_list(limit)
+    return artists
 
 @api_router.get("/artists/{artist_id}")
-async def get_artist(artist_id: str, db: Session = Depends(get_db)):
-    a = db.query(User).filter(User.id == artist_id, User.role == "artist").first()
-    if not a:
+async def get_artist(artist_id: str):
+    artist = await db.users.find_one({"id": artist_id, "role": "artist"}, {"_id": 0, "password": 0, "email": 0})
+    if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
-    return sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns})
+    return artist
 
 @api_router.put("/artists/me")
-async def update_profile(update_data: UserUpdate, user = Depends(get_current_user), db: Session = Depends(get_db)):
+async def update_profile(update_data: UserUpdate, user = Depends(get_current_user)):
     update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
     if update_dict:
-        db.query(User).filter(User.id == user["id"]).update(update_dict)
-        db.commit()
+        await db.users.update_one({"id": user["id"]}, {"$set": update_dict})
     
-    updated = db.query(User).filter(User.id == user["id"]).first()
-    return sanitize_user({c.name: getattr(updated, c.name) for c in updated.__table__.columns})
+    updated_user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password": 0})
+    return updated_user
 
 @api_router.post("/artists/me/avatar")
-async def upload_avatar(file: UploadFile = File(...), user = Depends(get_current_user), db: Session = Depends(get_db)):
-    ext = Path(file.filename).suffix.lower()
-    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
-        raise HTTPException(status_code=400, detail="Invalid image type")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    user = Depends(get_current_user)
+):
+    """Upload profile avatar image"""
+    allowed_types = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+    file_ext = Path(file.filename).suffix.lower()
     
-    fid = str(uuid.uuid4())
-    path = UPLOADS_DIR / 'avatars' / f"{fid}{ext}"
-    with open(path, "wb") as buf:
-        shutil.copyfileobj(file.file, buf)
+    if file_ext not in allowed_types:
+        raise HTTPException(status_code=400, detail="Invalid image type. Allowed: jpg, jpeg, png, gif, webp")
     
-    url = f"/uploads/avatars/{fid}{ext}"
-    db.query(User).filter(User.id == user["id"]).update({"avatar": url})
-    db.commit()
-    return {"avatar": url}
+    # Check file size (max 5MB)
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Maximum 5MB")
+    
+    # Save file
+    file_id = str(uuid.uuid4())
+    file_path = UPLOADS_DIR / 'avatars' / f"{file_id}{file_ext}"
+    
+    with open(file_path, "wb") as buffer:
+        buffer.write(contents)
+    
+    avatar_url = f"/uploads/avatars/{file_id}{file_ext}"
+    
+    # Update user avatar
+    await db.users.update_one({"id": user["id"]}, {"$set": {"avatar": avatar_url}})
+    
+    updated_user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password": 0})
+    return updated_user
 
-# ============== POSTS ROUTES ==============
+# ============== FEED / POSTS ROUTES ==============
 
 @api_router.post("/posts")
-async def create_post(post_data: PostCreate, user = Depends(require_artist_or_admin), db: Session = Depends(get_db)):
-    pid = str(uuid.uuid4())
-    new_post = Post(
-        id=pid,
-        author_id=user["id"],
-        content_type=post_data.content_type,
-        text_content=post_data.text_content,
-        media_url=post_data.media_url
-    )
-    db.add(new_post)
-    db.commit()
-    db.refresh(new_post)
+async def create_post(post_data: PostCreate, user = Depends(require_artist_or_admin)):
+    """Create a new post - Artists and Admins only"""
+    post_doc = {
+        "id": str(uuid.uuid4()),
+        "author_id": user["id"],
+        "content_type": post_data.content_type,
+        "text_content": post_data.text_content,
+        "media_url": post_data.media_url,
+        "likes_count": 0,
+        "comments_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "is_active": True
+    }
     
-    d = {c.name: getattr(new_post, c.name) for c in new_post.__table__.columns}
-    d["created_at"] = new_post.created_at.isoformat()
-    d["author"] = user
-    return d
+    await db.posts.insert_one(post_doc)
+    post_doc.pop("_id", None)
+    
+    # Add author info
+    post_doc["author"] = sanitize_user(user)
+    
+    return post_doc
+
+@api_router.post("/posts/upload")
+async def upload_post_media(
+    file: UploadFile = File(...),
+    content_type: str = Form(...),
+    text_content: str = Form(""),
+    user = Depends(require_artist_or_admin)
+):
+    """Upload media and create post - Artists and Admins only"""
+    allowed_image_types = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+    allowed_video_types = [".mp4", ".mov", ".avi", ".webm"]
+    
+    file_ext = Path(file.filename).suffix.lower()
+    
+    if content_type == "image" and file_ext not in allowed_image_types:
+        raise HTTPException(status_code=400, detail="Invalid image type")
+    if content_type == "video" and file_ext not in allowed_video_types:
+        raise HTTPException(status_code=400, detail="Invalid video type")
+    
+    # Save file
+    file_id = str(uuid.uuid4())
+    file_path = UPLOADS_DIR / 'posts' / f"{file_id}{file_ext}"
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    media_url = f"/uploads/posts/{file_id}{file_ext}"
+    
+    # Create post
+    post_doc = {
+        "id": str(uuid.uuid4()),
+        "author_id": user["id"],
+        "content_type": content_type,
+        "text_content": text_content,
+        "media_url": media_url,
+        "likes_count": 0,
+        "comments_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "is_active": True
+    }
+    
+    await db.posts.insert_one(post_doc)
+    post_doc.pop("_id", None)
+    post_doc["author"] = sanitize_user(user)
+    
+    return post_doc
 
 @api_router.get("/posts")
-async def get_posts(limit: int = 20, before: Optional[str] = None, author_id: Optional[str] = None, user = Depends(get_optional_user), db: Session = Depends(get_db)):
-    query = db.query(Post).filter(Post.is_active == True)
-    if before:
-        dt = datetime.fromisoformat(before.replace('Z', '+00:00'))
-        query = query.filter(Post.created_at < dt)
-    if author_id:
-        query = query.filter(Post.author_id == author_id)
-        
-    objs = query.order_by(Post.created_at.desc()).limit(limit).all()
+async def get_posts(
+    limit: int = 20,
+    before: Optional[str] = None,  # Cursor-based pagination
+    author_id: Optional[str] = None,
+    user = Depends(get_optional_user)
+):
+    """Get feed posts - All users can view"""
+    query = {"is_active": True}
     
-    posts = []
-    for p in objs:
-        d = {c.name: getattr(p, c.name) for c in p.__table__.columns}
-        d["created_at"] = p.created_at.isoformat()
-        author = db.query(User).filter(User.id == p.author_id).first()
-        d["author"] = sanitize_user({c.name: getattr(author, c.name) for c in author.__table__.columns}) if author else None
+    if before:
+        query["created_at"] = {"$lt": before}
+    if author_id:
+        query["author_id"] = author_id
+    
+    posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Enrich with author data and like status
+    for post in posts:
+        author = await db.users.find_one({"id": post["author_id"]}, {"_id": 0, "password": 0, "email": 0})
+        post["author"] = author
         
+        # Check if current user liked the post
         if user:
-            liked = db.query(Like).filter(Like.post_id == p.id, Like.user_id == user["id"]).first()
-            d["is_liked"] = liked is not None
+            like = await db.likes.find_one({"post_id": post["id"], "user_id": user["id"]})
+            post["is_liked"] = like is not None
         else:
-            d["is_liked"] = False
-        posts.append(d)
+            post["is_liked"] = False
+    
     return posts
 
 @api_router.get("/posts/{post_id}")
-async def get_post(post_id: str, user = Depends(get_optional_user), db: Session = Depends(get_db)):
-    p = db.query(Post).filter(Post.id == post_id, Post.is_active == True).first()
-    if not p: raise HTTPException(status_code=404, detail="Post not found")
+async def get_post(post_id: str, user = Depends(get_optional_user)):
+    """Get single post with details"""
+    post = await db.posts.find_one({"id": post_id, "is_active": True}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
     
-    d = {c.name: getattr(p, c.name) for c in p.__table__.columns}
-    d["created_at"] = p.created_at.isoformat()
-    author = db.query(User).filter(User.id == p.author_id).first()
-    d["author"] = sanitize_user({c.name: getattr(author, c.name) for c in author.__table__.columns}) if author else None
+    author = await db.users.find_one({"id": post["author_id"]}, {"_id": 0, "password": 0, "email": 0})
+    post["author"] = author
     
     if user:
-        liked = db.query(Like).filter(Like.post_id == p.id, Like.user_id == user["id"]).first()
-        d["is_liked"] = liked is not None
-    else: d["is_liked"] = False
-    return d
+        like = await db.likes.find_one({"post_id": post_id, "user_id": user["id"]})
+        post["is_liked"] = like is not None
+    else:
+        post["is_liked"] = False
+    
+    return post
 
 @api_router.delete("/posts/{post_id}")
-async def delete_post(post_id: str, user = Depends(get_current_user), db: Session = Depends(get_db)):
-    p = db.query(Post).filter(Post.id == post_id).first()
-    if not p: raise HTTPException(status_code=404, detail="Post not found")
-    if p.author_id != user["id"] and user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Unauthorized")
-    p.is_active = False
-    db.commit()
-    return {"message": "Deleted"}
+async def delete_post(post_id: str, user = Depends(get_current_user)):
+    """Delete a post - Owner or Admin only"""
+    post = await db.posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    if post["author_id"] != user["id"] and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.posts.update_one({"id": post_id}, {"$set": {"is_active": False}})
+    return {"message": "Post deleted"}
+
+# ============== LIKES ROUTES ==============
 
 @api_router.post("/posts/{post_id}/like")
-async def toggle_like(post_id: str, user = Depends(require_artist_or_admin), db: Session = Depends(get_db)):
-    p = db.query(Post).filter(Post.id == post_id).first()
-    if not p: raise HTTPException(status_code=404, detail="Post not found")
+async def toggle_like(post_id: str, user = Depends(require_artist_or_admin)):
+    """Toggle like on a post - Artists and Admins only"""
+    post = await db.posts.find_one({"id": post_id, "is_active": True})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
     
-    existing = db.query(Like).filter(Like.post_id == post_id, Like.user_id == user["id"]).first()
-    if existing:
-        db.delete(existing)
-        p.likes_count -= 1
-        db.commit()
-        return {"liked": False, "likes_count": p.likes_count}
+    existing_like = await db.likes.find_one({"post_id": post_id, "user_id": user["id"]})
+    
+    if existing_like:
+        # Unlike
+        await db.likes.delete_one({"id": existing_like["id"]})
+        await db.posts.update_one({"id": post_id}, {"$inc": {"likes_count": -1}})
+        return {"liked": False, "likes_count": post["likes_count"] - 1}
     else:
-        db.add(Like(id=str(uuid.uuid4()), post_id=post_id, user_id=user["id"]))
-        p.likes_count += 1
-        db.commit()
-        return {"liked": True, "likes_count": p.likes_count}
+        # Like
+        like_doc = {
+            "id": str(uuid.uuid4()),
+            "post_id": post_id,
+            "user_id": user["id"],
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.likes.insert_one(like_doc)
+        await db.posts.update_one({"id": post_id}, {"$inc": {"likes_count": 1}})
+        return {"liked": True, "likes_count": post["likes_count"] + 1}
+
+# ============== COMMENTS ROUTES ==============
 
 @api_router.post("/posts/{post_id}/comments")
-async def create_comment(post_id: str, data: CommentCreate, user = Depends(require_artist_or_admin), db: Session = Depends(get_db)):
-    p = db.query(Post).filter(Post.id == post_id).first()
-    if not p: raise HTTPException(status_code=404, detail="Post not found")
+async def create_comment(post_id: str, comment_data: CommentCreate, user = Depends(require_artist_or_admin)):
+    """Create a comment - Artists and Admins only"""
+    post = await db.posts.find_one({"id": post_id, "is_active": True})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
     
-    cid = str(uuid.uuid4())
-    c = Comment(id=cid, post_id=post_id, author_id=user["id"], content=data.content)
-    db.add(c)
-    p.comments_count += 1
-    db.commit()
-    db.refresh(c)
+    comment_doc = {
+        "id": str(uuid.uuid4()),
+        "post_id": post_id,
+        "author_id": user["id"],
+        "content": comment_data.content,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "is_active": True
+    }
     
-    d = {col.name: getattr(c, col.name) for col in c.__table__.columns}
-    d["created_at"] = c.created_at.isoformat()
-    d["author"] = user
-    return d
+    await db.comments.insert_one(comment_doc)
+    await db.posts.update_one({"id": post_id}, {"$inc": {"comments_count": 1}})
+    
+    comment_doc.pop("_id", None)
+    comment_doc["author"] = sanitize_user(user)
+    
+    return comment_doc
 
 @api_router.get("/posts/{post_id}/comments")
-async def get_comments(post_id: str, limit: int = 50, db: Session = Depends(get_db)):
-    objs = db.query(Comment).filter(Comment.post_id == post_id, Comment.is_active == True).order_by(Comment.created_at.asc()).limit(limit).all()
-    res = []
-    for c in objs:
-        d = {col.name: getattr(c, col.name) for col in c.__table__.columns}
-        d["created_at"] = c.created_at.isoformat()
-        a = db.query(User).filter(User.id == c.author_id).first()
-        d["author"] = sanitize_user({col.name: getattr(a, col.name) for col in a.__table__.columns}) if a else None
-        res.append(d)
-    return res
+async def get_comments(post_id: str, limit: int = 50):
+    """Get comments for a post - All users can view"""
+    comments = await db.comments.find(
+        {"post_id": post_id, "is_active": True}, 
+        {"_id": 0}
+    ).sort("created_at", 1).limit(limit).to_list(limit)
+    
+    for comment in comments:
+        author = await db.users.find_one({"id": comment["author_id"]}, {"_id": 0, "password": 0, "email": 0})
+        comment["author"] = author
+    
+    return comments
+
+@api_router.delete("/comments/{comment_id}")
+async def delete_comment(comment_id: str, user = Depends(get_current_user)):
+    """Delete a comment - Owner or Admin only"""
+    comment = await db.comments.find_one({"id": comment_id})
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    if comment["author_id"] != user["id"] and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.comments.update_one({"id": comment_id}, {"$set": {"is_active": False}})
+    await db.posts.update_one({"id": comment["post_id"]}, {"$inc": {"comments_count": -1}})
+    
+    return {"message": "Comment deleted"}
 
 # ============== MESSAGES ROUTES ==============
 
 @api_router.post("/messages")
-async def send_msg(data: MessageCreate, user = Depends(get_current_user), db: Session = Depends(get_db)):
-    mid = str(uuid.uuid4())
-    m = Message(id=mid, sender_id=user["id"], receiver_id=data.receiver_id, content=data.content)
-    db.add(m)
-    db.commit()
-    return {"message": "Sent"}
+async def send_message(message_data: MessageCreate, user = Depends(require_artist_or_admin)):
+    """Send a message - Artists and Admins only (Institutions cannot message)"""
+    receiver = await db.users.find_one({"id": message_data.receiver_id})
+    if not receiver:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    
+    if message_data.receiver_id == user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot send message to yourself")
+    
+    message_doc = {
+        "id": str(uuid.uuid4()),
+        "sender_id": user["id"],
+        "receiver_id": message_data.receiver_id,
+        "content": message_data.content,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "read": False
+    }
+    
+    await db.messages.insert_one(message_doc)
+    message_doc.pop("_id", None)
+    
+    return message_doc
 
 @api_router.get("/messages/conversations")
-async def get_convs(user = Depends(get_current_user), db: Session = Depends(get_db)):
-    uid = user["id"]
-    msgs = db.query(Message).filter((Message.sender_id == uid) | (Message.receiver_id == uid)).order_by(Message.created_at.desc()).all()
-    convs = {}
-    for m in msgs:
-        other = m.receiver_id if m.sender_id == uid else m.sender_id
-        if other not in convs:
-            u = db.query(User).filter(User.id == other).first()
-            if u:
-                convs[other] = {
-                    "user": sanitize_user({c.name: getattr(u, c.name) for c in u.__table__.columns}),
-                    "last_message": {"content": m.content, "created_at": m.created_at.isoformat()},
-                    "unread_count": 1 if m.receiver_id == uid and not m.read else 0
+async def get_conversations(user = Depends(get_current_user)):
+    user_id = user["id"]
+    
+    pipeline = [
+        {"$match": {"$or": [{"sender_id": user_id}, {"receiver_id": user_id}]}},
+        {"$sort": {"created_at": -1}},
+        {"$group": {
+            "_id": {
+                "$cond": [
+                    {"$eq": ["$sender_id", user_id]},
+                    "$receiver_id",
+                    "$sender_id"
+                ]
+            },
+            "last_message": {"$first": "$$ROOT"},
+            "unread_count": {
+                "$sum": {
+                    "$cond": [
+                        {"$and": [
+                            {"$eq": ["$receiver_id", user_id]},
+                            {"$eq": ["$read", False]}
+                        ]},
+                        1,
+                        0
+                    ]
                 }
-    return list(convs.values())
+            }
+        }}
+    ]
+    
+    conversations_raw = await db.messages.aggregate(pipeline).to_list(100)
+    
+    conversations = []
+    for conv in conversations_raw:
+        other_user_id = conv["_id"]
+        other_user = await db.users.find_one({"id": other_user_id}, {"_id": 0, "password": 0, "email": 0})
+        if other_user:
+            last_msg = conv["last_message"]
+            last_msg.pop("_id", None)
+            conversations.append({
+                "user": other_user,
+                "last_message": last_msg,
+                "unread_count": conv["unread_count"]
+            })
+    
+    conversations.sort(key=lambda x: x["last_message"]["created_at"] if x["last_message"] else "", reverse=True)
+    
+    return conversations
+
+@api_router.get("/messages/{other_user_id}")
+async def get_messages(other_user_id: str, user = Depends(get_current_user)):
+    user_id = user["id"]
+    
+    await db.messages.update_many(
+        {"sender_id": other_user_id, "receiver_id": user_id, "read": False},
+        {"$set": {"read": True}}
+    )
+    
+    messages = await db.messages.find(
+        {"$or": [
+            {"sender_id": user_id, "receiver_id": other_user_id},
+            {"sender_id": other_user_id, "receiver_id": user_id}
+        ]},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(500)
+    
+    return messages
+
+# ============== PORTFOLIO ROUTES ==============
+
+@api_router.post("/portfolio/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    file_type: str = Form(...),
+    title: str = Form(""),
+    description: str = Form(""),
+    user = Depends(require_artist_or_admin)
+):
+    allowed_doc_types = [".pdf", ".doc", ".docx"]
+    allowed_img_types = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+    
+    file_ext = Path(file.filename).suffix.lower()
+    
+    if file_type == "document" and file_ext not in allowed_doc_types:
+        raise HTTPException(status_code=400, detail="Invalid document type")
+    if file_type == "image" and file_ext not in allowed_img_types:
+        raise HTTPException(status_code=400, detail="Invalid image type")
+    
+    file_id = str(uuid.uuid4())
+    folder = "documents" if file_type == "document" else "images"
+    file_path = UPLOADS_DIR / folder / f"{file_id}{file_ext}"
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    file_record = {
+        "id": file_id,
+        "filename": file.filename,
+        "file_type": file_type,
+        "file_ext": file_ext,
+        "title": title or file.filename,
+        "description": description,
+        "url": f"/uploads/{folder}/{file_id}{file_ext}",
+        "uploaded_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    portfolio_key = f"portfolio.{file_type}s"
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$push": {portfolio_key: file_record}}
+    )
+    
+    return file_record
+
+@api_router.post("/portfolio/video")
+async def add_video_link(
+    url: str = Form(...),
+    title: str = Form(""),
+    description: str = Form(""),
+    user = Depends(require_artist_or_admin)
+):
+    video_record = {
+        "id": str(uuid.uuid4()),
+        "url": url,
+        "title": title,
+        "description": description,
+        "added_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$push": {"portfolio.videos": video_record}}
+    )
+    
+    return video_record
+
+@api_router.delete("/portfolio/{item_type}/{item_id}")
+async def delete_portfolio_item(item_type: str, item_id: str, user = Depends(get_current_user)):
+    if item_type not in ["documents", "images", "videos"]:
+        raise HTTPException(status_code=400, detail="Invalid item type")
+    
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$pull": {f"portfolio.{item_type}": {"id": item_id}}}
+    )
+    
+    return {"message": "Item deleted"}
 
 # ============== PROJECTS ROUTES ==============
 
 @api_router.post("/projects")
-async def create_proj(data: ProjectCreate, user = Depends(require_artist_or_admin), db: Session = Depends(get_db)):
-    pid = str(uuid.uuid4())
-    p = Project(id=pid, creator_id=user["id"], title=data.title, description=data.description, sector=data.sector, looking_for=data.looking_for)
-    db.add(p)
-    db.commit()
-    return {"id": pid}
+async def create_project(project_data: ProjectCreate, user = Depends(require_artist_or_admin)):
+    project_doc = {
+        "id": str(uuid.uuid4()),
+        "creator_id": user["id"],
+        "title": project_data.title,
+        "description": project_data.description,
+        "sector": project_data.sector,
+        "looking_for": project_data.looking_for,
+        "status": project_data.status,
+        "collaborators": [],
+        "applications": [],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.projects.insert_one(project_doc)
+    project_doc.pop("_id", None)
+    
+    return project_doc
 
 @api_router.get("/projects")
-async def get_projs(sector: Optional[str] = None, skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
-    q = db.query(Project).filter(Project.status == "open")
-    if sector: q = q.filter(Project.sector == sector)
-    objs = q.offset(skip).limit(limit).all()
-    res = []
-    for o in objs:
-        d = {c.name: getattr(o, c.name) for c in o.__table__.columns}
-        u = db.query(User).filter(User.id == o.creator_id).first()
-        d["creator"] = sanitize_user({c.name: getattr(u, c.name) for c in u.__table__.columns}) if u else None
-        res.append(d)
-    return res
+async def get_projects(
+    sector: Optional[str] = None,
+    status: str = "open",
+    limit: int = 20,
+    skip: int = 0
+):
+    query = {"status": status}
+    if sector:
+        query["sector"] = sector
+    
+    projects = await db.projects.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    
+    for project in projects:
+        creator = await db.users.find_one({"id": project["creator_id"]}, {"_id": 0, "password": 0, "email": 0})
+        project["creator"] = creator
+    
+    return projects
+
+@api_router.post("/projects/{project_id}/apply")
+async def apply_to_project(project_id: str, message: str = "", user = Depends(require_artist_or_admin)):
+    project = await db.projects.find_one({"id": project_id})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    if project["creator_id"] == user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot apply to your own project")
+    
+    application = {
+        "user_id": user["id"],
+        "message": message,
+        "applied_at": datetime.now(timezone.utc).isoformat(),
+        "status": "pending"
+    }
+    
+    await db.projects.update_one(
+        {"id": project_id},
+        {"$push": {"applications": application}}
+    )
+    
+    return {"message": "Application submitted"}
+
+# ============== PAYMENT ROUTES ==============
+
+@api_router.post("/payments/mock-checkout")
+async def mock_checkout(user = Depends(get_current_user)):
+    """Simulate a payment for institution access"""
+    if user.get("role") != "institution":
+        raise HTTPException(status_code=403, detail="Only institutions can purchase access")
+
+    # If already paid, return existing code
+    fresh_user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password": 0})
+    if fresh_user and fresh_user.get("has_paid") and fresh_user.get("access_code"):
+        return {
+            "access_code": fresh_user["access_code"],
+            "paid_at": fresh_user["paid_at"],
+            "message": "Access already active"
+        }
+
+    access_code = str(uuid.uuid4())
+    paid_at = datetime.now(timezone.utc).isoformat()
+
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"has_paid": True, "access_code": access_code, "paid_at": paid_at}}
+    )
+
+    return {
+        "access_code": access_code,
+        "paid_at": paid_at,
+        "message": "Payment successful — access granted"
+    }
+
+@api_router.get("/payments/status")
+async def get_payment_status(user = Depends(get_current_user)):
+    """Get current institution payment status"""
+    fresh_user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password": 0})
+    return {
+        "has_paid": fresh_user.get("has_paid", False),
+        "access_code": fresh_user.get("access_code"),
+        "paid_at": fresh_user.get("paid_at"),
+    }
 
 # ============== STATISTICS ROUTES ==============
 
 @api_router.get("/statistics/overview")
-async def stats_overview(db: Session = Depends(get_db)):
-    artists = db.query(User).filter(User.role == "artist").all()
-    sectors = {}
-    for a in artists: sectors[a.sector] = sectors.get(a.sector, 0) + 1
+async def get_statistics_overview(user = Depends(get_optional_user)):
+    """Public overview statistics"""
+    total_artists = await db.users.count_documents({"role": "artist"})
+    total_posts = await db.posts.count_documents({"is_active": True})
+    total_projects = await db.projects.count_documents({})
+    
+    # Interactions
+    total_likes = await db.likes.count_documents({})
+    total_comments = await db.comments.count_documents({"is_active": True})
+    
+    # By sector
+    sector_pipeline = [
+        {"$match": {"role": "artist"}},
+        {"$group": {"_id": "$sector", "count": {"$sum": 1}}}
+    ]
+    sectors = await db.users.aggregate(sector_pipeline).to_list(20)
+    
+    # By subregion
+    subregion_pipeline = [
+        {"$match": {"role": "artist"}},
+        {"$group": {"_id": "$subregion", "count": {"$sum": 1}}}
+    ]
+    subregions = await db.users.aggregate(subregion_pipeline).to_list(10)
+    
     return {
-        "total_artists": len(artists),
-        "total_posts": db.query(Post).count(),
-        "total_projects": db.query(Project).count(),
-        "by_sector": sectors
+        "total_artists": total_artists,
+        "total_posts": total_posts,
+        "total_projects": total_projects,
+        "total_interactions": total_likes + total_comments,
+        "by_sector": {s["_id"]: s["count"] for s in sectors if s["_id"]},
+        "by_subregion": {s["_id"]: s["count"] for s in subregions if s["_id"]}
     }
+
+@api_router.get("/statistics/detailed")
+async def get_detailed_statistics(user = Depends(require_paid_institution)):
+    """Detailed statistics - Institutions and Admins only"""
+    
+    # Gender distribution
+    gender_pipeline = [
+        {"$match": {"role": "artist"}},
+        {"$group": {"_id": "$gender", "count": {"$sum": 1}}}
+    ]
+    genders = await db.users.aggregate(gender_pipeline).to_list(10)
+    
+    # By country
+    country_pipeline = [
+        {"$match": {"role": "artist"}},
+        {"$group": {"_id": "$country", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+    countries = await db.users.aggregate(country_pipeline).to_list(60)
+    
+    # By domain
+    domain_pipeline = [
+        {"$match": {"role": "artist"}},
+        {"$group": {"_id": "$domain", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+    domains = await db.users.aggregate(domain_pipeline).to_list(50)
+    
+    # Gender by country
+    gender_country_pipeline = [
+        {"$match": {"role": "artist"}},
+        {"$group": {
+            "_id": {"country": "$country", "gender": "$gender"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    gender_by_country = await db.users.aggregate(gender_country_pipeline).to_list(300)
+    
+    # Gender by subregion
+    gender_subregion_pipeline = [
+        {"$match": {"role": "artist"}},
+        {"$group": {
+            "_id": {"subregion": "$subregion", "gender": "$gender"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    gender_by_subregion = await db.users.aggregate(gender_subregion_pipeline).to_list(50)
+    
+    # Activity metrics
+    total_posts = await db.posts.count_documents({"is_active": True})
+    total_likes = await db.likes.count_documents({})
+    total_comments = await db.comments.count_documents({"is_active": True})
+    
+    return {
+        "by_gender": {g["_id"]: g["count"] for g in genders if g["_id"]},
+        "by_country": {c["_id"]: c["count"] for c in countries if c["_id"]},
+        "by_domain": {d["_id"]: d["count"] for d in domains if d["_id"]},
+        "gender_by_country": gender_by_country,
+        "gender_by_subregion": gender_by_subregion,
+        "activity": {
+            "total_posts": total_posts,
+            "total_likes": total_likes,
+            "total_comments": total_comments
+        }
+    }
+
+# ============== ADMIN ROUTES ==============
+
+@api_router.get("/admin/users")
+async def admin_get_users(
+    role: Optional[str] = None,
+    limit: int = 50,
+    skip: int = 0,
+    user = Depends(require_admin)
+):
+    """Admin: Get all users"""
+    query = {}
+    if role:
+        query["role"] = role
+    
+    users = await db.users.find(query, {"_id": 0, "password": 0}).skip(skip).limit(limit).to_list(limit)
+    total = await db.users.count_documents(query)
+    
+    return {"users": users, "total": total}
+
+@api_router.put("/admin/users/{user_id}/role")
+async def admin_update_role(user_id: str, role: str, user = Depends(require_admin)):
+    """Admin: Update user role"""
+    if role not in ROLES:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    
+    await db.users.update_one({"id": user_id}, {"$set": {"role": role}})
+    return {"message": "Role updated"}
+
+@api_router.put("/admin/users/{user_id}/featured")
+async def admin_toggle_featured(user_id: str, user = Depends(require_admin)):
+    """Admin: Toggle featured status"""
+    target = await db.users.find_one({"id": user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    new_status = not target.get("is_featured", False)
+    await db.users.update_one({"id": user_id}, {"$set": {"is_featured": new_status}})
+    
+    return {"is_featured": new_status}
+
+@api_router.delete("/admin/posts/{post_id}")
+async def admin_delete_post(post_id: str, user = Depends(require_admin)):
+    """Admin: Force delete any post"""
+    await db.posts.update_one({"id": post_id}, {"$set": {"is_active": False}})
+    return {"message": "Post deleted"}
 
 # ============== SEED DATA ==============
 
 @api_router.post("/seed")
-async def seed(db: Session = Depends(get_db)):
-    if db.query(User).count() > 0: return {"message": "Seeded"}
-    admin = User(id=str(uuid.uuid4()), email="admin@artconnect.africa", password=hash_password("admin123"), first_name="Admin", last_name="ACA", role="admin")
-    db.add(admin)
-    db.commit()
-    return {"message": "Success"}
+async def seed_data():
+    existing = await db.users.count_documents({})
+    if existing > 0:
+        return {"message": "Data already seeded"}
+    
+    sample_artists = [
+        {
+            "id": str(uuid.uuid4()),
+            "email": "amara.diallo@artconnect.africa",
+            "password": hash_password("password123"),
+            "first_name": "Amara",
+            "last_name": "Diallo",
+            "country": "Senegal",
+            "subregion": "West Africa",
+            "gender": "Female",
+            "sector": "Visual Arts",
+            "domain": "Painting",
+            "year_started": 2015,
+            "bio": "Peintre contemporaine explorant l'identité africaine à travers des couleurs vibrantes et des motifs traditionnels revisités.",
+            "additional_info": "Expositions à Dakar, Paris et New York",
+            "avatar": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=400",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "artist",
+            "is_featured": True,
+            "is_verified": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "email": "kwame.asante@artconnect.africa",
+            "password": hash_password("password123"),
+            "first_name": "Kwame",
+            "last_name": "Asante",
+            "country": "Ghana",
+            "subregion": "West Africa",
+            "gender": "Male",
+            "sector": "Music",
+            "domain": "Afrobeat",
+            "year_started": 2012,
+            "bio": "Producteur musical mélangeant les rythmes traditionnels ghanéens avec l'afrobeat moderne.",
+            "additional_info": "Collaborations avec plusieurs artistes internationaux",
+            "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "artist",
+            "is_featured": True,
+            "is_verified": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "email": "fatou.barry@artconnect.africa",
+            "password": hash_password("password123"),
+            "first_name": "Fatou",
+            "last_name": "Barry",
+            "country": "Côte d'Ivoire",
+            "subregion": "West Africa",
+            "gender": "Female",
+            "sector": "Fashion & Design",
+            "domain": "Fashion Design",
+            "year_started": 2018,
+            "bio": "Créatrice de mode alliant tissus africains traditionnels et coupes contemporaines.",
+            "additional_info": "Défilés à Abidjan Fashion Week",
+            "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "artist",
+            "is_featured": True,
+            "is_verified": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "email": "youssef.benali@artconnect.africa",
+            "password": hash_password("password123"),
+            "first_name": "Youssef",
+            "last_name": "Ben Ali",
+            "country": "Morocco",
+            "subregion": "North Africa",
+            "gender": "Male",
+            "sector": "Cinema & Audiovisual",
+            "domain": "Film Direction",
+            "year_started": 2010,
+            "bio": "Réalisateur de films documentaires sur le patrimoine culturel maghrébin.",
+            "additional_info": "Prix du meilleur documentaire au FESPACO",
+            "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "artist",
+            "is_featured": True,
+            "is_verified": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "email": "amina.mwangi@artconnect.africa",
+            "password": hash_password("password123"),
+            "first_name": "Amina",
+            "last_name": "Mwangi",
+            "country": "Kenya",
+            "subregion": "East Africa",
+            "gender": "Female",
+            "sector": "Literature",
+            "domain": "Poetry",
+            "year_started": 2016,
+            "bio": "Poétesse et auteure explorant les thèmes de la femme africaine moderne.",
+            "additional_info": "Publications dans plusieurs anthologies panafricaines",
+            "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "artist",
+            "is_featured": True,
+            "is_verified": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "email": "thabo.molefe@artconnect.africa",
+            "password": hash_password("password123"),
+            "first_name": "Thabo",
+            "last_name": "Molefe",
+            "country": "South Africa",
+            "subregion": "Southern Africa",
+            "gender": "Male",
+            "sector": "Digital Arts",
+            "domain": "3D Art",
+            "year_started": 2019,
+            "bio": "Artiste 3D créant des œuvres afrofuturistes mêlant tradition et technologie.",
+            "additional_info": "NFT Artist avec ventes sur les grandes plateformes",
+            "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "artist",
+            "is_featured": True,
+            "is_verified": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "email": "grace.okafor@artconnect.africa",
+            "password": hash_password("password123"),
+            "first_name": "Grace",
+            "last_name": "Okafor",
+            "country": "Nigeria",
+            "subregion": "West Africa",
+            "gender": "Female",
+            "sector": "Performing Arts",
+            "domain": "Dance",
+            "year_started": 2014,
+            "bio": "Danseuse et chorégraphe spécialisée dans la danse contemporaine africaine.",
+            "additional_info": "Directrice d'une compagnie de danse à Lagos",
+            "avatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "artist",
+            "is_featured": False,
+            "is_verified": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "email": "moussa.traore@artconnect.africa",
+            "password": hash_password("password123"),
+            "first_name": "Moussa",
+            "last_name": "Traoré",
+            "country": "Mali",
+            "subregion": "West Africa",
+            "gender": "Male",
+            "sector": "Craftsmanship",
+            "domain": "Woodworking",
+            "year_started": 2008,
+            "bio": "Maître artisan sculpteur perpétuant les traditions de sculpture malienne.",
+            "additional_info": "Formateur au Centre Artisanal de Bamako",
+            "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "artist",
+            "is_featured": False,
+            "is_verified": True
+        },
+        # Institution account
+        {
+            "id": str(uuid.uuid4()),
+            "email": "culture@gov.sn",
+            "password": hash_password("institution123"),
+            "first_name": "Ministère",
+            "last_name": "Culture Sénégal",
+            "country": "Senegal",
+            "subregion": "West Africa",
+            "gender": "Prefer not to say",
+            "sector": "Cultural Heritage",
+            "domain": "Museum Curation",
+            "year_started": 2020,
+            "bio": "Ministère de la Culture et de la Communication du Sénégal",
+            "additional_info": "",
+            "organization_name": "Ministère de la Culture du Sénégal",
+            "avatar": "https://api.dicebear.com/7.x/initials/svg?seed=MC",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "institution",
+            "is_featured": False,
+            "is_verified": True
+        },
+        # Admin account
+        {
+            "id": str(uuid.uuid4()),
+            "email": "admin@artconnect.africa",
+            "password": hash_password("admin123"),
+            "first_name": "Admin",
+            "last_name": "ArtConnect",
+            "country": "Senegal",
+            "subregion": "West Africa",
+            "gender": "Prefer not to say",
+            "sector": "Digital Arts",
+            "domain": "Web Design",
+            "year_started": 2024,
+            "bio": "Administrateur de la plateforme Art Connect Africa",
+            "additional_info": "",
+            "avatar": "https://api.dicebear.com/7.x/initials/svg?seed=AA",
+            "portfolio": {"documents": [], "images": [], "videos": []},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "role": "admin",
+            "is_featured": False,
+            "is_verified": True
+        }
+    ]
+    
+    await db.users.insert_many(sample_artists)
+    
+    # Create sample posts
+    artist_ids = [a["id"] for a in sample_artists if a["role"] == "artist"]
+    sample_posts = [
+        {
+            "id": str(uuid.uuid4()),
+            "author_id": artist_ids[0],  # Amara
+            "content_type": "image",
+            "text_content": "Nouvelle toile terminée aujourd'hui ! 🎨 Inspirée par les couleurs du marché de Dakar.",
+            "media_url": "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=800",
+            "likes_count": 24,
+            "comments_count": 5,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_active": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "author_id": artist_ids[1],  # Kwame
+            "content_type": "video",
+            "text_content": "Session studio d'hier soir. Nouveau track Afrobeat en préparation ! 🎵",
+            "media_url": "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800",
+            "likes_count": 45,
+            "comments_count": 12,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_active": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "author_id": artist_ids[2],  # Fatou
+            "content_type": "image",
+            "text_content": "Sneak peek de la nouvelle collection ! Wax meets modernité. 👗",
+            "media_url": "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=800",
+            "likes_count": 67,
+            "comments_count": 8,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_active": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "author_id": artist_ids[4],  # Amina
+            "content_type": "text",
+            "text_content": "\"L'Afrique n'est pas un pays, c'est un univers de cultures, de langues, de rêves et de possibilités infinies.\"\n\n- Extrait de mon nouveau recueil 📚",
+            "media_url": None,
+            "likes_count": 89,
+            "comments_count": 15,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_active": True
+        }
+    ]
+    
+    await db.posts.insert_many(sample_posts)
+    
+    # Create sample project
+    sample_project = {
+        "id": str(uuid.uuid4()),
+        "creator_id": artist_ids[0],
+        "title": "Exposition Panafricaine 2026",
+        "description": "Recherche artistes pour une exposition collective célébrant l'art contemporain africain.",
+        "sector": "Visual Arts",
+        "looking_for": ["Sculpture", "Photography", "Mixed Media"],
+        "status": "open",
+        "collaborators": [],
+        "applications": [],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.projects.insert_one(sample_project)
+    
+    return {"message": "Sample data seeded successfully", "artists": len(sample_artists), "posts": len(sample_posts)}
+
+# ============== HEALTH CHECK ==============
+
+@api_router.get("/")
+async def root():
+    return {"message": "Art Connect Africa API is running", "version": "2.0"}
+
+@api_router.get("/health")
+async def health():
+    return {"status": "healthy"}
 
 # ============== APP SETUP ==============
 
-@api_router.get("/")
-async def root(): return {"message": "Art Connect Africa API (SQLite Mode)"}
-
-@api_router.get("/health")
-async def health(): return {"status": "ok"}
-
 app.include_router(api_router)
+# Mount uploads under /api/uploads so it goes through the API routing
 app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    client.close()

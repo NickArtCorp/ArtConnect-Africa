@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore, useLanguageStore } from '@/store';
+import { useAuthStore, useLanguageStore, useInstitutionStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, isLoading, error } = useAuthStore();
+  const { hydrateFromBackend, hasPaid } = useInstitutionStore();
   const { language, t } = useLanguageStore();
   const navigate = useNavigate();
 
@@ -18,7 +19,15 @@ export default function Login() {
     e.preventDefault();
     const result = await login(email, password);
     if (result.success) {
-      navigate('/dashboard');
+      const user = result.user || useAuthStore.getState().user;
+      if (user?.role === 'institution') {
+        // Hydrate payment state from backend then redirect accordingly
+        await hydrateFromBackend();
+        const paid = useInstitutionStore.getState().hasPaid;
+        navigate(paid ? '/statistics' : '/checkout');
+      } else {
+        navigate('/dashboard');
+      }
     }
   };
 
@@ -49,43 +58,25 @@ export default function Login() {
           <div className="space-y-2">
             <Label htmlFor="email">{t.auth.email}</Label>
             <Input
-              id="email"
-              type="email"
-              value={email}
+              id="email" type="email" value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="artist@example.com"
-              required
-              data-testid="login-email"
+              placeholder="artist@example.com" required data-testid="login-email"
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="password">{t.auth.password}</Label>
             <Input
-              id="password"
-              type="password"
-              value={password}
+              id="password" type="password" value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              data-testid="login-password"
+              placeholder="••••••••" required data-testid="login-password"
             />
           </div>
 
-          <Button
-            type="submit"
-            className="w-full rounded-full"
-            disabled={isLoading}
-            data-testid="login-submit"
-          >
+          <Button type="submit" className="w-full rounded-full" disabled={isLoading} data-testid="login-submit">
             {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {language === 'fr' ? 'Connexion...' : 'Signing in...'}
-              </>
-            ) : (
-              t.auth.login
-            )}
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{language === 'fr' ? 'Connexion...' : 'Signing in...'}</>
+            ) : t.auth.login}
           </Button>
         </form>
 
@@ -97,10 +88,11 @@ export default function Login() {
         </p>
 
         {/* Demo credentials */}
-        <div className="mt-6 p-4 bg-secondary/50 rounded-lg text-sm">
-          <p className="font-medium mb-2">{language === 'fr' ? 'Compte de démonstration :' : 'Demo account:'}</p>
-          <p className="text-muted-foreground">Email: amara.diallo@artconnect.africa</p>
-          <p className="text-muted-foreground">Password: password123</p>
+        <div className="mt-6 p-4 bg-secondary/50 rounded-lg text-sm space-y-1">
+          <p className="font-medium mb-2">{language === 'fr' ? 'Comptes de démonstration :' : 'Demo accounts:'}</p>
+          <p className="text-muted-foreground">🎨 amara.diallo@artconnect.africa / password123</p>
+          <p className="text-muted-foreground">🏛 mc@artconnect.africa / institution123</p>
+          <p className="text-muted-foreground">🔑 admin@artconnect.africa / admin123</p>
         </div>
       </motion.div>
     </div>

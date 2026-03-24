@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAuthStore, useThemeStore, useReferenceStore } from "@/store";
+import { useAuthStore, useThemeStore, useReferenceStore, useInstitutionStore } from "@/store";
 import { Navbar } from "@/components/Navbar";
 import { Toaster } from "sonner";
 
@@ -17,6 +17,7 @@ import Settings from "@/pages/Settings";
 import Projects from "@/pages/Projects";
 import Statistics from "@/pages/Statistics";
 import Feed from "@/pages/Feed";
+import Checkout from "@/pages/Checkout";
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -27,16 +28,27 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+// Institution statistics route — redirects unpaid institutions to checkout
+function InstitutionStatsRoute({ children }) {
+  const { user, token } = useAuthStore();
+  const { hasPaid } = useInstitutionStore();
+  if (!token) return <Navigate to="/login" replace />;
+  if (user?.role === 'institution' && !hasPaid) return <Navigate to="/checkout" replace />;
+  return children;
+}
+
 function App() {
   const { fetchUser, token } = useAuthStore();
   const { theme } = useThemeStore();
   const { fetchReferenceData } = useReferenceStore();
+  const { hydrateFromBackend } = useInstitutionStore();
 
   useEffect(() => {
     if (token) {
       fetchUser();
+      hydrateFromBackend();
     }
-  }, [token, fetchUser]);
+  }, [token, fetchUser, hydrateFromBackend]);
 
   useEffect(() => {
     // Apply theme to document
@@ -73,7 +85,12 @@ function App() {
           <Route path="/discover" element={<Discover />} />
           <Route path="/artist/:id" element={<ArtistProfile />} />
           <Route path="/projects" element={<Projects />} />
-          <Route path="/statistics" element={<Statistics />} />
+          <Route path="/statistics" element={
+            <InstitutionStatsRoute>
+              <Statistics />
+            </InstitutionStatsRoute>
+          } />
+          <Route path="/checkout" element={<Checkout />} />
           <Route path="/feed" element={<Feed />} />
           <Route 
             path="/dashboard" 
