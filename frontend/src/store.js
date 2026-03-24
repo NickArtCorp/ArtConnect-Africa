@@ -308,7 +308,15 @@ export const useAuthStore = create((set, get) => ({
       set({ user, token, isLoading: false });
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.detail || 'Login failed';
+      let message = 'Login failed';
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (typeof detail === 'string') {
+          message = detail;
+        } else if (Array.isArray(detail)) {
+          message = detail.map(err => `${err.loc[err.loc.length - 1]}: ${err.msg}`).join(', ');
+        }
+      }
       set({ error: message, isLoading: false });
       return { success: false, error: message };
     }
@@ -323,7 +331,15 @@ export const useAuthStore = create((set, get) => ({
       set({ user, token, isLoading: false });
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.detail || 'Registration failed';
+      let message = 'Registration failed';
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (typeof detail === 'string') {
+          message = detail;
+        } else if (Array.isArray(detail)) {
+          message = detail.map(err => `${err.loc[err.loc.length - 1]}: ${err.msg}`).join(', ');
+        }
+      }
       set({ error: message, isLoading: false });
       return { success: false, error: message };
     }
