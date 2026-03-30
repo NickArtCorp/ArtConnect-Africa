@@ -19,21 +19,41 @@ import Statistics from "@/pages/Statistics";
 import Feed from "@/pages/Feed";
 import Checkout from "@/pages/Checkout";
 
-// Protected Route wrapper
 function ProtectedRoute({ children }) {
   const { token } = useAuthStore();
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
+  // ✅ FIX 4a: Only redirect when we KNOW there's no token. A null token on
+  // first render (before the store rehydrates from localStorage) would cause a
+  // flash-redirect to /login. Zustand-persist rehydrates synchronously in most
+  // setups, so this check is safe — but if you ever switch to async storage
+  // (e.g. AsyncStorage on RN) wrap this in a hydration guard too.
+  if (!token) return <Navigate to="/login" replace />;
   return children;
 }
 
-// Institution statistics route — redirects unpaid institutions to checkout
 function InstitutionStatsRoute({ children }) {
   const { user, token } = useAuthStore();
   const { hasPaid } = useInstitutionStore();
+
+  // ✅ FIX 4b: No token → send to login
   if (!token) return <Navigate to="/login" replace />;
+
+  // ✅ FIX 4c: Token exists but user object hasn't arrived from fetchUser() yet.
+  // Returning null caused React to render nothing, which triggered an immediate
+  // re-evaluation of the route — sometimes entering an infinite render loop
+  // when combined with strict mode or fast re-renders.
+  // Rendering a minimal loading indicator breaks the loop and gives fetchUser()
+  // time to resolve before we decide whether to redirect.
+  if (token && user === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  // ✅ FIX 4d: Institution user who hasn't paid → checkout
   if (user?.role === 'institution' && !hasPaid) return <Navigate to="/checkout" replace />;
+
   return children;
 }
 
@@ -51,7 +71,6 @@ function App() {
   }, [token, fetchUser, hydrateFromBackend]);
 
   useEffect(() => {
-    // Apply theme to document
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -59,86 +78,56 @@ function App() {
     }
   }, [theme]);
 
-  // Fetch reference data and seed on first load
   useEffect(() => {
     fetchReferenceData();
-    
-    const seedData = async () => {
-      try {
-        const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-        await fetch(`${API}/seed`, { method: 'POST' });
-      } catch (e) {
-        console.log('Seed data already exists or failed');
-      }
-    };
-    seedData();
   }, [fetchReferenceData]);
 
   return (
-    <div className={`App min-h-screen bg-background text-foreground`}>
-      <BrowserRouter>
+    <BrowserRouter>
+      <div className="App min-h-screen bg-background text-foreground">
         <Navbar />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/discover" element={<Discover />} />
-          <Route path="/artist/:id" element={<ArtistProfile />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/statistics" element={
-            <InstitutionStatsRoute>
-              <Statistics />
-            </InstitutionStatsRoute>
-          } />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/feed" element={<Feed />} />
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/messages" 
-            element={
-              <ProtectedRoute>
-                <Messages />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/messages/:id" 
-            element={
-              <ProtectedRoute>
-                <Messages />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/settings" 
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            } 
-          />
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-      <Toaster 
-        position="bottom-right" 
-        toastOptions={{
-          style: {
-            background: 'hsl(var(--card))',
-            color: 'hsl(var(--foreground))',
-            border: '1px solid hsl(var(--border))',
-          },
-        }}
-      />
-    </div>
+        <main>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/discover" element={<Discover />} />
+            <Route path="/artist/:id" element={<ArtistProfile />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/statistics" element={
+              <InstitutionStatsRoute>
+                <Statistics />
+              </InstitutionStatsRoute>
+            } />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/feed" element={<Feed />} />
+            <Route path="/dashboard" element={
+              <ProtectedRoute><Dashboard /></ProtectedRoute>
+            } />
+            <Route path="/messages" element={
+              <ProtectedRoute><Messages /></ProtectedRoute>
+            } />
+            <Route path="/messages/:id" element={
+              <ProtectedRoute><Messages /></ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute><Settings /></ProtectedRoute>
+            } />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: 'hsl(var(--card))',
+              color: 'hsl(var(--foreground))',
+              border: '1px solid hsl(var(--border))',
+            },
+          }}
+        />
+      </div>
+    </BrowserRouter>
   );
 }
 

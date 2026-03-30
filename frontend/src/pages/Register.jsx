@@ -20,23 +20,30 @@ function ArtistForm({ onSuccess }) {
   });
 
   useEffect(() => { fetchReferenceData(); }, [fetchReferenceData]);
+
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
   const handleCountryChange = (value) => {
     const country = countries.find(c => c.name === value);
     setFormData({ ...formData, country: value, subregion: country?.subregion || '' });
   };
-  const handleSectorChange = (value) => setFormData({ ...formData, sector: value, domain: '' });
+
+  const handleSectorChange = (value) =>
+    setFormData({ ...formData, sector: value, domain: '' });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const result = await register(formData);
     if (result.success) onSuccess('artist');
   };
+
   const currentDomains = formData.sector ? (domains[formData.sector] || []) : [];
   const fr = language === 'fr';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 bg-card p-8 rounded-2xl border border-border/50">
       {error && <div className="p-4 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>{t.auth.firstName} *</Label>
@@ -47,6 +54,7 @@ function ArtistForm({ onSuccess }) {
           <Input name="last_name" value={formData.last_name} onChange={handleChange} required />
         </div>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>{t.auth.email} *</Label>
@@ -57,68 +65,116 @@ function ArtistForm({ onSuccess }) {
           <Input name="password" type="password" value={formData.password} onChange={handleChange} required minLength={6} />
         </div>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>{t.auth.country} *</Label>
-          <Select value={formData.country} onValueChange={handleCountryChange}>
+          {/*
+            ✅ FIX 3a: value={formData.country || undefined}
+            An empty string "" is a valid controlled value in Radix Select but
+            won't match any SelectItem (which are never ""), so the placeholder
+            never shows. Coercing "" → undefined lets Radix treat the field as
+            uncontrolled / unselected and correctly renders the placeholder.
+
+            ✅ FIX 3b: position="popper" + className="z-[100]"
+            Even though select.jsx now uses Portal (which already escapes the
+            stacking context), the explicit z-[100] class acts as a safety net
+            for cases where other portalled elements (modals, tooltips) may
+            overlap. position="popper" also aligns the dropdown under the
+            trigger instead of centering it in the viewport.
+          */}
+          <Select value={formData.country || undefined} onValueChange={handleCountryChange}>
             <SelectTrigger><SelectValue placeholder={t.auth.selectCountry} /></SelectTrigger>
-            <SelectContent className="max-h-60">
-              {countries.map((c) => <SelectItem key={c.name} value={c.name}>{fr ? c.name_fr : c.name}</SelectItem>)}
+            <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
+              {countries.map((c) => (
+                <SelectItem key={c.name} value={c.name}>{fr ? c.name_fr : c.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
+
         <div className="space-y-2">
           <Label>{t.auth.gender} *</Label>
-          <Select value={formData.gender} onValueChange={(v) => setFormData({ ...formData, gender: v })}>
+          <Select value={formData.gender || undefined} onValueChange={(v) => setFormData({ ...formData, gender: v })}>
             <SelectTrigger><SelectValue placeholder={t.auth.selectGender} /></SelectTrigger>
-            <SelectContent>
-              {genders.map((g) => <SelectItem key={g.name} value={g.name}>{fr ? g.name_fr : g.name}</SelectItem>)}
+            <SelectContent position="popper" sideOffset={4} className="z-[100]">
+              {genders.map((g) => (
+                <SelectItem key={g.name} value={g.name}>{fr ? g.name_fr : g.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
+
       {formData.subregion && (
         <div className="p-3 bg-secondary/50 rounded-lg text-sm">
           <span className="text-muted-foreground">{t.auth.subregion}: </span>
-          <span className="font-medium">{fr ? countries.find(c => c.name === formData.country)?.subregion_fr : formData.subregion}</span>
+          <span className="font-medium">
+            {fr ? countries.find(c => c.name === formData.country)?.subregion_fr : formData.subregion}
+          </span>
         </div>
       )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>{t.auth.sector} *</Label>
-          <Select value={formData.sector} onValueChange={handleSectorChange}>
+          <Select value={formData.sector || undefined} onValueChange={handleSectorChange}>
             <SelectTrigger><SelectValue placeholder={t.auth.selectSector} /></SelectTrigger>
-            <SelectContent>
-              {sectors.map((s) => <SelectItem key={s.name} value={s.name}>{fr ? s.name_fr : s.name}</SelectItem>)}
+            <SelectContent position="popper" sideOffset={4} className="z-[100]">
+              {sectors.map((s) => (
+                <SelectItem key={s.name} value={s.name}>{fr ? s.name_fr : s.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
+
         <div className="space-y-2">
           <Label>{t.auth.domain} *</Label>
-          <Select value={formData.domain} onValueChange={(v) => setFormData({ ...formData, domain: v })} disabled={!formData.sector}>
+          {/*
+            ✅ FIX 3c: disabled={!formData.sector} correctly blocks interaction
+            when no sector is chosen. Also using value || undefined to keep
+            the placeholder visible after a sector change resets domain to "".
+          */}
+          <Select
+            value={formData.domain || undefined}
+            onValueChange={(v) => setFormData({ ...formData, domain: v })}
+            disabled={!formData.sector}
+          >
             <SelectTrigger><SelectValue placeholder={t.auth.selectDomain} /></SelectTrigger>
-            <SelectContent>
-              {currentDomains.map((d) => <SelectItem key={d.name} value={d.name}>{fr ? d.name_fr : d.name}</SelectItem>)}
+            <SelectContent position="popper" sideOffset={4} className="z-[100]">
+              {currentDomains.map((d) => (
+                <SelectItem key={d.name} value={d.name}>{fr ? d.name_fr : d.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
+
       <div className="space-y-2">
         <Label>{t.auth.yearStarted} *</Label>
-        <Input name="year_started" type="number" min="1950" max={new Date().getFullYear()} value={formData.year_started} onChange={handleChange} required />
+        <Input
+          name="year_started" type="number"
+          min="1950" max={new Date().getFullYear()}
+          value={formData.year_started} onChange={handleChange} required
+        />
       </div>
+
       <div className="space-y-2">
         <Label>{t.auth.bio}</Label>
         <Textarea name="bio" value={formData.bio} onChange={handleChange} rows={3}
           placeholder={fr ? 'Parlez-nous de vous et de votre art...' : 'Tell us about yourself and your art...'} />
       </div>
+
       <div className="space-y-2">
         <Label>{t.auth.additionalInfo}</Label>
         <Textarea name="additional_info" value={formData.additional_info} onChange={handleChange} rows={2}
           placeholder={fr ? 'Expositions, prix, collaborations notables...' : 'Exhibitions, awards, notable collaborations...'} />
       </div>
+
       <Button type="submit" className="w-full rounded-full" disabled={isLoading}>
-        {isLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{fr ? 'Création...' : 'Creating...'}</> : t.auth.register}
+        {isLoading
+          ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{fr ? 'Création...' : 'Creating...'}</>
+          : t.auth.register}
       </Button>
     </form>
   );
@@ -136,26 +192,32 @@ function InstitutionForm({ onSuccess }) {
   });
 
   useEffect(() => { fetchReferenceData(); }, [fetchReferenceData]);
+
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
   const handleCountryChange = (value) => {
     const country = countries.find(c => c.name === value);
     setFormData({ ...formData, country: value, subregion: country?.subregion || '' });
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const result = await register(formData);
     if (result.success) onSuccess('institution');
   };
+
   const fr = language === 'fr';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 bg-card p-8 rounded-2xl border border-border/50">
       {error && <div className="p-4 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
+
       <div className="space-y-2">
         <Label>{fr ? "Nom de l'organisation *" : 'Organization Name *'}</Label>
         <Input name="organization_name" value={formData.organization_name} onChange={handleChange}
           placeholder={fr ? 'Ex: Ministère de la Culture du Sénégal' : 'Ex: Ministry of Culture of Senegal'} required />
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>{fr ? 'Prénom du contact *' : 'Contact First Name *'}</Label>
@@ -166,6 +228,7 @@ function InstitutionForm({ onSuccess }) {
           <Input name="last_name" value={formData.last_name} onChange={handleChange} required />
         </div>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>{t.auth.email} *</Label>
@@ -177,26 +240,35 @@ function InstitutionForm({ onSuccess }) {
           <Input name="password" type="password" value={formData.password} onChange={handleChange} required minLength={6} />
         </div>
       </div>
+
+      {/* ✅ Same Portal-backed SelectContent with value || undefined guard */}
       <div className="space-y-2">
         <Label>{t.auth.country} *</Label>
-        <Select value={formData.country} onValueChange={handleCountryChange}>
+        <Select value={formData.country || undefined} onValueChange={handleCountryChange}>
           <SelectTrigger><SelectValue placeholder={t.auth.selectCountry} /></SelectTrigger>
-          <SelectContent className="max-h-60">
-            {countries.map((c) => <SelectItem key={c.name} value={c.name}>{fr ? c.name_fr : c.name}</SelectItem>)}
+          <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
+            {countries.map((c) => (
+              <SelectItem key={c.name} value={c.name}>{fr ? c.name_fr : c.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
+
       {formData.subregion && (
         <div className="p-3 bg-secondary/50 rounded-lg text-sm">
           <span className="text-muted-foreground">{t.auth.subregion}: </span>
-          <span className="font-medium">{fr ? countries.find(c => c.name === formData.country)?.subregion_fr : formData.subregion}</span>
+          <span className="font-medium">
+            {fr ? countries.find(c => c.name === formData.country)?.subregion_fr : formData.subregion}
+          </span>
         </div>
       )}
+
       <div className="space-y-2">
         <Label>{fr ? "Mission / Description de l'organisation" : 'Mission / Organization Description'}</Label>
         <Textarea name="bio" value={formData.bio} onChange={handleChange} rows={3}
           placeholder={fr ? "Décrivez la mission de votre organisation..." : "Describe your organization's mission..."} />
       </div>
+
       <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl text-sm space-y-1">
         <p className="font-semibold text-primary">{fr ? '📊 Accès aux statistiques' : '📊 Statistics Access'}</p>
         <p className="text-muted-foreground">
@@ -205,6 +277,7 @@ function InstitutionForm({ onSuccess }) {
             : "After registration, you will need to complete a mock payment to receive your access code and view detailed statistics."}
         </p>
       </div>
+
       <Button type="submit" className="w-full rounded-full" disabled={isLoading}>
         {isLoading
           ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{fr ? 'Création...' : 'Creating...'}</>
@@ -227,7 +300,12 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-28">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="w-full max-w-2xl">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="w-full max-w-2xl"
+      >
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold tracking-tight mb-2">
             {fr ? 'Rejoignez Art Connect Africa' : 'Join Art Connect Africa'}

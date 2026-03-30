@@ -1,0 +1,25 @@
+/*
+  ✅ FIX: Radix Select/Popover portal wrapper z-index override.
+
+  When SelectContent is portalled to document.body, Radix wraps it in a div
+  with `data-radix-popper-content-wrapper`. This wrapper gets no z-index by
+  default from Radix, so it falls behind elements like a fixed Navbar (z-50).
+
+  The z-index class on <SelectContent className="z-[100]"> only affects the
+  inner element's stacking context relative to the wrapper — it does NOT lift
+  the wrapper itself above fixed/sticky elements in the page.
+
+  This rule targets the wrapper directly and guarantees it always sits on top.
+  9999 is safely above Navbar (z-50 = 50), modals (z-50), and toasts (z-50).
+*/
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+}
+
+/*
+  Same fix for Radix Dialog/Sheet portals, in case those are used elsewhere.
+*/
+[data-radix-dialog-overlay],
+[data-radix-dialog-content] {
+  z-index: 9998 !important;
+}

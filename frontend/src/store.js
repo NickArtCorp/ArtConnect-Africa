@@ -6,268 +6,136 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 // Translations
 export const translations = {
   en: {
-    // Navigation
     nav: {
-      home: 'Home',
-      discover: 'Discover',
-      feed: 'Feed',
-      projects: 'Projects',
-      messages: 'Messages',
-      dashboard: 'Dashboard',
-      statistics: 'Statistics',
-      signIn: 'Sign In',
-      getStarted: 'Get Started',
-      logout: 'Logout',
+      home: 'Home', discover: 'Discover', feed: 'Feed', projects: 'Projects',
+      messages: 'Messages', dashboard: 'Dashboard', statistics: 'Statistics',
+      signIn: 'Sign In', getStarted: 'Get Started', logout: 'Logout',
       institutionAccess: 'Institutional Access'
     },
-    // Home page
     home: {
       tagline: 'African Artistic Ecosystem',
-      title1: 'Connect.',
-      title2: 'Create.',
-      title3: 'Collaborate.',
+      title1: 'Connect.', title2: 'Create.', title3: 'Collaborate.',
       subtitle: 'The first platform dedicated to African artists. Showcase your work, find collaborators, and join a vibrant creative community across the continent.',
-      exploreArtists: 'Explore Artists',
-      joinCommunity: 'Join the Community',
-      featuredArtists: 'Featured Artists',
-      viewAll: 'View All',
-      stats: {
-        artists: 'Artists',
-        countries: 'Countries',
-        sectors: 'Artistic Sectors',
-        projects: 'Collaborations'
-      },
+      exploreArtists: 'Explore Artists', joinCommunity: 'Join the Community',
+      featuredArtists: 'Featured Artists', viewAll: 'View All',
+      stats: { artists: 'Artists', countries: 'Countries', sectors: 'Artistic Sectors', projects: 'Collaborations' },
       features: {
-        portfolio: {
-          title: 'Digital Portfolio',
-          desc: 'Showcase your work with documents, images, and videos'
-        },
-        network: {
-          title: 'Pan-African Network',
-          desc: 'Connect with artists from all over Africa'
-        },
-        collaborate: {
-          title: 'Collaborate',
-          desc: 'Find partners for your artistic projects'
-        }
+        portfolio: { title: 'Digital Portfolio', desc: 'Showcase your work with documents, images, and videos' },
+        network: { title: 'Pan-African Network', desc: 'Connect with artists from all over Africa' },
+        collaborate: { title: 'Collaborate', desc: 'Find partners for your artistic projects' }
       }
     },
-    // Auth
     auth: {
-      login: 'Sign In',
-      register: 'Create Account',
-      email: 'Email',
-      password: 'Password',
-      firstName: 'First Name',
-      lastName: 'Last Name',
-      country: 'Country',
-      subregion: 'Sub-region',
-      gender: 'Gender',
-      sector: 'Artistic Sector',
-      domain: 'Domain/Specialty',
-      yearStarted: 'Year Started',
-      bio: 'Biography',
-      additionalInfo: 'Additional Information',
-      website: 'Website',
-      alreadyAccount: 'Already have an account?',
-      noAccount: "Don't have an account?",
-      createOne: 'Create one',
-      signInHere: 'Sign in here',
-      selectCountry: 'Select your country',
-      selectSector: 'Select your sector',
-      selectDomain: 'Select your domain',
-      selectGender: 'Select gender'
+      login: 'Sign In', register: 'Create Account', email: 'Email', password: 'Password',
+      firstName: 'First Name', lastName: 'Last Name', country: 'Country',
+      subregion: 'Sub-region', gender: 'Gender', sector: 'Artistic Sector',
+      domain: 'Domain/Specialty', yearStarted: 'Year Started', bio: 'Biography',
+      additionalInfo: 'Additional Information', website: 'Website',
+      alreadyAccount: 'Already have an account?', noAccount: "Don't have an account?",
+      createOne: 'Create one', signInHere: 'Sign in here',
+      selectCountry: 'Select your country', selectSector: 'Select your sector',
+      selectDomain: 'Select your domain', selectGender: 'Select gender'
     },
-    // Profile
     profile: {
-      portfolio: 'Portfolio',
-      about: 'About',
-      contact: 'Contact',
-      sendMessage: 'Send Message',
-      editProfile: 'Edit Profile',
-      uploadDocument: 'Upload Document',
-      uploadImage: 'Upload Image',
-      addVideo: 'Add Video Link',
-      documents: 'Documents',
-      images: 'Images',
-      videos: 'Videos',
-      memberSince: 'Member since',
-      yearsExperience: 'years of experience'
+      portfolio: 'Portfolio', about: 'About', contact: 'Contact',
+      sendMessage: 'Send Message', editProfile: 'Edit Profile',
+      uploadDocument: 'Upload Document', uploadImage: 'Upload Image',
+      addVideo: 'Add Video Link', documents: 'Documents', images: 'Images',
+      videos: 'Videos', memberSince: 'Member since', yearsExperience: 'years of experience'
     },
-    // Projects
     projects: {
-      title: 'Collaboration Projects',
-      createProject: 'Create Project',
-      lookingFor: 'Looking for',
-      apply: 'Apply',
-      applications: 'applications',
-      openProjects: 'Open Projects',
-      myProjects: 'My Projects'
+      title: 'Collaboration Projects', createProject: 'Create Project',
+      lookingFor: 'Looking for', apply: 'Apply', applications: 'applications',
+      openProjects: 'Open Projects', myProjects: 'My Projects',
+      upcoming: 'Upcoming', ongoing: 'Ongoing', past: 'Past', 
+      typeLocal: 'Local', typeIntra: 'Intra-African', typeIntl: 'International',
+      startDate: 'Start Date', endDate: 'End Date (Optional / Open-ended)'
     },
-    // Statistics
     statistics: {
-      title: 'Statistics & Analytics',
-      overview: 'Overview',
-      byGender: 'By Gender',
-      byCountry: 'By Country',
-      byRegion: 'By Region',
-      bySector: 'By Sector',
-      requestAccess: 'Request Institutional Access',
-      totalArtists: 'Total Artists',
-      detailedStats: 'Detailed Statistics'
+      title: 'Statistics & Analytics', overview: 'Overview', byGender: 'By Gender',
+      byCountry: 'By Country', byRegion: 'By Region', bySector: 'By Sector',
+      requestAccess: 'Request Institutional Access', totalArtists: 'Total Artists',
+      detailedStats: 'Detailed Statistics',
+      projectCollaborations: 'Collaborations',
+      statsByType: 'By Type', statsByStatus: 'By Status', 
+      statsTimeline: 'Timeline', statsTopCountries: 'Top Countries'
     },
-    // Messages
     messages: {
-      title: 'Messages',
-      noConversations: 'No conversations yet',
-      findArtists: 'Find Artists',
-      typeMessage: 'Type a message...',
+      title: 'Messages', noConversations: 'No conversations yet',
+      findArtists: 'Find Artists', typeMessage: 'Type a message...',
       selectConversation: 'Select a conversation'
     },
-    // Common
     common: {
-      search: 'Search',
-      filter: 'Filter',
-      all: 'All',
-      save: 'Save',
-      cancel: 'Cancel',
-      delete: 'Delete',
-      edit: 'Edit',
-      loading: 'Loading...',
-      noResults: 'No results found',
-      viewProfile: 'View Profile'
+      search: 'Search', filter: 'Filter', all: 'All', save: 'Save',
+      cancel: 'Cancel', delete: 'Delete', edit: 'Edit', loading: 'Loading...',
+      noResults: 'No results found', viewProfile: 'View Profile'
     }
   },
   fr: {
-    // Navigation
     nav: {
-      home: 'Accueil',
-      discover: 'Découvrir',
-      feed: 'Fil',
-      projects: 'Projets',
-      messages: 'Messages',
-      dashboard: 'Tableau de bord',
-      statistics: 'Statistiques',
-      signIn: 'Connexion',
-      getStarted: 'Commencer',
-      logout: 'Déconnexion',
+      home: 'Accueil', discover: 'Découvrir', feed: 'Fil', projects: 'Projets',
+      messages: 'Messages', dashboard: 'Tableau de bord', statistics: 'Statistiques',
+      signIn: 'Connexion', getStarted: 'Commencer', logout: 'Déconnexion',
       institutionAccess: 'Accès Institutionnel'
     },
-    // Home page
     home: {
       tagline: 'Écosystème Artistique Africain',
-      title1: 'Connecter.',
-      title2: 'Créer.',
-      title3: 'Collaborer.',
-      subtitle: 'La première plateforme dédiée aux artistes africains. Présentez vos œuvres, trouvez des collaborateurs et rejoignez une communauté créative vibrante à travers le continent.',
-      exploreArtists: 'Explorer les Artistes',
-      joinCommunity: 'Rejoindre la Communauté',
-      featuredArtists: 'Artistes en Vedette',
-      viewAll: 'Voir Tout',
-      stats: {
-        artists: 'Artistes',
-        countries: 'Pays',
-        sectors: 'Secteurs Artistiques',
-        projects: 'Collaborations'
-      },
+      title1: 'Connecter.', title2: 'Créer.', title3: 'Collaborer.',
+      subtitle: "La première plateforme dédiée aux artistes africains. Présentez vos œuvres, trouvez des collaborateurs et rejoignez une communauté créative vibrante à travers le continent.",
+      exploreArtists: 'Explorer les Artistes', joinCommunity: 'Rejoindre la Communauté',
+      featuredArtists: 'Artistes en Vedette', viewAll: 'Voir Tout',
+      stats: { artists: 'Artistes', countries: 'Pays', sectors: 'Secteurs Artistiques', projects: 'Collaborations' },
       features: {
-        portfolio: {
-          title: 'Portfolio Numérique',
-          desc: 'Présentez vos travaux avec documents, images et vidéos'
-        },
-        network: {
-          title: 'Réseau Panafricain',
-          desc: 'Connectez-vous avec des artistes de toute l\'Afrique'
-        },
-        collaborate: {
-          title: 'Collaborer',
-          desc: 'Trouvez des partenaires pour vos projets artistiques'
-        }
+        portfolio: { title: 'Portfolio Numérique', desc: 'Présentez vos travaux avec documents, images et vidéos' },
+        network: { title: 'Réseau Panafricain', desc: "Connectez-vous avec des artistes de toute l'Afrique" },
+        collaborate: { title: 'Collaborer', desc: 'Trouvez des partenaires pour vos projets artistiques' }
       }
     },
-    // Auth
     auth: {
-      login: 'Connexion',
-      register: 'Créer un compte',
-      email: 'Email',
-      password: 'Mot de passe',
-      firstName: 'Prénom',
-      lastName: 'Nom',
-      country: 'Pays',
-      subregion: 'Sous-région',
-      gender: 'Genre',
-      sector: 'Secteur Artistique',
-      domain: 'Domaine/Spécialité',
-      yearStarted: 'Année de début',
-      bio: 'Biographie',
-      additionalInfo: 'Informations complémentaires',
-      website: 'Site web',
-      alreadyAccount: 'Vous avez déjà un compte ?',
-      noAccount: "Vous n'avez pas de compte ?",
-      createOne: 'Créer un compte',
-      signInHere: 'Connectez-vous ici',
-      selectCountry: 'Sélectionnez votre pays',
-      selectSector: 'Sélectionnez votre secteur',
-      selectDomain: 'Sélectionnez votre domaine',
-      selectGender: 'Sélectionnez le genre'
+      login: 'Connexion', register: 'Créer un compte', email: 'Email',
+      password: 'Mot de passe', firstName: 'Prénom', lastName: 'Nom',
+      country: 'Pays', subregion: 'Sous-région', gender: 'Genre',
+      sector: 'Secteur Artistique', domain: 'Domaine/Spécialité',
+      yearStarted: 'Année de début', bio: 'Biographie',
+      additionalInfo: 'Informations complémentaires', website: 'Site web',
+      alreadyAccount: 'Vous avez déjà un compte ?', noAccount: "Vous n'avez pas de compte ?",
+      createOne: 'Créer un compte', signInHere: 'Connectez-vous ici',
+      selectCountry: 'Sélectionnez votre pays', selectSector: 'Sélectionnez votre secteur',
+      selectDomain: 'Sélectionnez votre domaine', selectGender: 'Sélectionnez le genre'
     },
-    // Profile
     profile: {
-      portfolio: 'Portfolio',
-      about: 'À propos',
-      contact: 'Contact',
-      sendMessage: 'Envoyer un Message',
-      editProfile: 'Modifier le Profil',
-      uploadDocument: 'Télécharger un Document',
-      uploadImage: 'Télécharger une Image',
-      addVideo: 'Ajouter un Lien Vidéo',
-      documents: 'Documents',
-      images: 'Images',
-      videos: 'Vidéos',
-      memberSince: 'Membre depuis',
-      yearsExperience: "ans d'expérience"
+      portfolio: 'Portfolio', about: 'À propos', contact: 'Contact',
+      sendMessage: 'Envoyer un Message', editProfile: 'Modifier le Profil',
+      uploadDocument: 'Télécharger un Document', uploadImage: 'Télécharger une Image',
+      addVideo: 'Ajouter un Lien Vidéo', documents: 'Documents', images: 'Images',
+      videos: 'Vidéos', memberSince: 'Membre depuis', yearsExperience: "ans d'expérience"
     },
-    // Projects
     projects: {
-      title: 'Projets de Collaboration',
-      createProject: 'Créer un Projet',
-      lookingFor: 'Recherche',
-      apply: 'Postuler',
-      applications: 'candidatures',
-      openProjects: 'Projets Ouverts',
-      myProjects: 'Mes Projets'
+      title: 'Projets de Collaboration', createProject: 'Créer un Projet',
+      lookingFor: 'Recherche', apply: 'Postuler', applications: 'candidatures',
+      openProjects: 'Projets Ouverts', myProjects: 'Mes Projets',
+      upcoming: 'À venir', ongoing: 'En cours', past: 'Passés',
+      typeLocal: 'Local', typeIntra: 'Intra-Africain', typeIntl: 'International',
+      startDate: 'Date de début', endDate: 'Date de fin (Optionnel / En continu)'
     },
-    // Statistics
     statistics: {
-      title: 'Statistiques & Analyses',
-      overview: 'Vue d\'ensemble',
-      byGender: 'Par Genre',
-      byCountry: 'Par Pays',
-      byRegion: 'Par Région',
-      bySector: 'Par Secteur',
-      requestAccess: 'Demander un Accès Institutionnel',
-      totalArtists: 'Total Artistes',
-      detailedStats: 'Statistiques Détaillées'
+      title: 'Statistiques & Analyses', overview: "Vue d'ensemble",
+      byGender: 'Par Genre', byCountry: 'Par Pays', byRegion: 'Par Région',
+      bySector: 'Par Secteur', requestAccess: 'Demander un Accès Institutionnel',
+      totalArtists: 'Total Artistes', detailedStats: 'Statistiques Détaillées',
+      projectCollaborations: 'Collaborations',
+      statsByType: 'Par Type', statsByStatus: 'Par Statut', 
+      statsTimeline: 'Historique', statsTopCountries: 'Pays Principaux'
     },
-    // Messages
     messages: {
-      title: 'Messages',
-      noConversations: 'Aucune conversation',
-      findArtists: 'Trouver des Artistes',
-      typeMessage: 'Écrivez un message...',
+      title: 'Messages', noConversations: 'Aucune conversation',
+      findArtists: 'Trouver des Artistes', typeMessage: 'Écrivez un message...',
       selectConversation: 'Sélectionnez une conversation'
     },
-    // Common
     common: {
-      search: 'Rechercher',
-      filter: 'Filtrer',
-      all: 'Tout',
-      save: 'Enregistrer',
-      cancel: 'Annuler',
-      delete: 'Supprimer',
-      edit: 'Modifier',
-      loading: 'Chargement...',
-      noResults: 'Aucun résultat trouvé',
+      search: 'Rechercher', filter: 'Filtrer', all: 'Tout', save: 'Enregistrer',
+      cancel: 'Annuler', delete: 'Supprimer', edit: 'Modifier',
+      loading: 'Chargement...', noResults: 'Aucun résultat trouvé',
       viewProfile: 'Voir le Profil'
     }
   }
@@ -277,12 +145,10 @@ export const translations = {
 export const useLanguageStore = create((set, get) => ({
   language: localStorage.getItem('aca_language') || 'fr',
   t: translations[localStorage.getItem('aca_language') || 'fr'],
-  
   setLanguage: (lang) => {
     localStorage.setItem('aca_language', lang);
     set({ language: lang, t: translations[lang] });
   },
-  
   toggleLanguage: () => {
     const newLang = get().language === 'fr' ? 'en' : 'fr';
     localStorage.setItem('aca_language', newLang);
@@ -298,7 +164,13 @@ export const useAuthStore = create((set, get) => ({
   error: null,
 
   setUser: (user) => set({ user }),
-  
+
+  // ✅ FIX: Added missing clearError action.
+  // Login.jsx calls clearError() before each attempt to wipe stale errors from
+  // previous failed logins. Without this, the old error message stays on screen
+  // even after a successful retry, and isLoading can appear stuck.
+  clearError: () => set({ error: null }),
+
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
@@ -306,7 +178,7 @@ export const useAuthStore = create((set, get) => ({
       const { token, user } = response.data;
       localStorage.setItem('aca_token', token);
       set({ user, token, isLoading: false });
-      return { success: true };
+      return { success: true, user };
     } catch (error) {
       const message = error.response?.data?.detail || 'Login failed';
       set({ error: message, isLoading: false });
@@ -347,7 +219,6 @@ export const useAuthStore = create((set, get) => ({
   fetchUser: async () => {
     const { token } = get();
     if (!token) return;
-    
     try {
       const response = await axios.get(`${API}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -375,16 +246,11 @@ export const useAuthStore = create((set, get) => ({
   uploadAvatar: async (file) => {
     const { token } = get();
     if (!token) return { success: false, error: 'Not authenticated' };
-
     const formData = new FormData();
     formData.append('file', file);
-
     try {
       const response = await axios.post(`${API}/artists/me/avatar`, formData, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
       });
       set({ user: response.data });
       return { success: true, user: response.data };
@@ -397,13 +263,11 @@ export const useAuthStore = create((set, get) => ({
 // Theme Store
 export const useThemeStore = create((set) => ({
   theme: localStorage.getItem('aca_theme') || 'dark',
-  
   toggleTheme: () => set((state) => {
     const newTheme = state.theme === 'dark' ? 'light' : 'dark';
     localStorage.setItem('aca_theme', newTheme);
     return { theme: newTheme };
   }),
-  
   setTheme: (theme) => {
     localStorage.setItem('aca_theme', theme);
     set({ theme });
@@ -412,16 +276,9 @@ export const useThemeStore = create((set) => ({
 
 // Reference Data Store
 export const useReferenceStore = create((set, get) => ({
-  countries: [],
-  subregions: [],
-  sectors: [],
-  domains: {},
-  genders: [],
-  isLoaded: false,
-
+  countries: [], subregions: [], sectors: [], domains: {}, genders: [], isLoaded: false,
   fetchReferenceData: async () => {
     if (get().isLoaded) return;
-    
     try {
       const [countriesRes, subregionsRes, sectorsRes, domainsRes, gendersRes] = await Promise.all([
         axios.get(`${API}/reference/countries`),
@@ -430,14 +287,10 @@ export const useReferenceStore = create((set, get) => ({
         axios.get(`${API}/reference/domains`),
         axios.get(`${API}/reference/genders`)
       ]);
-      
       set({
-        countries: countriesRes.data,
-        subregions: subregionsRes.data,
-        sectors: sectorsRes.data,
-        domains: domainsRes.data,
-        genders: gendersRes.data,
-        isLoaded: true
+        countries: countriesRes.data, subregions: subregionsRes.data,
+        sectors: sectorsRes.data, domains: domainsRes.data,
+        genders: gendersRes.data, isLoaded: true
       });
     } catch (error) {
       console.error('Error fetching reference data:', error);
@@ -447,38 +300,16 @@ export const useReferenceStore = create((set, get) => ({
 
 // Artists Store
 export const useArtistsStore = create((set, get) => ({
-  artists: [],
-  featuredArtists: [],
-  currentArtist: null,
-  total: 0,
-  isLoading: false,
-  filters: {
-    search: '',
-    country: '',
-    subregion: '',
-    sector: '',
-    domain: '',
-    gender: ''
-  },
-
-  setFilters: (newFilters) => set((state) => ({
-    filters: { ...state.filters, ...newFilters }
-  })),
-
-  resetFilters: () => set({
-    filters: { search: '', country: '', subregion: '', sector: '', domain: '', gender: '' }
-  }),
-
+  artists: [], featuredArtists: [], currentArtist: null, total: 0, isLoading: false,
+  filters: { search: '', country: '', subregion: '', sector: '', domain: '', gender: '' },
+  setFilters: (newFilters) => set((state) => ({ filters: { ...state.filters, ...newFilters } })),
+  resetFilters: () => set({ filters: { search: '', country: '', subregion: '', sector: '', domain: '', gender: '' } }),
   fetchArtists: async () => {
     set({ isLoading: true });
     const { filters } = get();
-    
     try {
       const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value);
-      });
-      
+      Object.entries(filters).forEach(([key, value]) => { if (value) params.append(key, value); });
       const response = await axios.get(`${API}/artists?${params}`);
       set({ artists: response.data.artists, total: response.data.total, isLoading: false });
     } catch (error) {
@@ -486,7 +317,6 @@ export const useArtistsStore = create((set, get) => ({
       set({ isLoading: false });
     }
   },
-
   fetchFeaturedArtists: async () => {
     try {
       const response = await axios.get(`${API}/artists/featured`);
@@ -495,7 +325,6 @@ export const useArtistsStore = create((set, get) => ({
       console.error('Error fetching featured artists:', error);
     }
   },
-
   fetchArtist: async (id) => {
     set({ isLoading: true });
     try {
@@ -512,108 +341,86 @@ export const useArtistsStore = create((set, get) => ({
 
 // Messages Store
 export const useMessagesStore = create((set, get) => ({
-  conversations: [],
-  currentMessages: [],
-  isLoading: false,
-
+  conversations: [], currentMessages: [], isLoading: false,
   fetchConversations: async () => {
     const token = useAuthStore.getState().token;
     if (!token) return;
-
     set({ isLoading: true });
     try {
-      const response = await axios.get(`${API}/messages/conversations`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${API}/messages/conversations`, { headers: { Authorization: `Bearer ${token}` } });
       set({ conversations: response.data, isLoading: false });
     } catch (error) {
       console.error('Error fetching conversations:', error);
       set({ isLoading: false });
     }
   },
-
   fetchMessages: async (userId) => {
     const token = useAuthStore.getState().token;
     if (!token) return;
-
     set({ isLoading: true });
     try {
-      const response = await axios.get(`${API}/messages/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${API}/messages/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
       set({ currentMessages: response.data, isLoading: false });
     } catch (error) {
       console.error('Error fetching messages:', error);
       set({ isLoading: false });
     }
   },
-
   sendMessage: async (receiverId, content) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false };
-
     try {
-      const response = await axios.post(`${API}/messages`, 
-        { receiver_id: receiverId, content },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      set((state) => ({
-        currentMessages: [...state.currentMessages, response.data]
-      }));
-      
+      const response = await axios.post(`${API}/messages`, { receiver_id: receiverId, content }, { headers: { Authorization: `Bearer ${token}` } });
+      set((state) => ({ currentMessages: [...state.currentMessages, response.data] }));
       get().fetchConversations();
-      
       return { success: true, message: response.data };
     } catch (error) {
       console.error('Error sending message:', error);
       return { success: false, error: error.response?.data?.detail || 'Failed to send message' };
     }
   },
-
   clearCurrentMessages: () => set({ currentMessages: [] })
 }));
 
 // Projects Store
 export const useProjectsStore = create((set, get) => ({
-  projects: [],
-  isLoading: false,
-
+  projects: [], isLoading: false,
+  statusFilter: null, typeFilter: null,
+  setStatusFilter: (status) => set({ statusFilter: status }),
+  setTypeFilter: (type) => set({ typeFilter: type }),
   fetchProjects: async (sector = null) => {
     set({ isLoading: true });
     try {
-      const params = sector ? `?sector=${sector}` : '';
-      const response = await axios.get(`${API}/projects${params}`);
+      const { statusFilter, typeFilter } = get();
+      const queryParams = new URLSearchParams();
+      if (sector) queryParams.append('sector', sector);
+      if (statusFilter) queryParams.append('status', statusFilter);
+      if (typeFilter) queryParams.append('collaboration_type', typeFilter);
+      
+      const paramsStr = queryParams.toString() ? `?${queryParams.toString()}` : '';
+      const response = await axios.get(`${API}/projects${paramsStr}`);
       set({ projects: response.data, isLoading: false });
     } catch (error) {
       console.error('Error fetching projects:', error);
       set({ isLoading: false });
     }
   },
-
   createProject: async (projectData) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false };
-
     try {
-      const response = await axios.post(`${API}/projects`, projectData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.post(`${API}/projects`, projectData, { headers: { Authorization: `Bearer ${token}` } });
       get().fetchProjects();
       return { success: true, project: response.data };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Failed to create project' };
     }
   },
-
   applyToProject: async (projectId, message) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false };
-
     try {
-      await axios.post(`${API}/projects/${projectId}/apply?message=${encodeURIComponent(message)}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post(`${API}/projects/${projectId}/apply?message=${encodeURIComponent(message)}`, {}, { headers: { Authorization: `Bearer ${token}` } });
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Failed to apply' };
@@ -623,11 +430,7 @@ export const useProjectsStore = create((set, get) => ({
 
 // Statistics Store
 export const useStatisticsStore = create((set) => ({
-  overview: null,
-  detailed: null,
-  isLoading: false,
-  hasInstitutionAccess: false,
-
+  overview: null, detailed: null, collaborations: null, isLoading: false, hasInstitutionAccess: false,
   fetchOverview: async () => {
     set({ isLoading: true });
     try {
@@ -638,88 +441,70 @@ export const useStatisticsStore = create((set) => ({
       set({ isLoading: false });
     }
   },
-
   fetchDetailed: async () => {
     const token = useAuthStore.getState().token;
     if (!token) return;
-
     set({ isLoading: true });
     try {
-      const response = await axios.get(`${API}/statistics/detailed`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${API}/statistics/detailed`, { headers: { Authorization: `Bearer ${token}` } });
       set({ detailed: response.data, hasInstitutionAccess: true, isLoading: false });
     } catch (error) {
       console.error('Error fetching detailed statistics:', error);
       set({ isLoading: false, hasInstitutionAccess: false });
     }
   },
-
-  requestAccess: async (data) => {
+  fetchCollaborationStats: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+    set({ isLoading: true });
     try {
-      const response = await axios.post(`${API}/institution/request-access`, data);
-      return { success: true, requestId: response.data.request_id };
+      const response = await axios.get(`${API}/statistics/collaborations`, { headers: { Authorization: `Bearer ${token}` } });
+      set({ collaborations: response.data, isLoading: false });
     } catch (error) {
-      return { success: false, error: error.response?.data?.detail || 'Request failed' };
+      console.error('Error fetching collaboration statistics:', error);
+      set({ isLoading: false });
     }
   },
-
-  simulatePayment: async (requestId) => {
-    const token = useAuthStore.getState().token;
-    if (!token) return { success: false };
-
-    try {
-      await axios.post(`${API}/institution/simulate-payment?request_id=${requestId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.detail || 'Payment failed' };
-    }
-  }
+  reset: () => set({ overview: null, detailed: null, collaborations: null, isLoading: false })
 }));
 
 // Institution Payment Store
-export const useInstitutionStore = create((set, get) => ({
+export const useInstitutionStore = create((set) => ({
   hasPaid: localStorage.getItem('institution_paid') === 'true',
   accessCode: localStorage.getItem('institution_code') || null,
   paidAt: localStorage.getItem('institution_paid_at') || null,
   isLoading: false,
-
   setPayment: (code, paidAt) => {
     localStorage.setItem('institution_paid', 'true');
     localStorage.setItem('institution_code', code);
     localStorage.setItem('institution_paid_at', paidAt);
     set({ hasPaid: true, accessCode: code, paidAt });
   },
-
   hydrateFromBackend: async () => {
     const token = useAuthStore.getState().token;
-    if (!token) return;
+    if (!token) return { hasPaid: false, accessCode: null, paidAt: null };
     try {
-      const response = await axios.get(`${API}/payments/status`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${API}/payments/status`, { headers: { Authorization: `Bearer ${token}` } });
       const { has_paid, access_code, paid_at } = response.data;
       if (has_paid && access_code) {
         localStorage.setItem('institution_paid', 'true');
         localStorage.setItem('institution_code', access_code);
         localStorage.setItem('institution_paid_at', paid_at || '');
         set({ hasPaid: true, accessCode: access_code, paidAt: paid_at });
+        return { hasPaid: true, accessCode: access_code, paidAt: paid_at };
       }
+      return { hasPaid: !!has_paid, accessCode: access_code || null, paidAt: paid_at || null };
     } catch (e) {
       console.error('Failed to hydrate institution store:', e);
+      return { hasPaid: false, accessCode: null, paidAt: null };
     }
   },
-
   mockCheckout: async () => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false, error: 'Not authenticated' };
     set({ isLoading: true });
     try {
-      const response = await axios.post(`${API}/payments/mock-checkout`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.post(`${API}/payments/mock-checkout`, {}, { headers: { Authorization: `Bearer ${token}` } });
       const { access_code, paid_at } = response.data;
       localStorage.setItem('institution_paid', 'true');
       localStorage.setItem('institution_code', access_code);
@@ -731,7 +516,6 @@ export const useInstitutionStore = create((set, get) => ({
       return { success: false, error: error.response?.data?.detail || 'Payment failed' };
     }
   },
-
   reset: () => {
     localStorage.removeItem('institution_paid');
     localStorage.removeItem('institution_code');
@@ -740,148 +524,90 @@ export const useInstitutionStore = create((set, get) => ({
   }
 }));
 
-
 export const useFeedStore = create((set, get) => ({
-  posts: [],
-  isLoading: false,
-  hasMore: true,
-
+  posts: [], isLoading: false, hasMore: true,
   fetchPosts: async (reset = false) => {
     const { posts } = get();
     if (!reset && !get().hasMore) return;
-    
     set({ isLoading: true });
-    
     try {
       const before = reset ? '' : posts[posts.length - 1]?.created_at || '';
       const params = before ? `?before=${before}&limit=10` : '?limit=10';
       const token = useAuthStore.getState().token;
-      
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.get(`${API}/posts${params}`, { headers });
-      
       const newPosts = response.data;
-      
-      set({
-        posts: reset ? newPosts : [...posts, ...newPosts],
-        hasMore: newPosts.length === 10,
-        isLoading: false
-      });
+      set({ posts: reset ? newPosts : [...posts, ...newPosts], hasMore: newPosts.length === 10, isLoading: false });
     } catch (error) {
       console.error('Error fetching posts:', error);
       set({ isLoading: false });
     }
   },
-
   createPost: async (postData) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false, error: 'Not authenticated' };
-
     try {
-      const response = await axios.post(`${API}/posts`, postData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Add to beginning of posts
-      set((state) => ({
-        posts: [response.data, ...state.posts]
-      }));
-      
+      const response = await axios.post(`${API}/posts`, postData, { headers: { Authorization: `Bearer ${token}` } });
+      set((state) => ({ posts: [response.data, ...state.posts] }));
       return { success: true, post: response.data };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Failed to create post' };
     }
   },
-
   uploadPost: async (file, contentType, textContent) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false, error: 'Not authenticated' };
-
     const formData = new FormData();
     formData.append('file', file);
     formData.append('content_type', contentType);
     formData.append('text_content', textContent);
-
     try {
       const response = await axios.post(`${API}/posts/upload`, formData, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
       });
-      
-      set((state) => ({
-        posts: [response.data, ...state.posts]
-      }));
-      
+      set((state) => ({ posts: [response.data, ...state.posts] }));
       return { success: true, post: response.data };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Failed to upload post' };
     }
   },
-
   toggleLike: async (postId) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false, error: 'Not authenticated' };
-
     try {
-      const response = await axios.post(`${API}/posts/${postId}/like`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Update post in state
+      const response = await axios.post(`${API}/posts/${postId}/like`, {}, { headers: { Authorization: `Bearer ${token}` } });
       set((state) => ({
-        posts: state.posts.map(post => 
-          post.id === postId 
-            ? { ...post, is_liked: response.data.liked, likes_count: response.data.likes_count }
-            : post
+        posts: state.posts.map(post =>
+          post.id === postId ? { ...post, is_liked: response.data.liked, likes_count: response.data.likes_count } : post
         )
       }));
-      
       return { success: true, ...response.data };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Failed to toggle like' };
     }
   },
-
   deletePost: async (postId) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false };
-
     try {
-      await axios.delete(`${API}/posts/${postId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      set((state) => ({
-        posts: state.posts.filter(post => post.id !== postId)
-      }));
-      
+      await axios.delete(`${API}/posts/${postId}`, { headers: { Authorization: `Bearer ${token}` } });
+      set((state) => ({ posts: state.posts.filter(post => post.id !== postId) }));
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Failed to delete post' };
     }
   },
-
   resetPosts: () => set({ posts: [], hasMore: true })
 }));
 
 // Comments Store
-export const useCommentsStore = create((set, get) => ({
-  comments: {},
-  isLoading: false,
-
+export const useCommentsStore = create((set) => ({
+  comments: {}, isLoading: false,
   fetchComments: async (postId) => {
     set({ isLoading: true });
-    
     try {
       const response = await axios.get(`${API}/posts/${postId}/comments`);
-      
-      set((state) => ({
-        comments: { ...state.comments, [postId]: response.data },
-        isLoading: false
-      }));
-      
+      set((state) => ({ comments: { ...state.comments, [postId]: response.data }, isLoading: false }));
       return response.data;
     } catch (error) {
       console.error('Error fetching comments:', error);
@@ -889,46 +615,23 @@ export const useCommentsStore = create((set, get) => ({
       return [];
     }
   },
-
   addComment: async (postId, content) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false, error: 'Not authenticated' };
-
     try {
-      const response = await axios.post(`${API}/posts/${postId}/comments`, 
-        { content },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      set((state) => ({
-        comments: {
-          ...state.comments,
-          [postId]: [...(state.comments[postId] || []), response.data]
-        }
-      }));
-      
+      const response = await axios.post(`${API}/posts/${postId}/comments`, { content }, { headers: { Authorization: `Bearer ${token}` } });
+      set((state) => ({ comments: { ...state.comments, [postId]: [...(state.comments[postId] || []), response.data] } }));
       return { success: true, comment: response.data };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Failed to add comment' };
     }
   },
-
   deleteComment: async (postId, commentId) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false };
-
     try {
-      await axios.delete(`${API}/comments/${commentId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      set((state) => ({
-        comments: {
-          ...state.comments,
-          [postId]: (state.comments[postId] || []).filter(c => c.id !== commentId)
-        }
-      }));
-      
+      await axios.delete(`${API}/comments/${commentId}`, { headers: { Authorization: `Bearer ${token}` } });
+      set((state) => ({ comments: { ...state.comments, [postId]: (state.comments[postId] || []).filter(c => c.id !== commentId) } }));
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Failed to delete comment' };
@@ -939,71 +642,48 @@ export const useCommentsStore = create((set, get) => ({
 // Portfolio Store
 export const usePortfolioStore = create((set) => ({
   isUploading: false,
-
   uploadFile: async (file, fileType, title, description) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false };
-
     set({ isUploading: true });
-    
     const formData = new FormData();
     formData.append('file', file);
     formData.append('file_type', fileType);
     formData.append('title', title);
     formData.append('description', description);
-
     try {
       const response = await axios.post(`${API}/portfolio/upload`, formData, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
       });
       set({ isUploading: false });
-      
-      // Refresh user data
       await useAuthStore.getState().fetchUser();
-      
       return { success: true, file: response.data };
     } catch (error) {
       set({ isUploading: false });
       return { success: false, error: error.response?.data?.detail || 'Upload failed' };
     }
   },
-
   addVideo: async (url, title, description) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false };
-
     const formData = new FormData();
     formData.append('url', url);
     formData.append('title', title);
     formData.append('description', description);
-
     try {
-      const response = await axios.post(`${API}/portfolio/video`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+      const response = await axios.post(`${API}/portfolio/video`, formData, { headers: { Authorization: `Bearer ${token}` } });
       await useAuthStore.getState().fetchUser();
-      
       return { success: true, video: response.data };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Failed to add video' };
     }
   },
-
   deleteItem: async (itemType, itemId) => {
     const token = useAuthStore.getState().token;
     if (!token) return { success: false };
-
     try {
-      await axios.delete(`${API}/portfolio/${itemType}/${itemId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+      await axios.delete(`${API}/portfolio/${itemType}/${itemId}`, { headers: { Authorization: `Bearer ${token}` } });
       await useAuthStore.getState().fetchUser();
-      
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Delete failed' };

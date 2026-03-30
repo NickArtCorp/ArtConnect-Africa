@@ -16,16 +16,25 @@ export function Navbar() {
     navigate('/');
   };
 
+  // Rôles
+  const isAdmin = user?.role === 'admin';
+  const isArtist = user?.role === 'artist';
+  const isInstitution = user?.role === 'institution';
+
+  // Seuls les institutions et admins voient le lien Statistiques
+  const canSeeStats = isInstitution || isAdmin;
+
+  // Seuls les artistes et admins voient Feed, Projects, Messages
+  const canSeeSocialFeatures = isArtist || isAdmin;
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
+    <nav className="border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       {/* African flag stripe */}
-      <div className="flag-stripe" />
-      
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             data-testid="logo-link"
           >
@@ -39,50 +48,63 @@ export function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden lg:flex items-center gap-6">
-            <Link 
-              to="/discover" 
+            <Link
+              to="/discover"
               className="text-sm font-medium hover:text-primary transition-colors"
               data-testid="discover-link"
             >
               {t.nav.discover}
             </Link>
-            <Link 
-              to="/feed" 
-              className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1"
-              data-testid="feed-link"
-            >
-              <Newspaper className="w-4 h-4" />
-              {t.nav.feed || 'Feed'}
-            </Link>
-            <Link 
-              to="/projects" 
-              className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1"
-              data-testid="projects-link"
-            >
-              <Briefcase className="w-4 h-4" />
-              {t.nav.projects}
-            </Link>
-            <Link 
-              to="/statistics" 
-              className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1"
-              data-testid="statistics-link"
-            >
-              <BarChart3 className="w-4 h-4" />
-              {t.nav.statistics}
-            </Link>
+
+            {/* Feed, Projects, Messages : UNIQUEMENT pour Artistes et Admins */}
+            {canSeeSocialFeatures && (
+              <>
+                <Link
+                  to="/feed"
+                  className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1"
+                  data-testid="feed-link"
+                >
+                  <Newspaper className="w-4 h-4" />
+                  {t.nav.feed || 'Feed'}
+                </Link>
+                <Link
+                  to="/projects"
+                  className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1"
+                  data-testid="projects-link"
+                >
+                  <Briefcase className="w-4 h-4" />
+                  {t.nav.projects}
+                </Link>
+              </>
+            )}
+
+            {/* Statistiques : Institutions et Admins UNIQUEMENT */}
+            {canSeeStats && (
+              <Link
+                to="/statistics"
+                className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1"
+                data-testid="statistics-link"
+              >
+                <BarChart3 className="w-4 h-4" />
+                {t.nav.statistics}
+              </Link>
+            )}
 
             {user ? (
               <>
-                <Link 
-                  to="/messages" 
-                  className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1"
-                  data-testid="messages-link"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  {t.nav.messages}
-                </Link>
-                <Link 
-                  to="/dashboard" 
+                {/* Messages : UNIQUEMENT pour Artistes et Admins */}
+                {canSeeSocialFeatures && (
+                  <Link
+                    to="/messages"
+                    className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1"
+                    data-testid="messages-link"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    {t.nav.messages}
+                  </Link>
+                )}
+                <Link
+                  to="/dashboard"
                   className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1"
                   data-testid="dashboard-link"
                 >
@@ -141,19 +163,10 @@ export function Navbar() {
 
           {/* Mobile menu button */}
           <div className="flex lg:hidden items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleLanguage}
-              className="text-xs"
-            >
+            <Button variant="ghost" size="sm" onClick={toggleLanguage} className="text-xs">
               {language.toUpperCase()}
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-            >
+            <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
             <Button
@@ -171,48 +184,38 @@ export function Navbar() {
         {mobileMenuOpen && (
           <div className="lg:hidden py-4 border-t border-border/50 animate-fade-in">
             <div className="flex flex-col gap-3">
-              <Link 
-                to="/discover" 
-                className="text-sm font-medium hover:text-primary transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
+              <Link to="/discover" className="text-sm font-medium hover:text-primary transition-colors py-2" onClick={() => setMobileMenuOpen(false)}>
                 {t.nav.discover}
               </Link>
-              <Link 
-                to="/feed" 
-                className="text-sm font-medium hover:text-primary transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {t.nav.feed || 'Feed'}
-              </Link>
-              <Link 
-                to="/projects" 
-                className="text-sm font-medium hover:text-primary transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {t.nav.projects}
-              </Link>
-              <Link 
-                to="/statistics" 
-                className="text-sm font-medium hover:text-primary transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {t.nav.statistics}
-              </Link>
+
+              {/* Feed, Projects : UNIQUEMENT pour Artistes et Admins */}
+              {canSeeSocialFeatures && (
+                <>
+                  <Link to="/feed" className="text-sm font-medium hover:text-primary transition-colors py-2" onClick={() => setMobileMenuOpen(false)}>
+                    {t.nav.feed || 'Feed'}
+                  </Link>
+                  <Link to="/projects" className="text-sm font-medium hover:text-primary transition-colors py-2" onClick={() => setMobileMenuOpen(false)}>
+                    {t.nav.projects}
+                  </Link>
+                </>
+              )}
+
+              {/* Stats mobile : Institutions et Admins UNIQUEMENT */}
+              {canSeeStats && (
+                <Link to="/statistics" className="text-sm font-medium hover:text-primary transition-colors py-2" onClick={() => setMobileMenuOpen(false)}>
+                  {t.nav.statistics}
+                </Link>
+              )}
+
               {user ? (
                 <>
-                  <Link 
-                    to="/messages" 
-                    className="text-sm font-medium hover:text-primary transition-colors py-2"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {t.nav.messages}
-                  </Link>
-                  <Link 
-                    to="/dashboard" 
-                    className="text-sm font-medium hover:text-primary transition-colors py-2"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
+                  {/* Messages : UNIQUEMENT pour Artistes et Admins */}
+                  {canSeeSocialFeatures && (
+                    <Link to="/messages" className="text-sm font-medium hover:text-primary transition-colors py-2" onClick={() => setMobileMenuOpen(false)}>
+                      {t.nav.messages}
+                    </Link>
+                  )}
+                  <Link to="/dashboard" className="text-sm font-medium hover:text-primary transition-colors py-2" onClick={() => setMobileMenuOpen(false)}>
                     {t.nav.dashboard}
                   </Link>
                   <button
@@ -224,18 +227,10 @@ export function Navbar() {
                 </>
               ) : (
                 <>
-                  <Link 
-                    to="/login" 
-                    className="text-sm font-medium hover:text-primary transition-colors py-2"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
+                  <Link to="/login" className="text-sm font-medium hover:text-primary transition-colors py-2" onClick={() => setMobileMenuOpen(false)}>
                     {t.nav.signIn}
                   </Link>
-                  <Link 
-                    to="/register" 
-                    className="text-sm font-medium hover:text-primary transition-colors py-2"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
+                  <Link to="/register" className="text-sm font-medium hover:text-primary transition-colors py-2" onClick={() => setMobileMenuOpen(false)}>
                     {t.nav.getStarted}
                   </Link>
                 </>

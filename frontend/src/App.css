@@ -1,7 +1,10 @@
 /* Global app styles */
 
 /* Ensure smooth transitions for theme changes */
-* {
+/* IMPORTANT: Radix UI portals (Select, Popover, Dialog) are excluded.
+   A global transition on * causes Radix to fire a dismiss event on the same
+   frame as the open event, making dropdowns close instantly on click. */
+*:not([data-radix-popper-content-wrapper]):not([data-radix-popper-content-wrapper] *):not([data-radix-select-viewport]):not([data-radix-select-viewport] *) {
     transition-property: color, background-color, border-color;
     transition-duration: 150ms;
     transition-timing-function: ease-in-out;
