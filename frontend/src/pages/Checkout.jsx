@@ -11,20 +11,18 @@ import { toast } from 'sonner';
 export default function Checkout() {
   const { mockCheckout, isLoading, hasPaid, accessCode } = useInstitutionStore();
   const { user } = useAuthStore();
-  const { language } = useLanguageStore();
+  const { t } = useLanguageStore();
   const navigate = useNavigate();
   const [success, setSuccess] = useState(hasPaid);
-
-  const fr = language === 'fr';
 
   const handlePayment = async () => {
     const result = await mockCheckout();
     if (result.success) {
       setSuccess(true);
-      toast.success(fr ? 'Paiement accepté ! Accès accordé.' : 'Payment accepted! Access granted.');
+      toast.success(t.checkout.paymentAccepted);
       setTimeout(() => navigate('/statistics'), 1500);
     } else {
-      toast.error(result.error || (fr ? 'Erreur de paiement' : 'Payment error'));
+      toast.error(result.error || t.checkout.paymentError);
     }
   };
 
@@ -33,12 +31,12 @@ export default function Checkout() {
       <div className="min-h-screen pt-24 flex items-center justify-center px-4">
         <Card className="max-w-md w-full text-center p-8">
           <Lock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">{fr ? 'Connexion requise' : 'Login required'}</h2>
+          <h2 className="text-xl font-bold mb-2">{t.checkout.loginRequired}</h2>
           <p className="text-muted-foreground mb-4">
-            {fr ? 'Connectez-vous avec un compte institution.' : 'Sign in with an institution account.'}
+            {t.checkout.signInInstitution}
           </p>
           <Button onClick={() => navigate('/login')} className="rounded-full w-full">
-            {fr ? 'Se connecter' : 'Sign In'}
+            {t.nav.signIn}
           </Button>
         </Card>
       </div>
@@ -51,15 +49,13 @@ export default function Checkout() {
         <Card className="max-w-md w-full text-center p-8">
           <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-bold mb-2">
-            {fr ? 'Réservé aux institutions' : 'Institutions only'}
+            {t.checkout.institutionsOnly}
           </h2>
           <p className="text-muted-foreground mb-4">
-            {fr
-              ? 'Cet accès est réservé aux comptes de type Institution.'
-              : 'This access is reserved for Institution accounts.'}
+            {t.checkout.accessReserved}
           </p>
           <Button variant="outline" onClick={() => navigate('/statistics')} className="rounded-full w-full">
-            {fr ? 'Voir les stats publiques' : 'View public stats'}
+            {t.checkout.viewPublicStats}
           </Button>
         </Card>
       </div>
@@ -77,15 +73,13 @@ export default function Checkout() {
         >
           <Badge variant="outline" className="mb-4 text-xs px-3 py-1">
             <Building2 className="w-3 h-3 mr-1" />
-            {fr ? 'Accès Institutionnel' : 'Institutional Access'}
+            {t.checkout.institutionalAccess}
           </Badge>
           <h1 className="text-4xl font-bold tracking-tight mb-3">
-            {fr ? 'Débloquer les Statistiques' : 'Unlock Statistics'}
+            {t.checkout.title}
           </h1>
           <p className="text-muted-foreground">
-            {fr
-              ? 'Accédez aux données démographiques complètes de la communauté artistique africaine.'
-              : 'Access complete demographic data of the African artistic community.'}
+            {t.checkout.subtitle}
           </p>
         </motion.div>
 
@@ -97,9 +91,9 @@ export default function Checkout() {
           className="grid grid-cols-1 sm:grid-cols-3 gap-4"
         >
           {[
-            { icon: Users, label: fr ? 'Données démographiques' : 'Demographics', desc: fr ? 'Genre, âge, pays' : 'Gender, age, country' },
-            { icon: Globe, label: fr ? 'Couverture géographique' : 'Geography', desc: fr ? 'Par région africaine' : 'By African region' },
-            { icon: BarChart3, label: fr ? 'Activité & Tendances' : 'Activity & Trends', desc: fr ? 'Posts, likes, secteurs' : 'Posts, likes, sectors' },
+            { icon: Users, label: t.checkout.demographics, desc: t.checkout.demographicsDesc },
+            { icon: Globe, label: t.checkout.geography, desc: t.checkout.geographyDesc },
+            { icon: BarChart3, label: t.checkout.activityTrends, desc: t.checkout.activityTrendsDesc },
           ].map(({ icon: Icon, label, desc }) => (
             <Card key={label} className="bg-secondary/30 border-border/50">
               <CardContent className="pt-5 pb-4 text-center">
@@ -120,12 +114,12 @@ export default function Checkout() {
           <Card className="border-primary/20">
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-2xl">
-                {success ? (fr ? '✅ Accès activé' : '✅ Access activated') : (fr ? 'Paiement Fictif' : 'Mock Payment')}
+                {success ? `✅ ${t.checkout.accessActivated}` : t.checkout.mockPayment}
               </CardTitle>
               <CardDescription>
                 {success
-                  ? (fr ? 'Redirection vers les statistiques...' : 'Redirecting to statistics...')
-                  : (fr ? 'Simulation de paiement — aucune donnée bancaire requise' : 'Payment simulation — no bank data required')}
+                  ? t.checkout.redirecting
+                  : t.checkout.mockPaymentDesc}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-4">
@@ -133,7 +127,7 @@ export default function Checkout() {
                 <div className="text-center space-y-4">
                   <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
                   <div className="bg-secondary/50 rounded-xl p-4">
-                    <p className="text-xs text-muted-foreground mb-1">{fr ? 'Code d\'accès' : 'Access code'}</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t.checkout.accessCode}</p>
                     <p className="font-mono text-sm font-bold break-all">{accessCode || useInstitutionStore.getState().accessCode}</p>
                   </div>
                 </div>
@@ -142,11 +136,11 @@ export default function Checkout() {
                   {/* Plan details */}
                   <div className="bg-secondary/30 rounded-xl p-5 space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{fr ? 'Plan Institutionnel' : 'Institutional Plan'}</span>
-                      <Badge variant="secondary">{fr ? 'Annuel' : 'Annual'}</Badge>
+                      <span className="text-sm text-muted-foreground">{t.checkout.institutionalPlan}</span>
+                      <Badge variant="secondary">{t.checkout.annual}</Badge>
                     </div>
                     <div className="flex justify-between items-center border-t border-border/40 pt-3">
-                      <span className="font-semibold">{fr ? 'Total (simulation)' : 'Total (simulation)'}</span>
+                      <span className="font-semibold">{t.checkout.total}</span>
                       <span className="text-2xl font-bold text-primary">0 €</span>
                     </div>
                   </div>
@@ -154,10 +148,10 @@ export default function Checkout() {
                   {/* What's included */}
                   <ul className="space-y-2">
                     {[
-                      fr ? 'Statistiques détaillées par genre et pays' : 'Detailed stats by gender and country',
-                      fr ? 'Tableau de bord analytique complet' : 'Complete analytics dashboard',
-                      fr ? 'Code d\'accès unique et sécurisé' : 'Unique secure access code',
-                      fr ? 'Accès illimité aux données' : 'Unlimited data access',
+                      t.checkout.benefit1,
+                      t.checkout.benefit2,
+                      t.checkout.benefit3,
+                      t.checkout.benefit4,
                     ].map((item) => (
                       <li key={item} className="flex items-start gap-2 text-sm">
                         <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -175,20 +169,18 @@ export default function Checkout() {
                     {isLoading ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        {fr ? 'Traitement...' : 'Processing...'}
+                        {t.checkout.processing}
                       </>
                     ) : (
                       <>
                         <ShieldCheck className="w-5 h-5 mr-2" />
-                        {fr ? 'Simuler le paiement & Accéder' : 'Simulate Payment & Access'}
+                        {t.checkout.simulatePayment}
                       </>
                     )}
                   </Button>
 
                   <p className="text-center text-xs text-muted-foreground">
-                    {fr
-                      ? '🔒 Simulation uniquement — aucune transaction réelle'
-                      : '🔒 Simulation only — no real transaction'}
+                    {t.checkout.noRealTransaction}
                   </p>
                 </>
               )}

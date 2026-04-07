@@ -16,7 +16,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import { getMediaUrl } from '@/lib/utils';
 
-function PostCard({ post, onLike, onComment, onDelete, currentUser, language }) {
+function PostCard({ post, onLike, onComment, onDelete, currentUser }) {
+  const { t } = useLanguageStore();
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isCommenting, setIsCommenting] = useState(false);
@@ -55,7 +56,7 @@ function PostCard({ post, onLike, onComment, onDelete, currentUser, language }) 
 
   const timeAgo = formatDistanceToNow(new Date(post.created_at), {
     addSuffix: true,
-    locale: language === 'fr' ? fr : enUS
+    locale: t.common.langCode === 'fr' ? fr : enUS
   });
 
   return (
@@ -161,7 +162,7 @@ function PostCard({ post, onLike, onComment, onDelete, currentUser, language }) 
               <div className="space-y-3 max-h-60 overflow-y-auto">
                 {postComments.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    {language === 'fr' ? 'Aucun commentaire' : 'No comments yet'}
+                    {t.feed.noComments}
                   </p>
                 ) : (
                   postComments.map((comment) => {
@@ -192,7 +193,7 @@ function PostCard({ post, onLike, onComment, onDelete, currentUser, language }) 
                   <Input
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
-                    placeholder={language === 'fr' ? 'Ajouter un commentaire...' : 'Add a comment...'}
+                    placeholder={t.feed.addComment}
                     className="flex-1"
                     disabled={isCommenting}
                   />
@@ -210,7 +211,7 @@ function PostCard({ post, onLike, onComment, onDelete, currentUser, language }) 
 }
 
 function CreatePostDialog({ onClose }) {
-  const { language } = useLanguageStore();
+  const { t } = useLanguageStore();
   const { uploadPost, createPost } = useFeedStore();
   const [contentType, setContentType] = useState('text');
   const [textContent, setTextContent] = useState('');
@@ -244,7 +245,7 @@ function CreatePostDialog({ onClose }) {
     setIsSubmitting(false);
 
     if (result.success) {
-      toast.success(language === 'fr' ? 'Post publié !' : 'Post published!');
+      toast.success(t.feed.postPublished);
       onClose();
     } else {
       toast.error(result.error);
@@ -260,7 +261,7 @@ function CreatePostDialog({ onClose }) {
           size="sm"
           onClick={() => { setContentType('text'); setFile(null); setPreview(null); }}
         >
-          <FileText className="w-4 h-4 mr-1" /> {language === 'fr' ? 'Texte' : 'Text'}
+          <FileText className="w-4 h-4 mr-1" /> {t.feed.text}
         </Button>
         <Button
           variant={contentType === 'image' ? 'default' : 'outline'}
@@ -282,7 +283,7 @@ function CreatePostDialog({ onClose }) {
       <Textarea
         value={textContent}
         onChange={(e) => setTextContent(e.target.value)}
-        placeholder={language === 'fr' ? 'Partagez quelque chose avec la communauté...' : 'Share something with the community...'}
+        placeholder={t.feed.shareSomething}
         rows={4}
         className="resize-none"
       />
@@ -321,7 +322,7 @@ function CreatePostDialog({ onClose }) {
               onClick={() => fileInputRef.current?.click()}
             >
               {contentType === 'image' ? <Image className="w-8 h-8 mr-2" /> : <Video className="w-8 h-8 mr-2" />}
-              {language === 'fr' ? 'Cliquez pour ajouter' : 'Click to add'}
+              {t.feed.clickToAdd}
             </Button>
           )}
         </div>
@@ -334,9 +335,9 @@ function CreatePostDialog({ onClose }) {
         className="w-full"
       >
         {isSubmitting ? (
-          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {language === 'fr' ? 'Publication...' : 'Publishing...'}</>
+          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t.feed.publishing}</>
         ) : (
-          language === 'fr' ? 'Publier' : 'Publish'
+          t.feed.post
         )}
       </Button>
     </div>
@@ -346,7 +347,7 @@ function CreatePostDialog({ onClose }) {
 export default function Feed() {
   const { posts, fetchPosts, toggleLike, deletePost, isLoading, hasMore, resetPosts } = useFeedStore();
   const { user } = useAuthStore();
-  const { language, t } = useLanguageStore();
+  const { t } = useLanguageStore();
   const [createOpen, setCreateOpen] = useState(false);
   const observerRef = useRef(null);
   const loadMoreRef = useRef(null);
@@ -375,17 +376,17 @@ export default function Feed() {
 
   const handleLike = async (postId) => {
     if (!user || user.role === 'institution') {
-      toast.error(language === 'fr' ? 'Les institutions ne peuvent pas interagir' : 'Institutions cannot interact');
+      toast.error(t.feed.institutionNoInteract);
       return;
     }
     await toggleLike(postId);
   };
 
   const handleDelete = async (postId) => {
-    if (confirm(language === 'fr' ? 'Supprimer ce post ?' : 'Delete this post?')) {
+    if (confirm(t.feed.deleteConfirm || t.common.delete)) {
       const result = await deletePost(postId);
       if (result.success) {
-        toast.success(language === 'fr' ? 'Post supprimé' : 'Post deleted');
+        toast.success(t.feed.postDeleted);
       } else {
         toast.error(result.error);
       }
@@ -405,7 +406,7 @@ export default function Feed() {
         >
           <div>
             <span className="text-xs uppercase tracking-[0.3em] text-primary font-semibold">
-              {language === 'fr' ? 'Communauté' : 'Community'}
+              {t.feed.community}
             </span>
             <h1 className="text-3xl font-bold tracking-tight mt-1">Feed</h1>
           </div>
@@ -415,12 +416,12 @@ export default function Feed() {
               <DialogTrigger asChild>
                 <Button className="rounded-full gap-2" data-testid="create-post-btn">
                   <Plus className="w-4 h-4" />
-                  {language === 'fr' ? 'Nouveau post' : 'New Post'}
+                  {t.feed.newPost}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{language === 'fr' ? 'Créer un post' : 'Create a post'}</DialogTitle>
+                  <DialogTitle>{t.feed.createPost}</DialogTitle>
                 </DialogHeader>
                 <CreatePostDialog onClose={() => setCreateOpen(false)} />
               </DialogContent>
@@ -432,9 +433,7 @@ export default function Feed() {
         {user?.role === 'institution' && (
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
             <p className="text-sm text-yellow-600 dark:text-yellow-400">
-              {language === 'fr' 
-                ? '⚠️ En tant qu\'institution, vous pouvez consulter le feed mais pas interagir (liker, commenter, publier).'
-                : '⚠️ As an institution, you can view the feed but cannot interact (like, comment, post).'}
+              {t.feed.institutionWarning}
             </p>
           </div>
         )}
@@ -449,7 +448,6 @@ export default function Feed() {
                 onLike={handleLike}
                 onDelete={handleDelete}
                 currentUser={user}
-                language={language}
               />
             ))}
           </AnimatePresence>
@@ -460,7 +458,7 @@ export default function Feed() {
           {isLoading && <Loader2 className="w-6 h-6 animate-spin text-primary" />}
           {!hasMore && posts.length > 0 && (
             <p className="text-sm text-muted-foreground">
-              {language === 'fr' ? 'Vous avez tout vu !' : 'You\'ve seen it all!'}
+              {t.feed.seenItAll}
             </p>
           )}
         </div>
@@ -470,14 +468,14 @@ export default function Feed() {
           <div className="text-center py-16">
             <MessageCircle className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">
-              {language === 'fr' ? 'Aucun post pour le moment' : 'No posts yet'}
+              {t.feed.noPosts}
             </h3>
             <p className="text-muted-foreground text-sm mb-4">
-              {language === 'fr' ? 'Soyez le premier à partager !' : 'Be the first to share!'}
+              {t.feed.firstToShare}
             </p>
             {canCreatePost && (
               <Button onClick={() => setCreateOpen(true)} className="rounded-full">
-                {language === 'fr' ? 'Créer un post' : 'Create a post'}
+                {t.feed.createPost}
               </Button>
             )}
           </div>

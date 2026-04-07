@@ -15,7 +15,7 @@ export default function Login() {
   // each attempt. Without this, a previous error message lingers on retry.
   const { login, isLoading, error, clearError } = useAuthStore();
   const { hydrateFromBackend } = useInstitutionStore();
-  const { language, t } = useLanguageStore();
+  const { t } = useLanguageStore();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -65,10 +65,10 @@ export default function Login() {
       >
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold tracking-tight mb-2">
-            {language === 'fr' ? 'Bon retour ' : 'Welcome back'}
+            {t.auth.welcomeBack}
           </h1>
           <p className="text-muted-foreground">
-            {language === 'fr' ? 'Connectez-vous à Art Connect Africa' : 'Sign in to Art Connect Africa'}
+            {t.auth.signInTo}
           </p>
         </div>
 
@@ -99,7 +99,7 @@ export default function Login() {
 
           <Button type="submit" className="w-full rounded-full" disabled={isLoading} data-testid="login-submit">
             {isLoading ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{language === 'fr' ? 'Connexion...' : 'Signing in...'}</>
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t.auth.signingIn}</>
             ) : t.auth.login}
           </Button>
         </form>
@@ -113,11 +113,12 @@ export default function Login() {
 
         {/* Demo credentials */}
         <div className="mt-6 p-4 bg-secondary/50 rounded-lg text-sm space-y-1">
-          <p className="font-medium mb-2">{language === 'fr' ? 'Comptes de démonstration :' : 'Demo accounts:'}</p>
+          <p className="font-medium mb-2">{t.auth.demoAccounts}</p>
           <p className="text-muted-foreground">🎨 amara.diallo@artconnect.africa / password123</p>
           <p className="text-muted-foreground">🏛 mc@artconnect.africa / institution123</p>
           <p className="text-muted-foreground">🔑 admin@artconnect.africa / admin123</p>
         </div>
+
       </motion.div>
     </div>
   );

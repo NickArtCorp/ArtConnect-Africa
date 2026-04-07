@@ -5,7 +5,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, ArrowLeft, Loader2, MessageCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Send, ArrowLeft, Loader2, MessageCircle, User, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { getMediaUrl } from '@/lib/utils';
@@ -16,10 +17,26 @@ export default function Messages() {
   const { user } = useAuthStore();
   const { conversations, currentMessages, fetchConversations, fetchMessages, sendMessage, clearCurrentMessages, isLoading } = useMessagesStore();
   const { fetchArtist, currentArtist } = useArtistsStore();
-  const { language, t } = useLanguageStore();
+  const { t, language } = useLanguageStore();
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Helper to render visitor avatar
+  const renderVisitorAvatar = (visitorType) => {
+    const IconComponent = visitorType === 'organisation' ? Building2 : User;
+    return (
+      <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center border border-amber-300 dark:border-amber-700">
+        <IconComponent className="w-6 h-6 text-amber-700 dark:text-amber-400" />
+      </div>
+    );
+  };
+
+const getTagLabel = (tag) => {
+  if (tag === 'professional') return language === 'fr' ? 'Professionnel' : 'Professional';
+  if (tag === 'media') return language === 'fr' ? 'Média' : 'Media';
+  return language === 'fr' ? 'Artiste' : 'Artist';
+};
 
   useEffect(() => {
     if (!user) {
@@ -53,7 +70,7 @@ export default function Messages() {
     if (result.success) {
       setNewMessage('');
     } else {
-      toast.error(result.error || (language === 'fr' ? 'Échec de l\'envoi' : 'Failed to send'));
+      toast.error(result.error || t.profile.messageFailed);
     }
   };
 
@@ -94,7 +111,8 @@ export default function Messages() {
                   const fullName = `${conv.user.first_name} ${conv.user.last_name}`;
                   const initials = `${conv.user.first_name?.[0] || ''}${conv.user.last_name?.[0] || ''}`.toUpperCase();
                   const isActive = conv.user.id === activeUserId;
-                  const convAvatarUrl = getMediaUrl(conv.user.avatar);
+                  const isVisitor = conv.sender_role === 'visitor';
+                  const convAvatarUrl = isVisitor ? null : getMediaUrl(conv.user.avatar);
 
                   return (
                     <Link
@@ -106,10 +124,14 @@ export default function Messages() {
                       data-testid={`conv-item-${conv.user.id}`}
                     >
                       <div className="relative">
-                        <Avatar className="w-12 h-12">
-                          <AvatarImage src={convAvatarUrl} alt={fullName} />
-                          <AvatarFallback>{initials}</AvatarFallback>
-                        </Avatar>
+                        {isVisitor ? (
+                          renderVisitorAvatar(conv.sender_visitor_type)
+                        ) : (
+                          <Avatar className="w-12 h-12">
+                            <AvatarImage src={convAvatarUrl} alt={fullName} />
+                            <AvatarFallback>{initials}</AvatarFallback>
+                          </Avatar>
+                        )}
                         {conv.unread_count > 0 && (
                           <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center">
                             {conv.unread_count}
@@ -117,9 +139,20 @@ export default function Messages() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium truncate">{fullName}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium truncate">{fullName}</h4>
+                          {isVisitor ? (
+                            <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700 text-[10px] h-4 whitespace-nowrap">
+                              {t.nav.visitorBadge}
+                            </Badge>
+                          ) : conv.user.profile_tag && (
+                            <Badge variant="secondary" className="bg-primary/10 text-primary border-0 text-[10px] h-4 whitespace-nowrap">
+                              {getTagLabel(conv.user.profile_tag)}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground truncate">
-                          {conv.last_message?.content || 'No messages'}
+                          {conv.last_message?.content || t.messages.noMessages}
                         </p>
                       </div>
                     </Link>
@@ -146,15 +179,39 @@ export default function Messages() {
                   <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <Link to={`/artist/${chatUser.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage src={getMediaUrl(chatUser.avatar)} alt={`${chatUser.first_name} ${chatUser.last_name}`} />
-                    <AvatarFallback>
-                      {`${chatUser.first_name?.[0] || ''}${chatUser.last_name?.[0] || ''}`.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  {chatUser.role === 'visitor' ? (
+                    renderVisitorAvatar(chatUser.visitor_type)
+                  ) : (
+                    <Avatar className="w-10 h-10">
+                      <AvatarImage src={getMediaUrl(chatUser.avatar)} alt={`${chatUser.first_name} ${chatUser.last_name}`} />
+                      <AvatarFallback>
+                        {`${chatUser.first_name?.[0] || ''}${chatUser.last_name?.[0] || ''}`.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                   <div>
-                    <h3 className="font-medium" data-testid="chat-user-name">{chatUser.first_name} {chatUser.last_name}</h3>
-                    <p className="text-xs text-muted-foreground">{chatUser.sector}</p>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium" data-testid="chat-user-name">{chatUser.first_name} {chatUser.last_name}</h3>
+                      {chatUser.role === 'visitor' ? (
+                        <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700 text-xs">
+                          {t.nav.visitorBadge}
+                        </Badge>
+                      ) : chatUser.profile_tag && (
+                        <Badge variant="secondary" className="bg-primary/10 text-primary border-0 text-xs">
+                          {getTagLabel(chatUser.profile_tag)}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+  {chatUser.role === 'visitor'
+    ? (chatUser.visitor_type === 'organisation' 
+        ? t.auth.organisation 
+        : t.auth.individual)
+    : chatUser.domain
+      ? `${getTagLabel(chatUser.profile_tag)} • ${chatUser.domain}`
+      : chatUser.sector || ''
+  }
+</p>
                   </div>
                 </Link>
               </div>
@@ -164,6 +221,7 @@ export default function Messages() {
                 <div className="space-y-4 max-w-3xl mx-auto" data-testid="messages-container">
                   {currentMessages.map((msg, index) => {
                     const isSent = msg.sender_id === user.id;
+                    const isVisitorMsg = msg.sender_type === 'visitor';
                     return (
                       <motion.div
                         key={msg.id}
@@ -172,20 +230,27 @@ export default function Messages() {
                         transition={{ duration: 0.3, delay: index * 0.02 }}
                         className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div
-                          className={`max-w-[70%] px-4 py-3 rounded-2xl ${
-                            isSent
-                              ? 'message-sent text-primary-foreground rounded-br-md'
-                              : 'message-received border border-border/50 rounded-bl-md'
-                          }`}
-                          data-testid={`message-${msg.id}`}
-                        >
-                          <p className="text-sm break-words">{msg.content}</p>
-                          <p className={`text-xs mt-1 ${
-                            isSent ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                          }`}>
-                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                        <div className="flex flex-col max-w-[70%]">
+                          {!isSent && isVisitorMsg && (
+                            <Badge className="self-start mb-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700">
+                              {t.nav.visitorBadge}
+                            </Badge>
+                          )}
+                          <div
+                            className={`px-4 py-3 rounded-2xl ${
+                              isSent
+                                ? 'message-sent text-primary-foreground rounded-br-md'
+                                : 'message-received border border-border/50 rounded-bl-md'
+                            }`}
+                            data-testid={`message-${msg.id}`}
+                          >
+                            <p className="text-sm break-words">{msg.content}</p>
+                            <p className={`text-xs mt-1 ${
+                              isSent ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                            }`}>
+                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
                         </div>
                       </motion.div>
                     );

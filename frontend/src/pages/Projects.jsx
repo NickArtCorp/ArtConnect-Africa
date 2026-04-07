@@ -18,7 +18,7 @@ export default function Projects() {
   const { projects, fetchProjects, createProject, applyToProject, isLoading } = useProjectsStore();
   const { sectors, domains, fetchReferenceData } = useReferenceStore();
   const { user } = useAuthStore();
-  const { language, t } = useLanguageStore();
+  const { t } = useLanguageStore();
   
   const [createOpen, setCreateOpen] = useState(false);
   const [applyOpen, setApplyOpen] = useState(null);
@@ -35,13 +35,13 @@ export default function Projects() {
 
   const handleCreateProject = async () => {
     if (!newProject.title || !newProject.description || !newProject.sector || !newProject.start_date) {
-      toast.error(language === 'fr' ? 'Veuillez remplir les champs obligatoires' : 'Please fill required fields');
+      toast.error(t.projects.fillRequiredFields);
       return;
     }
 
     const result = await createProject(newProject);
     if (result.success) {
-      toast.success(language === 'fr' ? 'Projet créé !' : 'Project created!');
+      toast.success(t.projects.projectCreated);
       setCreateOpen(false);
       setNewProject({ title: '', description: '', sector: '', looking_for: [], collaboration_type: 'local', start_date: '', end_date: '', location: '' });
     } else {
@@ -52,7 +52,7 @@ export default function Projects() {
   const handleApply = async (projectId) => {
     const result = await applyToProject(projectId, applyMessage);
     if (result.success) {
-      toast.success(language === 'fr' ? 'Candidature envoyée !' : 'Application sent!');
+      toast.success(t.projects.applicationSent);
       setApplyOpen(null);
       setApplyMessage('');
     } else {
@@ -83,9 +83,8 @@ export default function Projects() {
     
     // Type visual logic
     let typeEmoji = "🏠";
-    let typeLabel = t.projects.typeLocal || "Local";
-    if (project.collaboration_type === "intra_african") { typeEmoji = "🌍"; typeLabel = t.projects.typeIntra || "Intra-African"; }
-    if (project.collaboration_type === "international") { typeEmoji = "🌐"; typeLabel = t.projects.typeIntl || "International"; }
+    let typeLabel = t.projects.typeLocal;
+    if (project.collaboration_type === "intra_african") { typeEmoji = "🌍"; typeLabel = t.projects.typeIntra; }
 
     return (
       <motion.div
@@ -127,10 +126,10 @@ export default function Projects() {
         {/* Dates */}
         <div className="text-xs text-muted-foreground mb-4 space-y-1">
           {project.start_date && (
-            <p><strong>{language === 'fr' ? 'Début :' : 'Starts:'}</strong> {new Date(project.start_date).toLocaleDateString()}</p>
+            <p><strong>{t.projects.starts}:</strong> {new Date(project.start_date).toLocaleDateString(t.common.langCode === 'fr' ? 'fr-FR' : 'en-US')}</p>
           )}
           {project.end_date && (
-            <p><strong>{language === 'fr' ? 'Fin :' : 'Ends:'}</strong> {new Date(project.end_date).toLocaleDateString()}</p>
+            <p><strong>{t.projects.ends}:</strong> {new Date(project.end_date).toLocaleDateString(t.common.langCode === 'fr' ? 'fr-FR' : 'en-US')}</p>
           )}
         </div>
 
@@ -175,16 +174,16 @@ export default function Projects() {
                   </DialogHeader>
                   <div className="space-y-4 pt-4">
                     <div className="space-y-2">
-                      <Label>{language === 'fr' ? 'Message (optionnel)' : 'Message (optional)'}</Label>
+                      <Label>{t.profile.message} ({t.common.optional || 'optional'})</Label>
                       <Textarea
                         value={applyMessage}
                         onChange={(e) => setApplyMessage(e.target.value)}
                         rows={3}
-                        placeholder={language === 'fr' ? 'Présentez-vous...' : 'Introduce yourself...'}
+                        placeholder={t.profile.writeMessagePlaceholder}
                       />
                     </div>
                     <Button onClick={() => handleApply(project.id)} className="w-full">
-                      {language === 'fr' ? 'Envoyer ma candidature' : 'Send Application'}
+                      {t.projects.sendApplication}
                     </Button>
                   </div>
                 </DialogContent>
@@ -215,15 +214,13 @@ export default function Projects() {
         >
           <div>
             <span className="text-xs uppercase tracking-[0.3em] text-primary font-semibold">
-              {language === 'fr' ? 'Collaboration' : 'Collaboration'}
+              Collaboration
             </span>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mt-2">
               {t.projects.title}
             </h1>
             <p className="text-muted-foreground mt-2">
-              {language === 'fr' 
-                ? 'Trouvez des collaborateurs pour vos projets artistiques'
-                : 'Find collaborators for your artistic projects'}
+              {t.projects.findCollaborators}
             </p>
           </div>
 
@@ -241,21 +238,21 @@ export default function Projects() {
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
                   <div className="space-y-2">
-                    <Label>{language === 'fr' ? 'Titre du projet' : 'Project Title'}</Label>
+                    <Label>{t.projects.projectTitle}</Label>
                     <Input
                       value={newProject.title}
                       onChange={(e) => setNewProject({...newProject, title: e.target.value})}
-                      placeholder={language === 'fr' ? 'Ex: Exposition Collective 2026' : 'Ex: Collective Exhibition 2026'}
+                      placeholder="Ex: Collective Exhibition 2026"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Description</Label>
+                    <Label>{t.dashboard.description}</Label>
                     <Textarea
                       value={newProject.description}
                       onChange={(e) => setNewProject({...newProject, description: e.target.value})}
                       rows={3}
-                      placeholder={language === 'fr' ? 'Décrivez votre projet...' : 'Describe your project...'}
+                      placeholder={t.profile.writeMessagePlaceholder}
                     />
                   </div>
 
@@ -271,7 +268,7 @@ export default function Projects() {
                       <SelectContent>
                         {sectors.map((s) => (
                           <SelectItem key={s.name} value={s.name}>
-                            {language === 'fr' ? s.name_fr : s.name}
+                            {t.common.isFrench ? (s.name_fr || s.name) : s.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -279,18 +276,17 @@ export default function Projects() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>{language === 'fr' ? 'Type de collaboration' : 'Collaboration Type'}</Label>
+                    <Label>{t.projects.type}</Label>
                     <Select 
                       value={newProject.collaboration_type} 
                       onValueChange={(v) => setNewProject({...newProject, collaboration_type: v})}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={t.projects.typeLocal || 'Local'} />
+                        <SelectValue placeholder={t.projects.typeLocal} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="local">🏠 {t.projects.typeLocal}</SelectItem>
-                        <SelectItem value="intra_african">🌍 {t.projects.typeIntra}</SelectItem>
-                        <SelectItem value="international">🌐 {t.projects.typeIntl}</SelectItem>
+                        <SelectItem value="local">{t.projects.typeLocal}</SelectItem>
+                        <SelectItem value="intra_african">{t.projects.typeIntra}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -315,11 +311,11 @@ export default function Projects() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>{language === 'fr' ? 'Lieu' : 'Location'}</Label>
+                    <Label>{t.projects.location}</Label>
                     <Input
                       value={newProject.location}
                       onChange={(e) => setNewProject({...newProject, location: e.target.value})}
-                      placeholder={language === 'fr' ? 'Ville, Pays...' : 'City, Country...'}
+                      placeholder="City, Country..."
                     />
                   </div>
 
@@ -334,7 +330,7 @@ export default function Projects() {
                             className="cursor-pointer"
                             onClick={() => toggleLookingFor(d.name)}
                           >
-                            {language === 'fr' ? d.name_fr : d.name}
+                            {t.common.isFrench ? (d.name_fr || d.name) : d.name}
                           </Badge>
                         ))}
                       </div>
@@ -342,7 +338,7 @@ export default function Projects() {
                   )}
 
                   <Button onClick={handleCreateProject} className="w-full">
-                    {language === 'fr' ? 'Créer le projet' : 'Create Project'}
+                    {t.projects.createProjectBtn}
                   </Button>
                 </div>
               </DialogContent>
@@ -359,7 +355,7 @@ export default function Projects() {
           <div className="text-center py-24 bg-card rounded-2xl border border-border/50">
             <Briefcase className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
             <p className="text-muted-foreground mb-4">
-              {language === 'fr' ? 'Aucun projet pour le moment' : 'No projects yet'}
+              {t.projects.noProjects}
             </p>
             {user && (
               <Button onClick={() => setCreateOpen(true)} className="rounded-full">
@@ -377,7 +373,7 @@ export default function Projects() {
             
             <TabsContent value="upcoming">
               {upcomingProjects.length === 0 ? (
-                <p className="text-muted-foreground p-8 text-center">{language === 'fr' ? 'Aucun projet à venir' : 'No upcoming projects'}</p>
+                <p className="text-muted-foreground p-8 text-center">{t.projects.noUpcoming}</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="upcoming-projects-grid">
                   {upcomingProjects.map(renderProjectCard)}
@@ -387,7 +383,7 @@ export default function Projects() {
             
             <TabsContent value="ongoing">
               {ongoingProjects.length === 0 ? (
-                <p className="text-muted-foreground p-8 text-center">{language === 'fr' ? 'Aucun projet en cours' : 'No ongoing projects'}</p>
+                <p className="text-muted-foreground p-8 text-center">{t.projects.noOngoing}</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="ongoing-projects-grid">
                   {ongoingProjects.map(renderProjectCard)}
@@ -397,7 +393,7 @@ export default function Projects() {
 
             <TabsContent value="past">
               {pastProjects.length === 0 ? (
-                <p className="text-muted-foreground p-8 text-center">{language === 'fr' ? 'Aucun projet passé' : 'No past projects'}</p>
+                <p className="text-muted-foreground p-8 text-center">{t.projects.noPast}</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="past-projects-grid">
                   {pastProjects.map(renderProjectCard)}

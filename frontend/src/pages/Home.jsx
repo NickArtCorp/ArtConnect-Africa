@@ -9,7 +9,7 @@ import { motion } from 'framer-motion';
 export default function Home() {
   const { featuredArtists, fetchFeaturedArtists } = useArtistsStore();
   const { user } = useAuthStore();
-  const { t } = useLanguageStore();
+  const { language, t } = useLanguageStore();
   const { overview, fetchOverview } = useStatisticsStore();
 
   useEffect(() => {
@@ -193,7 +193,7 @@ export default function Home() {
             <div className="flex items-end justify-between mb-10">
               <div>
                 <span className="text-xs uppercase tracking-[0.3em] text-primary font-semibold">
-                  Featured
+                  {t.common.explore}
                 </span>
                 <h2 className="text-4xl md:text-5xl font-bold tracking-tight mt-2">
                   {t.home.featuredArtists}
@@ -225,13 +225,9 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-4xl md:text-5xl font-bold tracking-tight mb-6"
+              className="text-4xl md:text-5xl font-bold tracking-tight mb-6 whitespace-pre-line"
             >
-              {t.language === 'fr' ? (
-                <>Rejoignez la communauté<br /><span className="gradient-text">artistique africaine</span></>
-              ) : (
-                <>Join the African<br /><span className="gradient-text">artistic community</span></>
-              )}
+              {t.home.joinCTA}
             </motion.h2>
             <motion.div
               initial={{ opacity: 0, y: 20 }}

@@ -57,12 +57,12 @@ class User(Base):
     password = Column(String)
     first_name = Column(String)
     last_name = Column(String)
-    country = Column(String)
-    subregion = Column(String)
-    gender = Column(String)
-    sector = Column(String)
-    domain = Column(String)
-    year_started = Column(Integer)
+    country = Column(String, nullable=True)
+    subregion = Column(String, nullable=True)
+    gender = Column(String, nullable=True)
+    sector = Column(String, nullable=True)
+    domain = Column(String, nullable=True)
+    year_started = Column(Integer, nullable=True)
     bio = Column(Text, default="")
     additional_info = Column(Text, default="")
     website = Column(String, default="")
@@ -70,12 +70,14 @@ class User(Base):
     portfolio = Column(JSON, default={"documents": [], "images": [], "videos": []})
     role = Column(String, default="artist")
     organization_name = Column(String, nullable=True)
+    visitor_type = Column(String, nullable=True)  # 'individual' | 'organisation'
     is_verified = Column(Boolean, default=False)
     is_featured = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     has_paid = Column(Boolean, default=False)
     access_code = Column(String, nullable=True)
     paid_at = Column(String, nullable=True)
+    profile_tag = Column(String, nullable=True)  # 'artist' | 'professional' | 'media'
 
 class Post(Base):
     __tablename__ = "posts"
@@ -114,6 +116,8 @@ class Message(Base):
     content = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     read = Column(Boolean, default=False)
+    sender_type = Column(String, default="artist")  # 'artist' | 'visitor' | 'institution'
+    is_visitor = Column(Boolean, default=False)  # tag if sender is visitor
 
 class Project(Base):
     __tablename__ = "projects"
@@ -132,6 +136,13 @@ class Project(Base):
     end_date = Column(DateTime, nullable=True)
     location = Column(String, nullable=True)
 
+class VisitorView(Base):
+    __tablename__ = "visitor_views"
+    id = Column(String, primary_key=True, index=True)
+    visitor_id = Column(String, nullable=True)  # None for anonymous, user_id for logged-in visitors
+    artist_id = Column(String, ForeignKey("users.id"))
+    viewed_at = Column(DateTime, default=datetime.utcnow)
+
 # Create tables
 Base.metadata.create_all(bind=engine)
 
@@ -142,6 +153,7 @@ def _run_migrations():
             ("has_paid",    "BOOLEAN DEFAULT 0"),
             ("access_code", "VARCHAR"),
             ("paid_at",     "VARCHAR"),
+            ("profile_tag", "VARCHAR"),
         ]:
             try:
                 conn.execute(
@@ -163,6 +175,29 @@ def _run_migrations():
                 conn.commit()
             except Exception:
                 pass
+        # Visitor columns
+        for col, definition in [
+            ("visitor_type", "VARCHAR"),
+        ]:
+            try:
+                conn.execute(
+                    __import__("sqlalchemy").text(f"ALTER TABLE users ADD COLUMN {col} {definition}")
+                )
+                conn.commit()
+            except Exception:
+                pass
+        # Message columns for visitor and sender_type
+        for col, definition in [
+            ("sender_type", "VARCHAR DEFAULT 'artist'"),
+            ("is_visitor", "BOOLEAN DEFAULT 0"),
+        ]:
+            try:
+                conn.execute(
+                    __import__("sqlalchemy").text(f"ALTER TABLE messages ADD COLUMN {col} {definition}")
+                )
+                conn.commit()
+            except Exception:
+                pass
 
 
 _run_migrations()
@@ -173,7 +208,7 @@ active_tokens = {}
 
 # ============== CONSTANTS ==============
 
-ROLES = ['admin', 'artist', 'institution']
+ROLES = ['admin', 'artist', 'institution', 'visitor']
 
 AFRICAN_COUNTRIES = [
     {"name": "Algeria", "name_fr": "Algérie", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
@@ -357,8 +392,27 @@ def sanitize_user(user: dict) -> dict:
     safe_fields = ['id', 'first_name', 'last_name', 'country', 'subregion', 'gender', 
                    'sector', 'domain', 'year_started', 'bio', 'additional_info', 
                    'website', 'avatar', 'role', 'is_featured', 'is_verified', 'created_at',
-                   'organization_name', 'portfolio', 'has_paid', 'access_code', 'paid_at']
+                   'organization_name', 'visitor_type', 'portfolio', 'has_paid', 'access_code', 'paid_at', 'profile_tag']
     return {k: v for k, v in user.items() if k in safe_fields}
+
+def compute_collaborations_count(user_id: str, db: Session) -> int:
+    """Count projects where user is creator or an accepted collaborator."""
+    # Creator of any project
+    creator_count = db.query(Project).filter(Project.creator_id == user_id).count()
+    # Accepted collaborator in other projects
+    all_projects = db.query(Project).filter(Project.creator_id != user_id).all()
+    accepted_count = 0
+    for p in all_projects:
+        collabs = p.collaborators if p.collaborators else []
+        if isinstance(collabs, list):
+            for c in collabs:
+                if isinstance(c, dict) and c.get('user_id') == user_id and c.get('status') == 'accepted':
+                    accepted_count += 1
+                    break
+                elif isinstance(c, str) and c == user_id:
+                    accepted_count += 1
+                    break
+    return creator_count + accepted_count
 
 # ============== AUTH DEPENDENCIES ==============
 
@@ -467,17 +521,19 @@ class UserCreate(BaseModel):
     password: str
     first_name: str
     last_name: str
-    country: str
-    subregion: str
-    gender: str
-    sector: str
-    domain: str
-    year_started: int
+    country: Optional[str] = None
+    subregion: Optional[str] = None
+    gender: Optional[str] = None
+    sector: Optional[str] = None
+    domain: Optional[str] = None
+    year_started: Optional[int] = None
     bio: Optional[str] = ""
     additional_info: Optional[str] = ""
     website: Optional[str] = ""
-    role: Literal['artist', 'institution'] = 'artist'
+    role: Literal['artist', 'institution', 'visitor'] = 'artist'
+    profile_tag: Optional[Literal['artist', 'professional', 'media']] = None
     organization_name: Optional[str] = None
+    visitor_type: Optional[Literal['individual', 'organisation']] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -496,6 +552,7 @@ class UserUpdate(BaseModel):
     additional_info: Optional[str] = None
     website: Optional[str] = None
     avatar: Optional[str] = None
+    profile_tag: Optional[Literal['artist', 'professional', 'media']] = None
 
 class PostCreate(BaseModel):
     content_type: Literal['text', 'image', 'video']
@@ -551,8 +608,30 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == user_data.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
+    # Validate role-specific requirements
+    if user_data.role == 'visitor':
+        if not user_data.visitor_type:
+            raise HTTPException(status_code=400, detail="visitor_type is required for visitor accounts")
+        if user_data.visitor_type == 'organisation' and not user_data.organization_name:
+            raise HTTPException(status_code=400, detail="organisation_name is required for organisation visitors")
+    elif user_data.role in ('artist', 'institution'):
+        missing = [f for f in ['country', 'subregion', 'gender', 'sector', 'domain'] if not getattr(user_data, f)]
+        if missing:
+            raise HTTPException(status_code=400, detail=f"Missing required fields: {', '.join(missing)}")
+
     user_id = str(uuid.uuid4())
+
+    # Avatar selection
+    if user_data.role == 'visitor':
+        # Generic visitor avatar via DiceBear with distinct style
+        if user_data.visitor_type == 'organisation':
+            avatar = f"https://api.dicebear.com/7.x/shapes/svg?seed={user_id}&backgroundColor=64748b"
+        else:
+            avatar = f"https://api.dicebear.com/7.x/personas/svg?seed={user_id}&backgroundColor=64748b"
+    else:
+        avatar = f"https://api.dicebear.com/7.x/initials/svg?seed={user_data.first_name}%20{user_data.last_name}"
+
     new_user = User(
         id=user_id,
         email=user_data.email,
@@ -561,28 +640,30 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         last_name=user_data.last_name,
         country=user_data.country,
         subregion=user_data.subregion,
-        gender=user_data.gender,
-        sector=user_data.sector,
-        domain=user_data.domain,
-        year_started=user_data.year_started,
+        gender=user_data.gender if user_data.role != 'visitor' else None,
+        sector=user_data.sector if user_data.role != 'visitor' else None,
+        domain=user_data.domain if user_data.role != 'visitor' else None,
+        year_started=user_data.year_started if user_data.role != 'visitor' else None,
         bio=user_data.bio or "",
         additional_info=user_data.additional_info or "",
         website=user_data.website or "",
-        avatar=f"https://api.dicebear.com/7.x/initials/svg?seed={user_data.first_name}%20{user_data.last_name}",
+        avatar=avatar,
         portfolio={"documents": [], "images": [], "videos": []},
         role=user_data.role,
-        organization_name=user_data.organization_name if user_data.role == 'institution' else None,
+        profile_tag=user_data.profile_tag,
+        organization_name=user_data.organization_name if user_data.role in ('institution', 'visitor') else None,
+        visitor_type=user_data.visitor_type if user_data.role == 'visitor' else None,
         is_verified=False,
         is_featured=False
     )
-    
+
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    
+
     token = generate_token()
     active_tokens[token] = user_id
-    
+
     user_dict = sanitize_user({c.name: getattr(new_user, c.name) for c in new_user.__table__.columns})
     return {"token": token, "user": user_dict}
 
@@ -623,7 +704,7 @@ async def get_artists(
     db: Session = Depends(get_db)
 ):
     query = db.query(User).filter(User.role == "artist")
-    
+
     if search:
         s = f"%{search}%"
         query = query.filter((User.first_name.ilike(s)) | (User.last_name.ilike(s)) | (User.bio.ilike(s)))
@@ -632,28 +713,93 @@ async def get_artists(
     if sector: query = query.filter(User.sector == sector)
     if domain: query = query.filter(User.domain == domain)
     if gender: query = query.filter(User.gender == gender)
-    
+
     total = query.count()
     objs = query.offset(skip).limit(limit).all()
-    
+
     artists = []
     for a in objs:
         d = sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns})
+        d['collaborations_count'] = compute_collaborations_count(a.id, db)
+        d['visitor_views_count'] = db.query(func.count(func.distinct(VisitorView.visitor_id))).filter(
+            VisitorView.artist_id == a.id, VisitorView.visitor_id != None
+        ).scalar() or 0
+        d['visitor_messages_count'] = db.query(func.count(Message.id)).filter(
+            Message.receiver_id == a.id, Message.sender_type == "visitor"
+        ).scalar() or 0
         artists.append(d)
-        
+
     return {"artists": artists, "total": total}
 
 @api_router.get("/artists/featured")
 async def get_featured_artists(limit: int = 6, db: Session = Depends(get_db)):
     objs = db.query(User).filter(User.role == "artist", User.is_featured == True).limit(limit).all()
-    return [sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns}) for a in objs]
+    results = []
+    for a in objs:
+        d = sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns})
+        d['collaborations_count'] = compute_collaborations_count(a.id, db)
+        d['visitor_views_count'] = db.query(func.count(func.distinct(VisitorView.visitor_id))).filter(
+            VisitorView.artist_id == a.id, VisitorView.visitor_id != None
+        ).scalar() or 0
+        d['visitor_messages_count'] = db.query(func.count(Message.id)).filter(
+            Message.receiver_id == a.id, Message.sender_type == "visitor"
+        ).scalar() or 0
+        results.append(d)
+    return results
 
 @api_router.get("/artists/{artist_id}")
 async def get_artist(artist_id: str, db: Session = Depends(get_db)):
     a = db.query(User).filter(User.id == artist_id, User.role == "artist").first()
     if not a:
         raise HTTPException(status_code=404, detail="Artist not found")
-    return sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns})
+    d = sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns})
+    d['collaborations_count'] = compute_collaborations_count(a.id, db)
+    # Calculate visitor metrics
+    d['visitor_views_count'] = db.query(func.count(func.distinct(VisitorView.visitor_id))).filter(
+        VisitorView.artist_id == artist_id, VisitorView.visitor_id != None
+    ).scalar() or 0
+    d['visitor_messages_count'] = db.query(func.count(Message.id)).filter(
+        Message.receiver_id == artist_id, Message.sender_type == "visitor"
+    ).scalar() or 0
+    # Attach recent collaborations for profile display
+    owned = db.query(Project).filter(Project.creator_id == artist_id).all()
+    now = datetime.utcnow()
+    project_list = []
+    for p in owned:
+        status = "ongoing"
+        if p.start_date and now < p.start_date: status = "upcoming"
+        elif p.end_date and now > p.end_date: status = "past"
+        project_list.append({
+            "id": p.id, "title": p.title, "sector": p.sector,
+            "collaboration_type": p.collaboration_type, "status": status,
+            "start_date": p.start_date.isoformat() if p.start_date else None,
+            "end_date": p.end_date.isoformat() if p.end_date else None,
+        })
+    d['collaborations'] = project_list
+    return d
+
+@api_router.post("/artists/{artist_id}/view")
+async def track_profile_view(
+    artist_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    """Log a visitor profile view (open to all, no auth required)."""
+    artist = db.query(User).filter(User.id == artist_id, User.role == "artist").first()
+    if not artist:
+        raise HTTPException(status_code=404, detail="Artist not found")
+    # Resolve visitor_id from token if present
+    visitor_id = None
+    if credentials and credentials.credentials in active_tokens:
+        visitor_id = active_tokens[credentials.credentials]
+    view = VisitorView(
+        id=str(uuid.uuid4()),
+        visitor_id=visitor_id,
+        artist_id=artist_id,
+    )
+    db.add(view)
+    db.commit()
+    return {"ok": True}
 
 @api_router.put("/artists/me")
 async def update_profile(update_data: UserUpdate, user = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -680,6 +826,40 @@ async def upload_avatar(file: UploadFile = File(...), user = Depends(get_current
     db.query(User).filter(User.id == user["id"]).update({"avatar": url})
     db.commit()
     return {"avatar": url}
+
+@api_router.post("/posts/upload")
+async def upload_post_media(
+    file: UploadFile = File(...),
+    content_type: str = Form(...),
+    text_content: str = Form(""),
+    user = Depends(require_artist_or_admin),
+    db: Session = Depends(get_db)
+):
+    ext = Path(file.filename).suffix.lower()
+    folder = 'images' if 'image' in content_type else 'videos'
+    fid = str(uuid.uuid4())
+    path = UPLOADS_DIR / folder / f"{fid}{ext}"
+    
+    with open(path, "wb") as buf:
+        shutil.copyfileobj(file.file, buf)
+    
+    media_url = f"/uploads/{folder}/{fid}{ext}"
+    
+    new_post = Post(
+        id=str(uuid.uuid4()),
+        author_id=user["id"],
+        content_type='image' if 'image' in content_type else 'video',
+        text_content=text_content,
+        media_url=media_url
+    )
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
+    
+    d = {c.name: getattr(new_post, c.name) for c in new_post.__table__.columns}
+    d["created_at"] = new_post.created_at.isoformat()
+    d["author"] = user
+    return d
 
 # ============== POSTS ROUTES ==============
 
@@ -805,10 +985,26 @@ async def get_comments(post_id: str, limit: int = 50, db: Session = Depends(get_
 @api_router.post("/messages")
 async def send_msg(data: MessageCreate, user = Depends(get_current_user), db: Session = Depends(get_db)):
     mid = str(uuid.uuid4())
-    m = Message(id=mid, sender_id=user["id"], receiver_id=data.receiver_id, content=data.content)
+    sender_type = user.get("role", "artist")  # Use user's actual role
+    is_visitor = sender_type == "visitor"
+    
+    m = Message(
+        id=mid,
+        sender_id=user["id"],
+        receiver_id=data.receiver_id,
+        content=data.content,
+        sender_type=sender_type,
+        is_visitor=is_visitor
+    )
     db.add(m)
     db.commit()
-    return {"message": "Sent"}
+    
+    # Return the created message with all fields
+    msg_dict = {c.name: getattr(m, c.name) for c in m.__table__.columns}
+    msg_dict["created_at"] = m.created_at.isoformat()
+    sender = db.query(User).filter(User.id == user["id"]).first()
+    msg_dict["sender"] = sanitize_user({c.name: getattr(sender, c.name) for c in sender.__table__.columns}) if sender else None
+    return msg_dict
 
 @api_router.get("/messages/conversations")
 async def get_convs(user = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -820,12 +1016,122 @@ async def get_convs(user = Depends(get_current_user), db: Session = Depends(get_
         if other not in convs:
             u = db.query(User).filter(User.id == other).first()
             if u:
+                user_data = sanitize_user({c.name: getattr(u, c.name) for c in u.__table__.columns})
                 convs[other] = {
-                    "user": sanitize_user({c.name: getattr(u, c.name) for c in u.__table__.columns}),
-                    "last_message": {"content": m.content, "created_at": m.created_at.isoformat()},
-                    "unread_count": 1 if m.receiver_id == uid and not m.read else 0
+                    "user": user_data,
+                    "sender_role": u.role,
+                    "sender_visitor_type": u.visitor_type,  # 'individual' | 'organisation' | None
+                    "sender_name": f"{u.first_name} {u.last_name}",
+                    "last_message": {
+                        "content": m.content,
+                        "created_at": m.created_at.isoformat(),
+                        "sender_type": m.sender_type
+                    },
+                    "unread_count": db.query(func.count(Message.id)).filter(
+                        Message.sender_id == other,
+                        Message.receiver_id == uid,
+                        Message.read == False
+                    ).scalar() or 0
                 }
     return list(convs.values())
+
+@api_router.patch("/messages/{user_id}/read")
+async def mark_messages_read(user_id: str, user = Depends(get_current_user), db: Session = Depends(get_db)):
+    uid = user["id"]
+    db.query(Message).filter(Message.sender_id == user_id, Message.receiver_id == uid, Message.read == False).update({"read": True})
+    db.commit()
+    return {"ok": True}
+
+@api_router.get("/messages/{user_id}")
+async def get_msgs(user_id: str, user = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Fetch all messages in a conversation with another user"""
+    uid = user["id"]
+    msgs = db.query(Message).filter(
+        ((Message.sender_id == uid) & (Message.receiver_id == user_id)) |
+        ((Message.sender_id == user_id) & (Message.receiver_id == uid))
+    ).order_by(Message.created_at.asc()).all()
+    
+    result = []
+    for m in msgs:
+        msg_dict = {c.name: getattr(m, c.name) for c in m.__table__.columns}
+        msg_dict["created_at"] = m.created_at.isoformat()
+        # Include sender info
+        sender = db.query(User).filter(User.id == m.sender_id).first()
+        if sender:
+            msg_dict["sender_name"] = f"{sender.first_name} {sender.last_name}"
+            msg_dict["sender_role"] = sender.role
+            msg_dict["sender_visitor_type"] = sender.visitor_type
+        result.append(msg_dict)
+    
+    return result
+
+# ============== PORTFOLIO ROUTES ==============
+
+@api_router.post("/portfolio/upload")
+async def upload_portfolio_item(
+    file: UploadFile = File(...),
+    file_type: str = Form(...),
+    title: str = Form(...),
+    description: str = Form(""),
+    user = Depends(require_artist_or_admin),
+    db: Session = Depends(get_db)
+):
+    ext = Path(file.filename).suffix.lower()
+    # Map file_type to folder
+    folder_map = {'image': 'portfolio/images', 'document': 'portfolio/docs', 'video': 'portfolio/videos'}
+    folder = folder_map.get(file_type, 'portfolio/others')
+    
+    (UPLOADS_DIR / folder).mkdir(parents=True, exist_ok=True)
+    fid = str(uuid.uuid4())
+    path = UPLOADS_DIR / folder / f"{fid}{ext}"
+    
+    with open(path, "wb") as buf:
+        shutil.copyfileobj(file.file, buf)
+    
+    url = f"/uploads/{folder}/{fid}{ext}"
+    
+    db_user = db.query(User).filter(User.id == user["id"]).first()
+    portfolio = dict(db_user.portfolio)
+    
+    item = {"id": fid, "url": url, "title": title, "description": description, "filename": file.filename}
+    
+    if file_type == 'image': portfolio["images"].append(item)
+    elif file_type == 'video': portfolio["videos"].append(item)
+    else: portfolio["documents"].append(item)
+    
+    db.query(User).filter(User.id == user["id"]).update({"portfolio": portfolio})
+    db.commit()
+    return item
+
+@api_router.post("/portfolio/video")
+async def upload_portfolio_video(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    description: str = Form(""),
+    user = Depends(require_artist_or_admin),
+    db: Session = Depends(get_db)
+):
+    """Refactored to handle direct video file upload"""
+    return await upload_portfolio_item(file, 'video', title, description, user, db)
+
+@api_router.delete("/portfolio/{item_type}/{item_id}")
+async def delete_portfolio_item(item_type: str, item_id: str, user = Depends(require_artist_or_admin), db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.id == user["id"]).first()
+    portfolio = dict(db_user.portfolio)
+    
+    # item_type is 'images', 'videos', or 'documents'
+    if item_type not in portfolio: raise HTTPException(status_code=400, detail="Invalid type")
+    
+    # Find and delete
+    original_len = len(portfolio[item_type])
+    portfolio[item_type] = [item for item in portfolio[item_type] if item["id"] != item_id]
+    
+    if len(portfolio[item_type]) == original_len:
+        raise HTTPException(status_code=404, detail="Item not found")
+        
+    db.query(User).filter(User.id == user["id"]).update({"portfolio": portfolio})
+    db.commit()
+    return {"ok": True}
 
 # ============== PROJECTS ROUTES ==============
 
@@ -893,70 +1199,194 @@ async def get_projs(
 # ============== STATISTICS ROUTES ==============
 # ============== STATISTICS ROUTES ==============
 @api_router.get("/statistics/collaborations")
-async def get_collaboration_statistics(user = Depends(require_paid_institution), db: Session = Depends(get_db)):
-    """Detailed collaboration statistics - Paid Institutions and Admins only"""
+async def get_collaboration_statistics(sector: Optional[str] = None, user = Depends(require_paid_institution), db: Session = Depends(get_db)):
+    """Detailed collaboration metrics and visitor interest"""
+    from collections import defaultdict
     
+    project_query = db.query(Project)
+    if sector:
+        project_query = project_query.filter(Project.sector == sector)
+    
+    user_query = db.query(User).filter(User.role == "artist")
+    if sector:
+        user_query = user_query.filter(User.sector == sector)
+
     # 1. By Type
-    types = db.query(Project.collaboration_type, func.count(Project.id)).group_by(Project.collaboration_type).all()
-    by_type = {t[0] or "local": t[1] for t in types}
-    
+    local = project_query.filter(Project.collaboration_type == "local").count()
+    intra_african = project_query.filter(Project.collaboration_type == "intra_african").count()
+    by_type = {"local": local, "intra_african": intra_african}
+
     # 2. By Status (computed)
     now = datetime.utcnow()
-    projects = db.query(Project.start_date, Project.end_date).all()
+    projects = project_query.with_entities(Project.start_date, Project.end_date).all()
     by_status = {"upcoming": 0, "ongoing": 0, "past": 0}
     for p in projects:
-        start_d = p[0]
-        end_d = p[1]
+        start_d, end_d = p
         if start_d and now < start_d:
             by_status["upcoming"] += 1
         elif end_d and now > end_d:
             by_status["past"] += 1
         else:
             by_status["ongoing"] += 1
-            
+
     # 3. By Month (timeline)
-    from collections import defaultdict
     by_month_counts = defaultdict(int)
-    all_projects = db.query(Project.start_date).all()
+    all_projects = project_query.with_entities(Project.start_date).all()
     for p in all_projects:
         d = p[0] or datetime.utcnow()
         month_str = d.strftime("%Y-%m")
         by_month_counts[month_str] += 1
-        
     by_month = [{"month": m, "count": by_month_counts[m]} for m in sorted(by_month_counts.keys())[-12:]]
+
+    # 4. By Country (derive from project creator's country)
+    country_rows = db.query(User.country, func.count(Project.id))\
+        .join(Project, Project.creator_id == User.id)
+    if sector:
+        country_rows = country_rows.filter(Project.sector == sector)
+    country_rows = country_rows.group_by(User.country).all()
+    by_country = [{"country": c[0], "count": c[1]} for c in country_rows if c[0]]
+
+    # 5. By Country Pair (Intra-African)
+    # We will show statistics per country-pair by counting projects where creators are from different countries.
+    all_proj_data = project_query.with_entities(Project.id, Project.creator_id, Project.collaborators, Project.collaboration_type).all()
+    country_gender_map = {}  # (countryA, countryB) -> {men, women, other}
     
-    # 4. By Country (derive from project creator's country for simplicity)
-    countries = db.query(User.country, func.count(Project.id))\
-        .join(Project, Project.creator_id == User.id)\
-        .group_by(User.country).all()
-    by_country = [{"country": c[0], "count": c[1]} for c in countries if c[0]]
-    
+    for proj_row in all_proj_data:
+        if proj_row.collaboration_type != "intra_african": continue
+        
+        proj_creator = db.query(User.country, User.gender).filter(User.id == proj_row.creator_id).first()
+        if not proj_creator or not proj_creator[0]: continue
+        creator_country = proj_creator[0]
+        
+        collabs = proj_row.collaborators if proj_row.collaborators else []
+        if not isinstance(collabs, list): continue
+        for c in collabs:
+            collab_id = c.get('user_id') if isinstance(c, dict) else c
+            if not collab_id: continue
+            collab_user = db.query(User.country, User.gender).filter(User.id == collab_id).first()
+            if not collab_user or not collab_user[0]: continue
+            if collab_user[0] == creator_country: continue  # same country skip
+            
+            a, b = sorted([creator_country, collab_user[0]])
+            key = (a, b)
+            if key not in country_gender_map:
+                country_gender_map[key] = {"men": 0, "women": 0, "other": 0}
+            g = (collab_user[1] or "").lower()
+            if g in ("male", "homme"): country_gender_map[key]["men"] += 1
+            elif g in ("female", "femme"): country_gender_map[key]["women"] += 1
+            else: country_gender_map[key]["other"] += 1
+
+    by_country_gender = []
+    for (ca, cb), counts in country_gender_map.items():
+        total = counts["men"] + counts["women"] + counts["other"]
+        by_country_gender.append({
+            "country_a": ca, "country_b": cb,
+            "men": counts["men"], "women": counts["women"], "other": counts["other"],
+            "total": total
+        })
+    by_country_gender.sort(key=lambda x: -x["total"])
+    by_country_gender = by_country_gender[:5] # Requested: Top 5 intra-African country pairs
+
+    # 6. By Gender + Domain: artist counts by domain and gender
+    domain_gender_q = db.query(User.domain, User.sector, User.gender, func.count(User.id))\
+        .filter(User.role == "artist", User.domain != None, User.gender != None)
+    if sector:
+        domain_gender_q = domain_gender_q.filter(User.sector == sector)
+    domain_gender_rows = domain_gender_q.group_by(User.domain, User.sector, User.gender).all()
+
+    domain_gender_map = {}
+    for row in domain_gender_rows:
+        domain, sec, gender, cnt = row
+        key = (domain or "", sec or "")
+        if key not in domain_gender_map:
+            domain_gender_map[key] = {"women": 0, "men": 0, "other": 0}
+        g = (gender or "").lower()
+        if g in ("female", "femme"): domain_gender_map[key]["women"] += cnt
+        elif g in ("male", "homme"): domain_gender_map[key]["men"] += cnt
+        else: domain_gender_map[key]["other"] += cnt
+
+    by_gender_domain = []
+    for (domain, sec), counts in domain_gender_map.items():
+        total = counts["women"] + counts["men"] + counts["other"]
+        by_gender_domain.append({
+            "domain": domain, "sector": sec,
+            "women": counts["women"], "men": counts["men"], "other": counts["other"],
+            "total": total
+        })
+    by_gender_domain.sort(key=lambda x: -x["total"])
+
+    # 7. By Country + Gender + Domain (artists + visitor interest)
+    cg_domain_q = db.query(User.country, User.gender, User.domain, User.sector, func.count(User.id))\
+        .filter(User.role == "artist", User.country != None, User.gender != None, User.domain != None)
+    if sector:
+        cg_domain_q = cg_domain_q.filter(User.sector == sector)
+    cg_domain_rows = cg_domain_q.group_by(User.country, User.gender, User.domain, User.sector).all()
+
+    by_country_gender_domain = []
+    for row in cg_domain_rows:
+        country, gender, domain, sec, artist_cnt = row
+        # Count visitor views for artists matching this country+gender+domain
+        artist_id_q = db.query(User.id).filter(
+            User.role == "artist", User.country == country,
+            User.gender == gender, User.domain == domain
+        )
+        if sector:
+            artist_id_q = artist_id_q.filter(User.sector == sector)
+        artist_ids = artist_id_q.all()
+        artist_id_list = [r[0] for r in artist_ids]
+        
+        visitor_interest = 0
+        visitor_views = 0
+        if artist_id_list:
+            visitor_interest = db.query(func.count(Message.id)).filter(
+                Message.receiver_id.in_(artist_id_list),
+                Message.sender_type == "visitor"
+            ).scalar() or 0
+            visitor_views = db.query(VisitorView).filter(
+                VisitorView.artist_id.in_(artist_id_list),
+                VisitorView.visitor_id != None
+            ).count()
+            
+        by_country_gender_domain.append({
+            "country": country, "gender": gender, "domain": domain, "sector": sec or "",
+            "artist_count": artist_cnt, "visitor_interest_count": visitor_interest,
+            "visitor_views_count": visitor_views
+        })
+    by_country_gender_domain.sort(key=lambda x: -x["visitor_interest_count"])
+
     return {
         "by_type": by_type,
         "by_status": by_status,
         "by_month": by_month,
-        "by_country": by_country
+        "by_country": by_country,
+        "by_country_pair": by_country_gender, # Updated label to be more descriptive
+        "by_gender_domain": by_gender_domain,
+        "by_country_gender_domain": by_country_gender_domain
     }
 
 @api_router.get("/statistics/overview")
 async def get_statistics_overview(user = Depends(get_optional_user), db: Session = Depends(get_db)):
     """Public overview statistics"""
-    total_artists = db.query(User).filter(User.role == "artist").count()
+    total_artists = db.query(User).filter(User.role == "artist", User.profile_tag == "artist").count()
+    total_professionals = db.query(User).filter(User.role == "artist", User.profile_tag == "professional").count()
+    total_media = db.query(User).filter(User.role == "artist", User.profile_tag == "media").count()
+    
     total_posts = db.query(Post).filter(Post.is_active == True).count()
     total_projects = db.query(Project).count()
     total_likes = db.query(Like).count()
     total_comments = db.query(Comment).filter(Comment.is_active == True).count()
     
     # Collaborations
-    # These fields don't exist in SQL model yet normally, using approximations
     total_collaborations = db.query(Project).filter(Project.collaborators != "[]").count()
-    total_intra_african = 0 # Cannot accurately query JSON looking_for without raw SQL over JSON payload in SQLite
+    total_intra_african = db.query(Project).filter(Project.collaboration_type == "intra_african").count()
     
     sectors = db.query(User.sector, func.count(User.id)).filter(User.role == "artist", User.sector != None).group_by(User.sector).all()
     subregions = db.query(User.subregion, func.count(User.id)).filter(User.role == "artist", User.subregion != None).group_by(User.subregion).all()
     
     return {
         "total_artists": total_artists,
+        "total_professionals": total_professionals,
+        "total_media": total_media,
         "total_posts": total_posts,
         "total_projects": total_projects,
         "total_collaborations": total_collaborations,
@@ -967,40 +1397,57 @@ async def get_statistics_overview(user = Depends(get_optional_user), db: Session
     }
 
 @api_router.get("/statistics/detailed")
-async def get_detailed_statistics(user = Depends(require_paid_institution), db: Session = Depends(get_db)):
+async def get_detailed_statistics(
+    sector: Optional[str] = None, 
+    profile_tag: Optional[str] = None,
+    user = Depends(require_paid_institution), 
+    db: Session = Depends(get_db)
+):
     """Detailed statistics - Paid Institutions and Admins only"""
     
+    base_query = db.query(User).filter(User.role == "artist")
+    if sector:
+        base_query = base_query.filter(User.sector == sector)
+    if profile_tag and profile_tag != "all":
+        base_query = base_query.filter(User.profile_tag == profile_tag)
+
+    project_query = db.query(Project)
+    if sector:
+        project_query = project_query.filter(Project.sector == sector)
+    
     # === GENDER DISTRIBUTION ===
-    genders = db.query(User.gender, func.count(User.id)).filter(User.role == "artist", User.gender != None).group_by(User.gender).all()
+    genders = db.query(User.gender, func.count(User.id)).filter(User.role == "artist", User.gender != None)
+    if sector: genders = genders.filter(User.sector == sector)
+    if profile_tag and profile_tag != "all": genders = genders.filter(User.profile_tag == profile_tag)
+    genders = genders.group_by(User.gender).all()
+    
     gender_data = {g[0]: g[1] for g in genders}
     total_artists = sum(gender_data.values()) if gender_data else 1
     gender_percentages = {g: round((c / total_artists) * 100, 1) for g, c in gender_data.items()}
     
     # === COLLABORATIONS ===
-    total_collaborations = db.query(Project).filter(Project.collaborators != "[]").count()
-    
-    # Intra-African
-    intra_african_by_type = {}
-    
-    # Top countries in collaborations - Mocking for now since SQLite JSON extracting is complex
-    top_countries = {}
+    total_collaborations = project_query.filter(Project.collaborators != "[]").count()
     
     # === BY COUNTRY & DOMAIN ===
-    countries = db.query(User.country, func.count(User.id)).filter(User.role == "artist", User.country != None).group_by(User.country).order_by(func.count(User.id).desc()).limit(60).all()
+    countries_query = db.query(User.country, func.count(User.id)).filter(User.role == "artist", User.country != None)
+    if sector: countries_query = countries_query.filter(User.sector == sector)
+    if profile_tag and profile_tag != "all": countries_query = countries_query.filter(User.profile_tag == profile_tag)
+    countries = countries_query.group_by(User.country).order_by(func.count(User.id).desc()).limit(60).all()
     
-    domains = db.query(User.domain, func.count(User.id)).filter(User.role == "artist", User.domain != None).group_by(User.domain).order_by(func.count(User.id).desc()).limit(50).all()
+    domains_query = db.query(User.domain, func.count(User.id)).filter(User.role == "artist", User.domain != None)
+    if sector: domains_query = domains_query.filter(User.sector == sector)
+    if profile_tag and profile_tag != "all": domains_query = domains_query.filter(User.profile_tag == profile_tag)
+    domains = domains_query.group_by(User.domain).order_by(func.count(User.id).desc()).limit(50).all()
     
     # === GENDER BY SUBREGION ===
-    gender_subreq = db.query(User.subregion, User.gender, func.count(User.id)).filter(User.role == "artist", User.subregion != None, User.gender != None).group_by(User.subregion, User.gender).all()
+    gender_subreq_query = db.query(User.subregion, User.gender, func.count(User.id)).filter(User.role == "artist", User.subregion != None, User.gender != None)
+    if sector: gender_subreq_query = gender_subreq_query.filter(User.sector == sector)
+    if profile_tag and profile_tag != "all": gender_subreq_query = gender_subreq_query.filter(User.profile_tag == profile_tag)
+    gender_subreq = gender_subreq_query.group_by(User.subregion, User.gender).all()
     
-    # === ACTIVITY METRICS ===
-    total_posts = db.query(Post).filter(Post.is_active == True).count()
-    total_likes = db.query(Like).count()
-    total_comments = db.query(Comment).filter(Comment.is_active == True).count()
-    
-    # === LOCAL VS INTERNATIONAL ===
-    local_collabs = 0
-    international_collabs = total_collaborations
+    # === LOCAL VS INTRA-AFRICAN ===
+    local_collabs = project_query.filter(Project.collaboration_type == "local").count()
+    intra_african_collabs = project_query.filter(Project.collaboration_type == "intra_african").count()
     
     return {
         "by_gender": gender_data,
@@ -1008,22 +1455,15 @@ async def get_detailed_statistics(user = Depends(require_paid_institution), db: 
         "collaborations": {
             "total": total_collaborations,
             "local": local_collabs,
-            "international": international_collabs,
-            "intra_african": 0,
-            "by_type": {}
-        },
-        "intra_african": {
-            "total": 0,
-            "by_partnership_type": intra_african_by_type,
-            "top_countries": top_countries
+            "intra_african": intra_african_collabs
         },
         "by_country": {c[0]: c[1] for c in countries},
         "by_domain": {d[0]: d[1] for d in domains},
         "gender_by_subregion": [{"subregion": row[0], "gender": row[1], "count": row[2]} for row in gender_subreq],
         "activity": {
-            "total_posts": total_posts,
-            "total_likes": total_likes,
-            "total_comments": total_comments
+            "total_posts": db.query(Post).filter(Post.is_active == True).count(),
+            "total_likes": db.query(Like).count(),
+            "total_comments": db.query(Comment).filter(Comment.is_active == True).count()
         }
     }
 

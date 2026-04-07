@@ -1,0 +1,1161 @@
+import { useEffect, useState } from 'react';
+import { useStatisticsStore, useLanguageStore, useAuthStore } from '@/store';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  BarChart3, Users, Globe, TrendingUp, Heart, MessageCircle,
+  PieChart as PieChartIcon, Activity, Eye, ChevronRight,
+  Menu, X, Filter
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import {
+  BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, LineChart, Line, Area, AreaChart
+} from 'recharts';
+
+const COLORS = {
+  primary: '#7C3AED',
+  accent: '#06B6D4',
+  pink: '#EC4899',
+  blue: '#3B82F6',
+  purple: '#8B5CF6',
+  green: '#10B981',
+  orange: '#F59E0B',
+  amber: '#F59E0B'
+};
+
+const GENDER_COLORS = {
+  women: COLORS.pink,
+  men: COLORS.blue,
+  other: COLORS.purple
+};
+
+const STATUS_COLORS = {
+  ongoing: COLORS.green,
+  upcoming: COLORS.blue,
+  past: COLORS.purple
+};
+
+export default function Statistics() {
+  const { overview, detailed, collaborations, fetchOverview, fetchDetailed, fetchCollaborationStats, isLoading } = useStatisticsStore();
+  const { user } = useAuthStore();
+  const { language, t } = useLanguageStore();
+  const [activeSection, setActiveSection] = useState('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [countryFilter, setCountryFilter] = useState('all');
+  const [domainFilter, setDomainFilter] = useState('all');
+
+  const fr = language === 'fr';
+  const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    fetchOverview();
+    fetchDetailed();
+    fetchCollaborationStats();
+  }, [fetchOverview, fetchDetailed, fetchCollaborationStats]);
+
+  // Sidebar sections
+  const sections = [
+    { id: 'overview', label: fr ? 'Vue Générale' : 'Overview', icon: BarChart3 },
+    { id: 'collaborations', label: fr ? 'Collaborations' : 'Collaborations', icon: Users },
+    { id: 'genderDomain', label: fr ? 'Genre & Domaine' : 'Gender & Domain', icon: PieChartIcon },
+    { id: 'visitors', label: fr ? 'Visiteurs' : 'Visitors', icon: Eye },
+    { id: 'postsActivity', label: fr ? 'Posts & Activité' : 'Posts & Activity', icon: Activity }
+  ];
+
+  // Filter visitor data
+  const filteredVisitorData = detailed?.by_country_gender_domain?.filter(item => {
+    const matchesGender = genderFilter === 'all' || item.gender === genderFilter;
+    const matchesCountry = countryFilter === 'all' || item.country === countryFilter;
+    const matchesDomain = domainFilter === 'all' || item.domain === domainFilter;
+    return matchesGender && matchesCountry && matchesDomain;
+  }) || [];
+
+  // Prepare chart data
+  const genderPieData = Object.entries(detailed?.by_gender || {}).map(([gender, count]) => ({
+    name: fr ? (gender === 'women' ? 'Femmes' : gender === 'men' ? 'Hommes' : 'Autre') : gender,
+    value: count,
+    color: GENDER_COLORS[gender] || COLORS.purple
+  }));
+
+  const collaborationTypeData = [
+    { name: fr ? 'Locale' : 'Local', value: collaborations?.by_type?.local || 0, color: COLORS.blue },
+    { name: fr ? 'Intra-Africaine' : 'Intra-African', value: collaborations?.by_type?.intra_african || 0, color: COLORS.green }
+  ];
+
+  const statusData = [
+    { name: fr ? 'En cours' : 'Ongoing', value: collaborations?.by_status?.ongoing || 0, color: STATUS_COLORS.ongoing },
+    { name: fr ? 'À venir' : 'Upcoming', value: collaborations?.by_status?.upcoming || 0, color: STATUS_COLORS.upcoming },
+    { name: fr ? 'Passés' : 'Past', value: collaborations?.by_status?.past || 0, color: STATUS_COLORS.past }
+  ];
+
+  const monthlyData = collaborations?.by_month?.map(month => ({
+    month: month.month,
+    local: month.local || 0,
+    intra_african: month.intra_african || 0
+  })) || [];
+
+  const genderCollaborationData = collaborations?.by_gender ? [
+    {
+      type: fr ? 'Locale' : 'Local',
+      women: collaborations.by_gender.local?.women || 0,
+      men: collaborations.by_gender.local?.men || 0,
+      other: collaborations.by_gender.local?.other || 0
+    },
+    {
+      type: fr ? 'Intra-Africaine' : 'Intra-African',
+      women: collaborations.by_gender.intra_african?.women || 0,
+      men: collaborations.by_gender.intra_african?.men || 0,
+      other: collaborations.by_gender.intra_african?.other || 0
+    }
+  ] : [];
+
+  const topCountryPairs = collaborations?.by_country_pair?.slice(0, 10).map(pair => ({
+    pair: `${pair.country_a} ↔ ${pair.country_b}`,
+    total: pair.total,
+    women: pair.women,
+    men: pair.men,
+    other: pair.other
+  })) || [];
+
+  const visitorViewsData = filteredVisitorData
+    .sort((a, b) => (b.visitor_views_count || 0) - (a.visitor_views_count || 0))
+    .slice(0, 10)
+    .map(item => ({
+      name: `${item.country} - ${item.gender} - ${item.domain}`,
+      views: item.visitor_views_count || 0,
+      messages: item.visitor_messages_count || 0
+    }));
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">{fr ? 'Chargement...' : 'Loading...'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const renderSection = () => {
+    switch (activeSection) {
+      case 'overview':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{fr ? 'Artistes' : 'Artists'}</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{overview?.total_artists || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {overview?.artists_trend ? `+${overview.artists_trend}` : ''} {fr ? 'vs mois dernier' : 'vs last month'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{fr ? 'Collaborations' : 'Collaborations'}</CardTitle>
+                <Handshake className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{overview?.total_collaborations || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {overview?.collaborations_trend ? `+${overview.collaborations_trend}` : ''} {fr ? 'vs mois dernier' : 'vs last month'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{fr ? 'Intra-Africaines' : 'Intra-African'}</CardTitle>
+                <Globe className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{collaborations?.by_type?.intra_african || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {fr ? 'collaborations' : 'collaborations'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{fr ? 'Posts' : 'Posts'}</CardTitle>
+                <MessageCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{overview?.total_posts || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {overview?.posts_trend ? `+${overview.posts_trend}` : ''} {fr ? 'vs mois dernier' : 'vs last month'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 'collaborations':
+        return (
+          <div className="space-y-6">
+            {/* Status Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {statusData.map((status, index) => (
+                <Card key={index}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{status.name}</CardTitle>
+                    <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: status.color }} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{status.value}</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Type Split */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{fr ? 'Répartition par Type' : 'Type Distribution'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={collaborationTypeData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {collaborationTypeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Monthly Evolution */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{fr ? 'Évolution Mensuelle' : 'Monthly Evolution'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="local" stroke={COLORS.blue} name={fr ? 'Locale' : 'Local'} />
+                    <Line type="monotone" dataKey="intra_african" stroke={COLORS.green} name={fr ? 'Intra-Africaine' : 'Intra-African'} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* By Gender */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{fr ? 'Par Genre' : 'By Gender'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={genderCollaborationData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="type" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="women" stackId="a" fill={GENDER_COLORS.women} name={fr ? 'Femmes' : 'Women'} />
+                    <Bar dataKey="men" stackId="a" fill={GENDER_COLORS.men} name={fr ? 'Hommes' : 'Men'} />
+                    <Bar dataKey="other" stackId="a" fill={GENDER_COLORS.other} name={fr ? 'Autre' : 'Other'} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Country Pairs */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{fr ? 'Paires de Pays (Intra-Africain)' : 'Country Pairs (Intra-African)'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={topCountryPairs} layout="horizontal">
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis dataKey="pair" type="category" width={150} />
+                      <Tooltip />
+                      <Bar dataKey="total" fill={COLORS.primary} />
+                    </BarChart>
+                  </ResponsiveContainer>
+
+                  <div className="text-sm text-muted-foreground">
+                    {fr ? 'Paire la plus active' : 'Most active pair'}: {topCountryPairs[0]?.pair || 'N/A'}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 'genderDomain':
+        return (
+          <div className="space-y-6">
+            {/* Gender Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{fr ? 'Répartition par Genre' : 'Gender Distribution'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={genderPieData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {genderPieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Gender by Domain */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{fr ? 'Genre par Domaine' : 'Gender by Domain'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart data={detailed?.by_gender_domain || []}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="domain" angle={-45} textAnchor="end" height={80} />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="women" fill={GENDER_COLORS.women} name={fr ? 'Femmes' : 'Women'} />
+                    <Bar dataKey="men" fill={GENDER_COLORS.men} name={fr ? 'Hommes' : 'Men'} />
+                    <Bar dataKey="other" fill={GENDER_COLORS.other} name={fr ? 'Autre' : 'Other'} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 'visitors':
+        return (
+          <div className="space-y-6">
+            {/* Visitor Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{fr ? 'Vues Visiteurs' : 'Visitor Views'}</CardTitle>
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{detailed?.total_visitor_views || 0}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{fr ? 'Messages Visiteurs' : 'Visitor Messages'}</CardTitle>
+                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{detailed?.total_visitor_messages || 0}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{fr ? 'Domaine le plus contacté' : 'Most Messaged Domain'}</CardTitle>
+                  <Heart className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{detailed?.most_messaged_domain || 'N/A'}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Top Domains by Visitor Messages */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{fr ? 'Top Domaines par Messages Visiteurs' : 'Top Domains by Visitor Messages'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={visitorViewsData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="views" fill={COLORS.blue} name={fr ? 'Vues' : 'Views'} />
+                    <Bar dataKey="messages" fill={COLORS.green} name={fr ? 'Messages' : 'Messages'} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Filterable Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{fr ? 'Données Détaillées' : 'Detailed Data'}</CardTitle>
+                <div className="flex gap-2 flex-wrap">
+                  <Select value={countryFilter} onValueChange={setCountryFilter}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder={fr ? 'Pays' : 'Country'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{fr ? 'Tous' : 'All'}</SelectItem>
+                      {[...new Set(filteredVisitorData.map(d => d.country))].map(country => (
+                        <SelectItem key={country} value={country}>{country}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={genderFilter} onValueChange={setGenderFilter}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder={fr ? 'Genre' : 'Gender'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{fr ? 'Tous' : 'All'}</SelectItem>
+                      <SelectItem value="women">{fr ? 'Femmes' : 'Women'}</SelectItem>
+                      <SelectItem value="men">{fr ? 'Hommes' : 'Men'}</SelectItem>
+                      <SelectItem value="other">{fr ? 'Autre' : 'Other'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={domainFilter} onValueChange={setDomainFilter}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder={fr ? 'Domaine' : 'Domain'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{fr ? 'Tous' : 'All'}</SelectItem>
+                      {[...new Set(filteredVisitorData.map(d => d.domain))].map(domain => (
+                        <SelectItem key={domain} value={domain}>{domain}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-96">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{fr ? 'Pays' : 'Country'}</TableHead>
+                        <TableHead>{fr ? 'Genre' : 'Gender'}</TableHead>
+                        <TableHead>{fr ? 'Domaine' : 'Domain'}</TableHead>
+                        <TableHead>{fr ? 'Artistes' : 'Artists'}</TableHead>
+                        <TableHead>{fr ? 'Vues Visiteurs' : 'Visitor Views'}</TableHead>
+                        <TableHead>{fr ? 'Messages Visiteurs' : 'Visitor Messages'}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredVisitorData.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{item.country}</TableCell>
+                          <TableCell>{item.gender}</TableCell>
+                          <TableCell>{item.domain}</TableCell>
+                          <TableCell>{item.artist_count || 0}</TableCell>
+                          <TableCell>{item.visitor_views_count || 0}</TableCell>
+                          <TableCell>{item.visitor_messages_count || 0}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 'postsActivity':
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{fr ? 'Activité des Posts' : 'Posts Activity'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    {fr ? 'Fonctionnalité en développement' : 'Feature in development'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="flex">
+        {/* Sidebar */}
+        <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
+          <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="text-lg font-semibold">{fr ? 'Statistiques' : 'Statistics'}</h2>
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="lg:hidden">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <ScrollArea className="flex-1 p-4">
+            <nav className="space-y-2">
+              {sections.map((section) => {
+                const Icon = section.icon;
+                return (
+                  <Button
+                    key={section.id}
+                    variant={activeSection === section.id ? 'secondary' : 'ghost'}
+                    className="w-full justify-start gap-3"
+                    onClick={() => {
+                      setActiveSection(section.id);
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {section.label}
+                    {activeSection === section.id && <ChevronRight className="h-4 w-4 ml-auto" />}
+                  </Button>
+                );
+              })}
+            </nav>
+          </ScrollArea>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 lg:ml-0">
+          <div className="p-6">
+            {/* Mobile menu button */}
+            <div className="lg:hidden mb-4">
+              <Button variant="outline" onClick={() => setSidebarOpen(true)} className="gap-2">
+                <Menu className="h-4 w-4" />
+                {fr ? 'Menu' : 'Menu'}
+              </Button>
+            </div>
+
+            {/* Section Content */}
+            <motion.div
+              key={activeSection}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {renderSection()}
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+  }));
+
+  // Project Collaborations Stats
+  const projCollabByStatus = collaborations?.by_status || { ongoing: 0, upcoming: 0, past: 0 };
+  const projCollabByType = Object.entries(collaborations?.by_type || {}).map(([type, count]) => ({
+    name: type === 'local' ? (fr ? 'Locales' : 'Local') 
+        : type === 'intra_african' ? (fr ? 'Intra-Africaines' : 'Intra-African')
+        : (fr ? 'Autre' : 'Other'),
+    value: count,
+    fill: type === 'local' ? COLORS.green : type === 'intra_african' ? COLORS.primary : COLORS.blue
+  }));
+
+  // Partenariats par type - Pie Chart
+  const partnershipPieData = Object.entries(detailed?.intra_african?.by_partnership_type || {}).map(([type, count], index) => ({
+    name: fr 
+      ? (type === 'cultural' ? 'Culturel' : type === 'commercial' ? 'Commercial' : type === 'education' ? 'Éducation' : type)
+      : type.charAt(0).toUpperCase() + type.slice(1),
+    value: count,
+    fill: [COLORS.primary, COLORS.accent, COLORS.green, COLORS.orange, COLORS.pink][index % 5]
+  }));
+
+  // Top pays - Bar Chart
+  const topCountriesData = Object.entries(detailed?.intra_african?.top_countries || {})
+    .slice(0, 8)
+    .map(([country, count]) => ({
+      name: fr 
+        ? (country === 'Nigeria' ? 'Nigéria' : country === 'South Africa' ? 'Afrique du Sud' 
+           : country === 'Kenya' ? 'Kenya' : country === 'Senegal' ? 'Sénégal' : country)
+        : country,
+      value: count
+    }));
+
+  if (isLoading && !overview) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background p-6 md:p-12 max-w-7xl mx-auto">
+      
+      {/* HEADER */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ duration: 0.6 }} 
+        className="mb-8"
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-xs uppercase tracking-[0.3em] text-primary font-semibold">
+            {fr ? 'DONNÉES' : 'DATA'}
+          </span>
+          <Badge variant="outline" className="text-xs">
+            <ShieldCheck className="w-3 h-3 mr-1" />
+            {isAdmin ? 'Admin' : 'Institution'}
+          </Badge>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+          {fr ? 'Dashboard Statistiques' : 'Statistics Dashboard'}
+        </h1>
+        <p className="text-muted-foreground max-w-xl">
+          {fr
+            ? 'Accès complet aux données démographiques, collaborations et partenariats intra-africains.'
+            : 'Full access to demographics, collaborations and intra-African partnerships data.'}
+        </p>
+      </motion.div>
+
+      {/* KPI CARDS */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ duration: 0.6, delay: 0.1 }} 
+        className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
+      >
+        <Card className="stat-card">
+          <CardContent className="pt-6">
+            <Users className="w-8 h-8 text-primary mb-2" />
+            <p className="text-3xl font-bold">{overview?.total_artists || 0}</p>
+            <p className="text-sm text-muted-foreground">{t.statistics.totalArtists}</p>
+          </CardContent>
+        </Card>
+        <Card className="stat-card">
+          <CardContent className="pt-6">
+            <Handshake className="w-8 h-8 text-accent mb-2" />
+            <p className="text-3xl font-bold">{detailed?.collaborations?.total || 0}</p>
+            <p className="text-sm text-muted-foreground">{fr ? 'Collaborations' : 'Collaborations'}</p>
+          </CardContent>
+        </Card>
+        <Card className="stat-card">
+          <CardContent className="pt-6">
+            <Globe className="w-8 h-8 text-primary mb-2" />
+            <p className="text-3xl font-bold">{detailed?.intra_african?.total || 0}</p>
+            <p className="text-sm text-muted-foreground">{fr ? 'Projets Intra-Africains' : 'Intra-African Projects'}</p>
+          </CardContent>
+        </Card>
+        <Card className="stat-card">
+          <CardContent className="pt-6">
+            <TrendingUp className="w-8 h-8 text-accent mb-2" />
+            <p className="text-3xl font-bold">{overview?.total_posts || 0}</p>
+            <p className="text-sm text-muted-foreground">Posts</p>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* TABS DASHBOARD */}
+      <Tabs defaultValue="collaborations" className="space-y-6">
+        <TabsList className="bg-card border border-border/50">
+          <TabsTrigger value="collaborations">
+            <Handshake className="w-4 h-4 mr-2" />
+            {fr ? 'Collaborations' : 'Collaborations'}
+          </TabsTrigger>
+          <TabsTrigger value="intra-african">
+            <Globe className="w-4 h-4 mr-2" />
+            {fr ? 'Partenariats Intra-Africains' : 'Intra-African'}
+          </TabsTrigger>
+          <TabsTrigger value="gender">
+            <Users className="w-4 h-4 mr-2" />
+            {fr ? 'Genre' : 'Gender'}
+          </TabsTrigger>
+          <TabsTrigger value="gender-domain">
+            <BarChart3 className="w-4 h-4 mr-2" />
+            {t.statistics.genderByDomain}
+          </TabsTrigger>
+          <TabsTrigger value="country-gender">
+            <Globe className="w-4 h-4 mr-2" />
+            {t.statistics.interCountryGender}
+          </TabsTrigger>
+          <TabsTrigger value="visitor-interest">
+            <Users className="w-4 h-4 mr-2" />
+            {t.statistics.visitorInterest}
+          </TabsTrigger>
+          <TabsTrigger value="demographics">
+            <BarChart3 className="w-4 h-4 mr-2" />
+            {fr ? 'Démographie' : 'Demographics'}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* TAB: COLLABORATIONS */}
+        <TabsContent value="collaborations" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <Card className="stat-card border-green-500/20 bg-green-500/5">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-sm font-medium text-green-500">{t.projects.ongoing}</span>
+                </div>
+                <p className="text-3xl font-bold">{projCollabByStatus.ongoing}</p>
+              </CardContent>
+            </Card>
+            <Card className="stat-card border-blue-500/20 bg-blue-500/5">
+              <CardContent className="pt-6">
+                <span className="text-sm font-medium text-blue-500 mb-2 block">{t.projects.upcoming}</span>
+                <p className="text-3xl font-bold">{projCollabByStatus.upcoming}</p>
+              </CardContent>
+            </Card>
+            <Card className="stat-card border-muted-foreground/20 bg-muted/50">
+              <CardContent className="pt-6">
+                <span className="text-sm font-medium text-muted-foreground mb-2 block">{t.projects.past}</span>
+                <p className="text-3xl font-bold">{projCollabByStatus.past}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChartIcon className="w-5 h-5 text-primary" />
+                  {t.statistics.statsByType}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={projCollabByType}
+                      cx="50%" cy="50%" outerRadius={100}
+                      dataKey="value" nameKey="name"
+                      label={({ name, value }) => `${name}: ${value}`}
+                    >
+                      {projCollabByType.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-accent" />
+                  {t.statistics.statsTimeline}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={collaborations?.by_month || []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                    <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
+                    <YAxis stroke="#9CA3AF" fontSize={12} allowDecimals={false} />
+                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                    <Bar dataKey="count" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-blue-500" />
+                  {t.statistics.statsTopCountries}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={collaborations?.by_country || []} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                    <XAxis type="number" stroke="#9CA3AF" fontSize={12} allowDecimals={false} />
+                    <YAxis dataKey="country" type="category" stroke="#9CA3AF" fontSize={11} width={100} />
+                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                    <Bar dataKey="count" fill={COLORS.accent} radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* TAB: INTRA-AFRICAN */}
+        <TabsContent value="intra-african" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChartIcon className="w-5 h-5 text-accent" />
+                  {fr ? 'Types de Partenariats' : 'Partnership Types'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={partnershipPieData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      dataKey="value"
+                      label={({ name, percentage }) => `${name}`}
+                    >
+                      {partnershipPieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-primary" />
+                  {fr ? 'Top Pays Impliqués' : 'Top Countries'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={topCountriesData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                    <XAxis type="number" stroke="#9CA3AF" fontSize={12} />
+                    <YAxis dataKey="name" type="category" stroke="#9CA3AF" fontSize={11} width={100} />
+                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                    <Bar dataKey="value" fill={COLORS.primary} radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* TAB: GENDER */}
+        <TabsContent value="gender" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChartIcon className="w-5 h-5 text-pink-500" />
+                  {fr ? 'Distribution par Genre' : 'Gender Distribution'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={genderPieData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      dataKey="value"
+                      label={({ name, percentage }) => `${name}: ${percentage}%`}
+                    >
+                      {genderPieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={GENDER_COLORS[entry.name] || COLORS.primary} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{fr ? 'Statistiques par Genre' : 'Gender Statistics'}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {Object.entries(detailed?.by_gender || {}).map(([gender, count]) => (
+                  <div key={gender} className="p-4 bg-secondary/30 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium">{fr ? (gender === 'Female' ? 'Femmes' : gender === 'Male' ? 'Hommes' : gender) : gender}</span>
+                      <Badge>{count}</Badge>
+                    </div>
+                    <div className="w-full h-3 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ 
+                          width: `${detailed?.gender_percentages?.[gender] || 0}%`,
+                          backgroundColor: GENDER_COLORS[gender] || COLORS.primary
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {detailed?.gender_percentages?.[gender] || 0}%
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* TAB: GENDER BY DOMAIN */}
+        <TabsContent value="gender-domain" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                {t.statistics.genderByDomain}
+              </CardTitle>
+              <CardDescription>
+                {fr ? 'Nombre d\'artistes par domaine et genre' : 'Number of artists by domain and gender'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={collaborations?.by_gender_domain?.slice(0, 15) || []}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                  <XAxis dataKey="domain" stroke="#9CA3AF" fontSize={11} angle={-45} textAnchor="end" height={100} />
+                  <YAxis stroke="#9CA3AF" fontSize={12} allowDecimals={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                  <Legend />
+                  <Bar dataKey="women" fill={COLORS.pink} />
+                  <Bar dataKey="men" fill={COLORS.blue} />
+                  <Bar dataKey="other" fill={COLORS.purple} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB: COUNTRY GENDER */}
+        <TabsContent value="country-gender" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-primary" />
+                {t.statistics.interCountryGender}
+              </CardTitle>
+              <CardDescription>
+                {fr ? 'Collaborations entre pays par genre' : 'Inter-country collaborations by gender'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={collaborations?.by_country_gender?.slice(0, 12) || []}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                  <XAxis 
+                    dataKey={(entry) => `${entry.country_a} ↔ ${entry.country_b}`}
+                    stroke="#9CA3AF" 
+                    fontSize={10} 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={80}
+                  />
+                  <YAxis stroke="#9CA3AF" fontSize={12} allowDecimals={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                  <Legend />
+                  <Bar dataKey="women" fill={COLORS.pink} />
+                  <Bar dataKey="men" fill={COLORS.blue} />
+                  <Bar dataKey="other" fill={COLORS.purple} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{fr ? 'Détails par Paire de Pays' : 'Details by Country Pair'}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/50">
+                      <th className="text-left py-3 px-4">{t.statistics.countryPair}</th>
+                      <th className="text-center py-3 px-4">{t.statistics.women}</th>
+                      <th className="text-center py-3 px-4">{t.statistics.men}</th>
+                      <th className="text-center py-3 px-4">{t.statistics.other}</th>
+                      <th className="text-right py-3 px-4">{fr ? 'Total' : 'Total'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {collaborations?.by_country_gender?.slice(0, 10).map((item, idx) => (
+                      <tr key={idx} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                        <td className="py-3 px-4">{item.country_a} ↔ {item.country_b}</td>
+                        <td className="text-center py-3 px-4">{item.women}</td>
+                        <td className="text-center py-3 px-4">{item.men}</td>
+                        <td className="text-center py-3 px-4">{item.other}</td>
+                        <td className="text-right py-3 px-4 font-medium">{item.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB: VISITOR INTEREST */}
+        <TabsContent value="visitor-interest" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                {t.statistics.visitorInterest}
+              </CardTitle>
+              <CardDescription>
+                {fr ? 'Intérêt des visiteurs par profil d\'artiste' : 'Visitor interest by artist profile'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6">
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={collaborations?.by_country_gender_domain?.slice(0, 10) || []} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                    <XAxis type="number" stroke="#9CA3AF" fontSize={12} />
+                    <YAxis 
+                      dataKey={(entry) => `${entry.country} - ${entry.gender} - ${entry.domain}`}
+                      type="category"
+                      stroke="#9CA3AF"
+                      fontSize={10}
+                      width={200}
+                    />
+                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                    <Bar dataKey="visitor_interest_count" fill={COLORS.primary} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{fr ? 'Tableau Détaillé' : 'Detailed Table'}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/50">
+                      <th className="text-left py-3 px-4">{t.auth.country}</th>
+                      <th className="text-left py-3 px-4">{t.auth.gender}</th>
+                      <th className="text-left py-3 px-4">{t.auth.domain}</th>
+                      <th className="text-center py-3 px-4">{t.statistics.artistCount}</th>
+                      <th className="text-right py-3 px-4">{t.statistics.visitorViews}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {collaborations?.by_country_gender_domain?.slice(0, 15).map((item, idx) => (
+                      <tr key={idx} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                        <td className="py-3 px-4">{item.country}</td>
+                        <td className="py-3 px-4">{fr ? (item.gender === 'Female' ? 'Femme' : item.gender === 'Male' ? 'Homme' : item.gender) : item.gender}</td>
+                        <td className="py-3 px-4">{item.domain}</td>
+                        <td className="text-center py-3 px-4">{item.artist_count}</td>
+                        <td className="text-right py-3 px-4">
+                          <Badge variant="secondary">{item.visitor_interest_count}</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB: DEMOGRAPHICS */}
+        <TabsContent value="demographics" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t.statistics.bySector}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Object.entries(overview?.by_sector || {}).map(([sector, count]) => (
+                    <div key={sector} className="flex items-center justify-between">
+                      <span className="text-sm truncate max-w-[180px]">{sector}</span>
+                      <Badge variant="secondary">{count}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{t.statistics.byRegion}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Object.entries(overview?.by_subregion || {}).map(([region, count]) => (
+                    <div key={region} className="flex items-center justify-between">
+                      <span className="text-sm">{region}</span>
+                      <Badge variant="secondary">{count}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{fr ? 'Activité de la Plateforme' : 'Platform Activity'}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center p-4 bg-secondary/30 rounded-lg">
+                  <BarChart3 className="w-10 h-10 text-primary mx-auto mb-2" />
+                  <p className="text-3xl font-bold">{detailed?.activity?.total_posts || 0}</p>
+                  <p className="text-sm text-muted-foreground">{fr ? 'Publications' : 'Posts'}</p>
+                </div>
+                <div className="text-center p-4 bg-secondary/30 rounded-lg">
+                  <Heart className="w-10 h-10 text-red-500 mx-auto mb-2" />
+                  <p className="text-3xl font-bold">{detailed?.activity?.total_likes || 0}</p>
+                  <p className="text-sm text-muted-foreground">{fr ? 'Likes' : 'Likes'}</p>
+                </div>
+                <div className="text-center p-4 bg-secondary/30 rounded-lg">
+                  <MessageCircle className="w-10 h-10 text-accent mx-auto mb-2" />
+                  <p className="text-3xl font-bold">{detailed?.activity?.total_comments || 0}</p>
+                  <p className="text-sm text-muted-foreground">{fr ? 'Commentaires' : 'Comments'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

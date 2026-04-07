@@ -18,14 +18,14 @@ export default function Dashboard() {
   const { user, updateProfile, fetchUser } = useAuthStore();
   const { conversations, fetchConversations, isLoading } = useMessagesStore();
   const { uploadFile, addVideo, deleteItem, isUploading } = usePortfolioStore();
-  const { language, t } = useLanguageStore();
+  const { t } = useLanguageStore();
   const navigate = useNavigate();
-  
+
+
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadType, setUploadType] = useState('image');
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadDesc, setUploadDesc] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -49,9 +49,9 @@ export default function Dashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const result = await uploadFile(file, uploadType === 'image' ? 'image' : 'document', uploadTitle, uploadDesc);
+    const result = await uploadFile(file, uploadType, uploadTitle, uploadDesc);
     if (result.success) {
-      toast.success(language === 'fr' ? 'Fichier téléchargé !' : 'File uploaded!');
+      toast.success(uploadType === 'video' ? t.dashboard.videoAdded : t.dashboard.fileUploaded);
       setUploadDialogOpen(false);
       setUploadTitle('');
       setUploadDesc('');
@@ -61,26 +61,11 @@ export default function Dashboard() {
     }
   };
 
-  const handleAddVideo = async () => {
-    if (!videoUrl.trim()) return;
-    
-    const result = await addVideo(videoUrl, uploadTitle, uploadDesc);
-    if (result.success) {
-      toast.success(language === 'fr' ? 'Vidéo ajoutée !' : 'Video added!');
-      setUploadDialogOpen(false);
-      setUploadTitle('');
-      setUploadDesc('');
-      setVideoUrl('');
-      fetchUser();
-    } else {
-      toast.error(result.error);
-    }
-  };
 
   const handleDelete = async (type, id) => {
     const result = await deleteItem(type, id);
     if (result.success) {
-      toast.success(language === 'fr' ? 'Supprimé !' : 'Deleted!');
+      toast.success(t.dashboard.deleted);
       fetchUser();
     } else {
       toast.error(result.error);
@@ -106,7 +91,7 @@ export default function Dashboard() {
             {t.nav.dashboard}
           </span>
           <h1 className="text-4xl font-bold tracking-tight mt-2">
-            {language === 'fr' ? 'Bienvenue' : 'Welcome'}, {user.first_name}
+            {t.dashboard.welcome}, {user.first_name}
           </h1>
         </motion.div>
 
@@ -177,12 +162,12 @@ export default function Dashboard() {
                     <MessageCircle className="w-8 h-8 text-primary" />
                     {unreadCount > 0 && (
                       <Badge className="bg-primary text-primary-foreground">
-                        {unreadCount} {language === 'fr' ? 'nouveau' : 'new'}
+                        {unreadCount} {t.dashboard.new}
                       </Badge>
                     )}
                   </div>
                   <p className="text-3xl font-bold">{conversations.length}</p>
-                  <p className="text-sm text-muted-foreground">{language === 'fr' ? 'Conversations' : 'Conversations'}</p>
+                  <p className="text-sm text-muted-foreground">{t.dashboard.conversations}</p>
                 </div>
               </Link>
 
@@ -191,8 +176,8 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-4">
                     <Users className="w-8 h-8 text-accent" />
                   </div>
-                  <p className="text-3xl font-bold">{language === 'fr' ? 'Explorer' : 'Explore'}</p>
-                  <p className="text-sm text-muted-foreground">{language === 'fr' ? 'Trouver des artistes' : 'Find Artists'}</p>
+                  <p className="text-3xl font-bold">{t.common.explore}</p>
+                  <p className="text-sm text-muted-foreground">{t.dashboard.findArtists}</p>
                 </div>
               </Link>
             </div>
@@ -205,100 +190,52 @@ export default function Dashboard() {
                   <DialogTrigger asChild>
                     <Button size="sm" className="rounded-full gap-2">
                       <Plus className="w-4 h-4" />
-                      {language === 'fr' ? 'Ajouter' : 'Add'}
+                      {t.dashboard.add}
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>
-                        {uploadType === 'image' ? t.profile.uploadImage :
-                         uploadType === 'document' ? t.profile.uploadDocument :
-                         t.profile.addVideo}
+                        {uploadType === 'image' ? t.profile.uploadImage : uploadType === 'document' ? t.profile.uploadDocument : t.profile.uploadVideo}
                       </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-4">
                       <div className="flex gap-2">
-                        <Button
-                          variant={uploadType === 'image' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setUploadType('image')}
-                        >
-                          <Image className="w-4 h-4 mr-1" /> Image
-                        </Button>
-                        <Button
-                          variant={uploadType === 'document' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setUploadType('document')}
-                        >
-                          <FileText className="w-4 h-4 mr-1" /> Document
-                        </Button>
-                        <Button
-                          variant={uploadType === 'video' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setUploadType('video')}
-                        >
-                          <Video className="w-4 h-4 mr-1" /> Video
-                        </Button>
+                        <Button variant={uploadType === 'image' ? 'default' : 'outline'} size="sm" onClick={() => setUploadType('image')}><Image className="w-4 h-4 mr-1" /> {t.dashboard.image}</Button>
+                        <Button variant={uploadType === 'document' ? 'default' : 'outline'} size="sm" onClick={() => setUploadType('document')}><FileText className="w-4 h-4 mr-1" /> {t.dashboard.document}</Button>
+                        <Button variant={uploadType === 'video' ? 'default' : 'outline'} size="sm" onClick={() => setUploadType('video')}><Video className="w-4 h-4 mr-1" /> {t.dashboard.video}</Button>
                       </div>
 
                       <div className="space-y-2">
-                        <Label>{language === 'fr' ? 'Titre' : 'Title'}</Label>
-                        <Input
-                          value={uploadTitle}
-                          onChange={(e) => setUploadTitle(e.target.value)}
-                          placeholder={language === 'fr' ? 'Titre du fichier' : 'File title'}
-                        />
+                        <Label>{t.dashboard.title}</Label>
+                        <Input value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} placeholder={t.dashboard.title} />
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Textarea
-                          value={uploadDesc}
-                          onChange={(e) => setUploadDesc(e.target.value)}
-                          placeholder={language === 'fr' ? 'Description (optionnel)' : 'Description (optional)'}
-                          rows={2}
-                        />
+                        <Label>{t.dashboard.description}</Label>
+                        <Textarea value={uploadDesc} onChange={(e) => setUploadDesc(e.target.value)} placeholder={t.dashboard.description} rows={2} />
                       </div>
-
-                      {uploadType === 'video' ? (
-                        <div className="space-y-2">
-                          <Label>URL</Label>
-                          <Input
-                            value={videoUrl}
-                            onChange={(e) => setVideoUrl(e.target.value)}
-                            placeholder="https://youtube.com/watch?v=..."
-                          />
-                          <Button
-                            onClick={handleAddVideo}
-                            disabled={!videoUrl.trim()}
-                            className="w-full"
-                          >
-                            {language === 'fr' ? 'Ajouter la vidéo' : 'Add Video'}
-                          </Button>
-                        </div>
-                      ) : (
-                        <div>
-                          <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileUpload}
-                            accept={uploadType === 'image' ? 'image/*' : '.pdf,.doc,.docx'}
-                            className="hidden"
-                          />
-                          <Button
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploading}
-                            className="w-full gap-2"
-                          >
-                            {isUploading ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Upload className="w-4 h-4" />
-                            )}
-                            {language === 'fr' ? 'Choisir un fichier' : 'Choose File'}
-                          </Button>
-                        </div>
-                      )}
+                      <div>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleFileUpload}
+                          accept={
+                            uploadType === 'image' ? 'image/*' :
+                              uploadType === 'video' ? 'video/mp4,video/mov,video/webm,video/ogv' :
+                                '.pdf,.doc,.docx'
+                          }
+                          className="hidden"
+                        />
+                        <Button
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading}
+                          className="w-full gap-2"
+                        >
+                          {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          {t.dashboard.chooseFile}
+                        </Button>
+                      </div>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -349,7 +286,7 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <p className="text-muted-foreground text-sm text-center py-8">
-                      {language === 'fr' ? 'Aucune image' : 'No images yet'}
+                      {t.dashboard.noImages}
                     </p>
                   )}
                 </TabsContent>
@@ -377,7 +314,7 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <p className="text-muted-foreground text-sm text-center py-8">
-                      {language === 'fr' ? 'Aucun document' : 'No documents yet'}
+                      {t.dashboard.noDocuments}
                     </p>
                   )}
                 </TabsContent>
@@ -391,7 +328,7 @@ export default function Dashboard() {
                             <Video className="w-5 h-5 text-primary" />
                             <div>
                               <p className="font-medium text-sm">{vid.title || 'Video'}</p>
-                              <p className="text-xs text-muted-foreground truncate max-w-xs">{vid.url}</p>
+                              <p className="text-xs text-muted-foreground truncate max-w-xs">{vid.filename || 'Video File'}</p>
                             </div>
                           </div>
                           <button
@@ -405,7 +342,7 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <p className="text-muted-foreground text-sm text-center py-8">
-                      {language === 'fr' ? 'Aucune vidéo' : 'No videos yet'}
+                      {t.dashboard.noVideos}
                     </p>
                   )}
                 </TabsContent>
@@ -415,7 +352,7 @@ export default function Dashboard() {
             {/* Recent Messages */}
             <div className="bg-card rounded-2xl border border-border/50 p-6" data-testid="recent-messages">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-lg">{language === 'fr' ? 'Messages récents' : 'Recent Messages'}</h3>
+                <h3 className="font-bold text-lg">{t.dashboard.recentMessages}</h3>
                 <Link to="/messages">
                   <Button variant="ghost" size="sm" className="gap-2">
                     {t.home.viewAll} <ArrowRight className="w-4 h-4" />

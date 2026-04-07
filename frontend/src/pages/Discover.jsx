@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 export default function Discover() {
   const { artists, total, fetchArtists, isLoading, filters, setFilters, resetFilters } = useArtistsStore();
   const { countries, subregions, sectors, domains, genders, fetchReferenceData } = useReferenceStore();
-  const { language, t } = useLanguageStore();
+  const { t } = useLanguageStore();
   const [localSearch, setLocalSearch] = useState(filters.search);
 
   useEffect(() => {
@@ -45,15 +45,13 @@ export default function Discover() {
           className="mb-8"
         >
           <span className="text-xs uppercase tracking-[0.3em] text-primary font-semibold">
-            {language === 'fr' ? 'Explorer' : 'Explore'}
+            {t.common.explore}
           </span>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mt-2 mb-4">
             {t.nav.discover}
           </h1>
           <p className="text-muted-foreground max-w-xl">
-            {language === 'fr' 
-              ? `Découvrez ${total} artistes de toute l'Afrique`
-              : `Discover ${total} artists from across Africa`}
+            {t.discover.resultsCount.replace('{total}', total)}
           </p>
         </motion.div>
 
@@ -72,7 +70,7 @@ export default function Discover() {
                 type="text"
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
-                placeholder={language === 'fr' ? 'Rechercher par nom...' : 'Search by name...'}
+                placeholder={t.discover.searchPlaceholder}
                 className="pl-10"
                 data-testid="search-input"
               />
@@ -86,13 +84,13 @@ export default function Discover() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <Select value={filters.subregion || 'all'} onValueChange={(v) => setFilters({ subregion: v === 'all' ? '' : v })}>
               <SelectTrigger data-testid="filter-subregion">
-                <SelectValue placeholder={language === 'fr' ? 'Sous-région' : 'Subregion'} />
+                <SelectValue placeholder={t.auth.subregion} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t.common.all}</SelectItem>
                 {subregions.map((s) => (
                   <SelectItem key={s.name} value={s.name}>
-                    {language === 'fr' ? s.name_fr : s.name}
+                    {t.common.isFrench ? (s.name_fr || s.name) : s.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -106,7 +104,7 @@ export default function Discover() {
                 <SelectItem value="all">{t.common.all}</SelectItem>
                 {countries.map((c) => (
                   <SelectItem key={c.name} value={c.name}>
-                    {language === 'fr' ? c.name_fr : c.name}
+                    {t.common.isFrench ? (c.name_fr || c.name) : c.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -120,7 +118,7 @@ export default function Discover() {
                 <SelectItem value="all">{t.common.all}</SelectItem>
                 {sectors.map((s) => (
                   <SelectItem key={s.name} value={s.name}>
-                    {language === 'fr' ? s.name_fr : s.name}
+                    {t.common.isFrench ? (s.name_fr || s.name) : s.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -138,7 +136,7 @@ export default function Discover() {
                 <SelectItem value="all">{t.common.all}</SelectItem>
                 {currentDomains.map((d) => (
                   <SelectItem key={d.name} value={d.name}>
-                    {language === 'fr' ? d.name_fr : d.name}
+                    {t.common.isFrench ? (d.name_fr || d.name) : d.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -152,7 +150,7 @@ export default function Discover() {
                 <SelectItem value="all">{t.common.all}</SelectItem>
                 {genders.map((g) => (
                   <SelectItem key={g.name} value={g.name}>
-                    {language === 'fr' ? g.name_fr : g.name}
+                    {t.common.isFrench ? (g.name_fr || g.name) : g.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -161,9 +159,10 @@ export default function Discover() {
             {hasActiveFilters && (
               <Button variant="outline" onClick={handleReset} className="gap-2">
                 <X className="w-4 h-4" />
-                {language === 'fr' ? 'Effacer' : 'Clear'}
+                {t.common.cancel}
               </Button>
             )}
+
           </div>
         </motion.div>
 

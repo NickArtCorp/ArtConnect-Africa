@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAuthStore, useThemeStore, useReferenceStore, useInstitutionStore } from "@/store";
+import { useAuthStore, useThemeStore, useReferenceStore, useInstitutionStore, useLanguageStore } from "@/store";
 import { Navbar } from "@/components/Navbar";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 
 // Pages
 import Home from "@/pages/Home";
@@ -11,6 +11,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Discover from "@/pages/Discover";
 import ArtistProfile from "@/pages/ArtistProfile";
+import VisitorProfile from "@/pages/VisitorProfile";
 import Dashboard from "@/pages/Dashboard";
 import Messages from "@/pages/Messages";
 import Settings from "@/pages/Settings";
@@ -57,6 +58,20 @@ function InstitutionStatsRoute({ children }) {
   return children;
 }
 
+function VisitorRestrictedRoute({ children }) {
+  const { user, token } = useAuthStore();
+  const { t } = useLanguageStore();
+  
+  // Only block visitors from protected routes
+  if (token && user?.role === 'visitor') {
+    // Show a localized toast notification
+    toast.error(t?.common?.search ? `${t.nav.visitorBadge || 'Visitor'} accounts cannot access this page` : 'Visitor accounts cannot access this feature');
+    return <Navigate to="/discover" replace />;
+  }
+  
+  return children;
+}
+
 function App() {
   const { fetchUser, token } = useAuthStore();
   const { theme } = useThemeStore();
@@ -93,22 +108,33 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/artist/:id" element={<ArtistProfile />} />
-            <Route path="/projects" element={<Projects />} />
+            <Route path="/visitor/:id" element={<VisitorProfile />} />
+            <Route path="/projects" element={
+              <VisitorRestrictedRoute><Projects /></VisitorRestrictedRoute>
+            } />
             <Route path="/statistics" element={
               <InstitutionStatsRoute>
                 <Statistics />
               </InstitutionStatsRoute>
             } />
             <Route path="/checkout" element={<Checkout />} />
-            <Route path="/feed" element={<Feed />} />
+            <Route path="/feed" element={
+              <VisitorRestrictedRoute><Feed /></VisitorRestrictedRoute>
+            } />
             <Route path="/dashboard" element={
-              <ProtectedRoute><Dashboard /></ProtectedRoute>
+              <VisitorRestrictedRoute>
+                <ProtectedRoute><Dashboard /></ProtectedRoute>
+              </VisitorRestrictedRoute>
             } />
             <Route path="/messages" element={
-              <ProtectedRoute><Messages /></ProtectedRoute>
+              <VisitorRestrictedRoute>
+                <ProtectedRoute><Messages /></ProtectedRoute>
+              </VisitorRestrictedRoute>
             } />
             <Route path="/messages/:id" element={
-              <ProtectedRoute><Messages /></ProtectedRoute>
+              <VisitorRestrictedRoute>
+                <ProtectedRoute><Messages /></ProtectedRoute>
+              </VisitorRestrictedRoute>
             } />
             <Route path="/settings" element={
               <ProtectedRoute><Settings /></ProtectedRoute>

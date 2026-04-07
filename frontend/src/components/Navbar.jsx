@@ -1,13 +1,14 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore, useThemeStore, useLanguageStore } from '@/store';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, MessageCircle, User, LogOut, Menu, X, Globe, BarChart3, Briefcase, Newspaper } from 'lucide-react';
+import { Moon, Sun, MessageCircle, User, LogOut, Menu, X, BarChart3, Briefcase, Newspaper } from 'lucide-react';
 import { useState } from 'react';
+import { LanguageSelector } from './LanguageSelector';
 
 export function Navbar() {
   const { user, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
-  const { language, toggleLanguage, t } = useLanguageStore();
+  const { t } = useLanguageStore();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -65,7 +66,7 @@ export function Navbar() {
                   data-testid="feed-link"
                 >
                   <Newspaper className="w-4 h-4" />
-                  {t.nav.feed || 'Feed'}
+                  {t.nav.feed}
                 </Link>
                 <Link
                   to="/projects"
@@ -133,17 +134,8 @@ export function Navbar() {
               </>
             )}
 
-            {/* Language Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleLanguage}
-              className="text-xs font-medium"
-              data-testid="language-toggle"
-            >
-              <Globe className="w-4 h-4 mr-1" />
-              {language.toUpperCase()}
-            </Button>
+            {/* Language Selector */}
+            <LanguageSelector />
 
             {/* Theme Toggle */}
             <Button
@@ -163,9 +155,7 @@ export function Navbar() {
 
           {/* Mobile menu button */}
           <div className="flex lg:hidden items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={toggleLanguage} className="text-xs">
-              {language.toUpperCase()}
-            </Button>
+            <LanguageSelector />
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
@@ -192,7 +182,7 @@ export function Navbar() {
               {canSeeSocialFeatures && (
                 <>
                   <Link to="/feed" className="text-sm font-medium hover:text-primary transition-colors py-2" onClick={() => setMobileMenuOpen(false)}>
-                    {t.nav.feed || 'Feed'}
+                    {t.nav.feed}
                   </Link>
                   <Link to="/projects" className="text-sm font-medium hover:text-primary transition-colors py-2" onClick={() => setMobileMenuOpen(false)}>
                     {t.nav.projects}

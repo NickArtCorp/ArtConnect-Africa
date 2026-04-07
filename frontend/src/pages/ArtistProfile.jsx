@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageCircle, ArrowLeft, Loader2, Send, MapPin, Calendar, Globe, FileText, Image, Video } from 'lucide-react';
+import { MessageCircle, ArrowLeft, Loader2, Send, MapPin, Calendar, Globe, FileText, Image, Video, Users, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { getMediaUrl } from '@/lib/utils';
@@ -35,12 +35,12 @@ export default function ArtistProfile() {
     setSending(false);
     
     if (result.success) {
-      toast.success(language === 'fr' ? 'Message envoyé !' : 'Message sent!');
+      toast.success(t.profile.messageSent);
       setMessageContent('');
       setMessageOpen(false);
       navigate(`/messages/${id}`);
     } else {
-      toast.error(result.error || (language === 'fr' ? 'Échec de l\'envoi' : 'Failed to send message'));
+      toast.error(result.error || t.profile.messageFailed);
     }
   };
 
@@ -59,6 +59,12 @@ export default function ArtistProfile() {
   const portfolio = currentArtist.portfolio || { documents: [], images: [], videos: [] };
   const avatarUrl = getMediaUrl(currentArtist.avatar);
 
+ const getTagLabel = (tag) => {
+  if (tag === 'professional') return language === 'fr' ? 'Professionnel' : 'Professional';
+  if (tag === 'media') return language === 'fr' ? 'Média' : 'Media';
+  return language === 'fr' ? 'Artiste' : 'Artist';
+};
+
   return (
     <div className="min-h-screen pt-24 pb-16 px-4 md:px-8">
       <div className="max-w-5xl mx-auto">
@@ -69,7 +75,7 @@ export default function ArtistProfile() {
           data-testid="back-to-discover"
         >
           <ArrowLeft className="w-4 h-4" />
-          {language === 'fr' ? 'Retour' : 'Back'}
+          {t.common.back}
         </Link>
 
         <motion.div
@@ -92,10 +98,22 @@ export default function ArtistProfile() {
 
                 <div className="flex-1">
                   <div className="flex flex-wrap gap-2 mb-2">
+                    {currentArtist.role === 'visitor' && (
+                      <Badge className="bg-secondary/50 text-secondary-foreground border-0">
+                        {t.profile.visitorBadge}
+                      </Badge>
+                    )}
                     <Badge className="bg-primary/10 text-primary border-0">
                       {currentArtist.sector}
                     </Badge>
-                    <Badge variant="outline">{currentArtist.domain}</Badge>
+                    {currentArtist.profile_tag && currentArtist.domain && (
+                      <Badge variant="secondary" className="bg-accent/10 text-accent border border-accent/30">
+                        {getTagLabel(currentArtist.profile_tag)} • {currentArtist.domain}
+                      </Badge>
+                    )}
+                    {!currentArtist.profile_tag && currentArtist.domain && (
+                      <Badge variant="outline">{currentArtist.domain}</Badge>
+                    )}
                   </div>
                   <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2" data-testid="artist-name">
                     {fullName}
@@ -109,6 +127,18 @@ export default function ArtistProfile() {
                       <Calendar className="w-4 h-4" />
                       {yearsExperience} {t.profile.yearsExperience}
                     </span>
+                    {currentArtist.collaborations_count !== undefined && (
+                      <span className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        {currentArtist.collaborations_count} {t.profile.collaborationsCount}
+                      </span>
+                    )}
+                    {currentArtist.visitor_views_count !== undefined && (
+                      <span className="flex items-center gap-1">
+                        <Eye className="w-4 h-4" />
+                        {currentArtist.visitor_views_count} {t.profile.views}
+                      </span>
+                    )}
                     {currentArtist.website && (
                       <a href={currentArtist.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary">
                         <Globe className="w-4 h-4" />
@@ -125,18 +155,18 @@ export default function ArtistProfile() {
                       <DialogTrigger asChild>
                         <Button className="rounded-full gap-2" data-testid="message-artist-button">
                           <MessageCircle className="w-4 h-4" />
-                          {t.profile.sendMessage}
+                          {user.role === 'visitor' ? t.profile.contact : t.profile.sendMessage}
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>{t.profile.sendMessage} - {fullName}</DialogTitle>
+                          <DialogTitle>{t.profile.message} - {fullName}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 pt-4">
                           <Textarea
                             value={messageContent}
                             onChange={(e) => setMessageContent(e.target.value)}
-                            placeholder={language === 'fr' ? 'Écrivez votre message...' : 'Write your message...'}
+                            placeholder={t.profile.writeMessagePlaceholder}
                             rows={4}
                             className="resize-none"
                             data-testid="message-textarea"
@@ -152,7 +182,7 @@ export default function ArtistProfile() {
                               data-testid="send-message-button"
                             >
                               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                              {language === 'fr' ? 'Envoyer' : 'Send'}
+                              {t.common.send}
                             </Button>
                           </div>
                         </div>
@@ -186,7 +216,9 @@ export default function ArtistProfile() {
             <Tabs defaultValue="about" className="w-full">
               <TabsList className="w-full justify-start bg-card border border-border/50 rounded-xl p-1">
                 <TabsTrigger value="about" className="rounded-lg">{t.profile.about}</TabsTrigger>
-                <TabsTrigger value="portfolio" className="rounded-lg">{t.profile.portfolio}</TabsTrigger>
+                {currentArtist.role === 'artist' ? (
+                  <TabsTrigger value="portfolio" className="rounded-lg">{t.profile.portfolio}</TabsTrigger>
+                ) : null}
               </TabsList>
 
               <TabsContent value="about" className="mt-6">
@@ -205,7 +237,7 @@ export default function ArtistProfile() {
                   )}
                   <div className="mt-6 pt-6 border-t border-border/50">
                     <p className="text-sm text-muted-foreground">
-                      {t.profile.memberSince} {new Date(currentArtist.created_at).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', { month: 'long', year: 'numeric' })}
+                      {t.profile.memberSince} {new Date(currentArtist.created_at).toLocaleDateString(t.common.langCode === 'fr' ? 'fr-FR' : 'en-US', { month: 'long', year: 'numeric' })}
                     </p>
                   </div>
                 </div>
@@ -307,7 +339,7 @@ export default function ArtistProfile() {
                   {(!portfolio.documents?.length && !portfolio.images?.length && !portfolio.videos?.length) && (
                     <div className="text-center py-12 bg-card rounded-2xl border border-border/50">
                       <p className="text-muted-foreground">
-                        {language === 'fr' ? 'Aucun élément dans le portfolio' : 'No portfolio items yet'}
+                        {t.profile.noPortfolioItems}
                       </p>
                     </div>
                   )}

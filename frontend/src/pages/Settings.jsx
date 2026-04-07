@@ -15,7 +15,7 @@ import { getMediaUrl } from '@/lib/utils';
 export default function Settings() {
   const { user, updateProfile, uploadAvatar } = useAuthStore();
   const { countries, sectors, domains, fetchReferenceData } = useReferenceStore();
-  const { language, t } = useLanguageStore();
+  const { t } = useLanguageStore();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -75,13 +75,13 @@ export default function Settings() {
     // Validate file type
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      toast.error(language === 'fr' ? 'Type de fichier invalide. Utilisez JPG, PNG, GIF ou WebP' : 'Invalid file type. Use JPG, PNG, GIF or WebP');
+      toast.error(t.settings.invalidFileType);
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error(language === 'fr' ? 'Fichier trop volumineux. Maximum 5MB' : 'File too large. Maximum 5MB');
+      toast.error(t.settings.fileTooLarge);
       return;
     }
 
@@ -90,9 +90,9 @@ export default function Settings() {
     setUploadingAvatar(false);
 
     if (result.success) {
-      toast.success(language === 'fr' ? 'Photo de profil mise à jour !' : 'Profile photo updated!');
+      toast.success(t.settings.photoUpdated);
     } else {
-      toast.error(result.error || (language === 'fr' ? 'Échec de l\'upload' : 'Upload failed'));
+      toast.error(result.error || t.settings.uploadFailed);
     }
   };
 
@@ -103,9 +103,9 @@ export default function Settings() {
     setSaving(false);
 
     if (result.success) {
-      toast.success(language === 'fr' ? 'Profil mis à jour !' : 'Profile updated!');
+      toast.success(t.settings.profileUpdated);
     } else {
-      toast.error(result.error || (language === 'fr' ? 'Échec de la mise à jour' : 'Update failed'));
+      toast.error(result.error || t.settings.updateFailed);
     }
   };
 
@@ -125,7 +125,7 @@ export default function Settings() {
           transition={{ duration: 0.6 }}
         >
           <span className="text-xs uppercase tracking-[0.3em] text-primary font-semibold">
-            {language === 'fr' ? 'Paramètres' : 'Settings'}
+            {t.settings.title}
           </span>
           <h1 className="text-4xl font-bold tracking-tight mt-2 mb-8">
             {t.profile.editProfile}
@@ -177,13 +177,11 @@ export default function Settings() {
                 ) : (
                   <Upload className="w-4 h-4" />
                 )}
-                {language === 'fr' ? 'Changer la photo' : 'Change photo'}
+                {t.settings.changePhoto}
               </Button>
               
               <p className="text-xs text-muted-foreground text-center">
-                {language === 'fr' 
-                  ? 'JPG, PNG, GIF ou WebP. Max 5MB.' 
-                  : 'JPG, PNG, GIF or WebP. Max 5MB.'}
+                JPG, PNG, GIF or WebP. Max 5MB.
               </p>
             </div>
 
@@ -221,15 +219,15 @@ export default function Settings() {
                 <SelectContent className="max-h-60">
                   {countries.map((c) => (
                     <SelectItem key={c.name} value={c.name}>
-                      {language === 'fr' ? c.name_fr : c.name}
+                      {t.common.isFrench ? (c.name_fr || c.name) : c.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {formData.subregion && (
                 <p className="text-sm text-muted-foreground">
-                  {t.auth.subregion}: {language === 'fr' 
-                    ? countries.find(c => c.name === formData.country)?.subregion_fr 
+                  {t.auth.subregion}: {t.common.isFrench 
+                    ? (countries.find(c => c.name === formData.country)?.subregion_fr || formData.subregion)
                     : formData.subregion}
                 </p>
               )}
@@ -246,7 +244,7 @@ export default function Settings() {
                   <SelectContent>
                     {sectors.map((s) => (
                       <SelectItem key={s.name} value={s.name}>
-                        {language === 'fr' ? s.name_fr : s.name}
+                        {t.common.isFrench ? (s.name_fr || s.name) : s.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -265,7 +263,7 @@ export default function Settings() {
                   <SelectContent>
                     {currentDomains.map((d) => (
                       <SelectItem key={d.name} value={d.name}>
-                        {language === 'fr' ? d.name_fr : d.name}
+                        {t.common.isFrench ? (d.name_fr || d.name) : d.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -275,14 +273,22 @@ export default function Settings() {
 
             {/* Bio */}
             <div className="space-y-2">
-              <Label htmlFor="bio">{t.auth.bio}</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="bio">{t.auth.bio}</Label>
+                <span className={`text-xs font-medium ${(formData.bio?.length || 0) >= 2800 ? ((formData.bio?.length || 0) >= 3000 ? 'text-destructive' : 'text-amber-500') : 'text-muted-foreground'}`}>
+                  {formData.bio?.length || 0} / 3000
+                </span>
+              </div>
               <Textarea
                 id="bio"
                 name="bio"
                 value={formData.bio}
-                onChange={handleChange}
-                rows={4}
+                onChange={(e) => {
+                  if (e.target.value.length <= 3000) handleChange(e);
+                }}
+                rows={6}
                 data-testid="settings-bio"
+                placeholder={t.auth.bioPlaceholder}
               />
             </div>
 
@@ -322,7 +328,7 @@ export default function Settings() {
                 {saving ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {language === 'fr' ? 'Enregistrement...' : 'Saving...'}
+                    {t.settings.saving}
                   </>
                 ) : (
                   <>
