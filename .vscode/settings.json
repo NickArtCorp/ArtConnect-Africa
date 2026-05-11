@@ -1,0 +1,9 @@
+{
+    "CodeGPT.apiKey": "Groq",
+    "chat.tools.terminal.autoApprove": {
+        "/^node -c c:\\\\Users\\\\NickCorp\\\\ArtConnect-Africa\\\\ArtConnect-Africa\\\\frontend\\\\src\\\\store\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

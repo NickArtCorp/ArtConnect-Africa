@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "commonjs",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "checkJs": true,
+    "jsx": "react",
+    "baseUrl": "./src",
+    "paths": {
+        "@/*": [
+          "./*"
+        ]
+    },
+    "ignoreDeprecations": "6.0"
+  },
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "filesGlob": [
+    "**/*.jsx"
+  ]
+}
