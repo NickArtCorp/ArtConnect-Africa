@@ -1,0 +1,185 @@
+{
+  "project_name": "ArtSync - Artist Messaging & Discovery Platform",
+  "design_philosophy": {
+    "persona": "E1: The Anti-AI Designer",
+    "core_principles": [
+      "Fusion over Imitation: Mix Gallery Aesthetics with SaaS Functionality",
+      "Emotion First: Every interaction must feel 'created', not just 'rendered'",
+      "Content is King: The art is the hero, the UI is the frame",
+      "Negative Space: Luxurious padding to let art breathe"
+    ],
+    "anti_patterns": [
+      "No default 'Inter' for headings",
+      "No generic center-alignment",
+      "No full-screen gradients",
+      "No standard 'Bootstrap' columns"
+    ]
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Syne, 'Cormorant Garamond', sans-serif",
+      "body": "Manrope, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "installation_command": "@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Manrope:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap');",
+    "rules": [
+      "Headings (H1-H2) must use 'Syne' for a modern art-gallery feel.",
+      "Body text must use 'Manrope' for high legibility in small sizes (messaging).",
+      "Use 'Cormorant Garamond' for editorial pull-quotes or artist statements.",
+      "Headings > 32px must use 'tracking-tight' or 'tracking-tighter'.",
+      "Overlines/Labels must be Uppercase + tracking-widest."
+    ]
+  },
+  "colors": {
+    "theme_strategy": "Dual Theme (Light 'Gallery' / Dark 'Studio')",
+    "light_theme": {
+      "background": "#F2F0E9",
+      "foreground": "#1A1A1A",
+      "card": "#FFFFFF",
+      "card_foreground": "#1A1A1A",
+      "primary": "#2D2D2D",
+      "primary_foreground": "#F2F0E9",
+      "accent": "#E63946",
+      "border": "#D8D4C9"
+    },
+    "dark_theme": {
+      "background": "#0A0A0A",
+      "foreground": "#F2F0E9",
+      "card": "#141414",
+      "card_foreground": "#F2F0E9",
+      "primary": "#F2F0E9",
+      "primary_foreground": "#0A0A0A",
+      "accent": "#7000FF",
+      "border": "#262626"
+    },
+    "usage_rules": [
+      "Never use pure black (#000000). Use #0A0A0A or #121212.",
+      "Primary Action Color: Use 'Accent' sparingly (only for 'Send', 'Connect', 'Sign Up').",
+      "Text Contrast: Ensure WCAG AA compliance (4.5:1).",
+      "FORBIDDEN COLORS: Purple/Teal for CTA (Use defined Accent instead)."
+    ]
+  },
+  "layout_and_grid": {
+    "spacing_scale": "Tailwind (p-1 to p-64)",
+    "container_padding": "px-6 md:px-12 lg:px-24",
+    "strategies": [
+      {
+        "name": "The Bento Grid (Discovery)",
+        "usage": "Artist Showcase & Feed",
+        "classes": "grid grid-cols-1 md:grid-cols-8 lg:grid-cols-12 gap-6",
+        "rules": [
+          "Hero Item: col-span-full md:col-span-8 row-span-2",
+          "Square Item: col-span-4 row-span-1",
+          "Tall Item: col-span-4 row-span-2",
+          "Never fill 100% perfectly; leave negative space."
+        ]
+      },
+      {
+        "name": "The Message Pane",
+        "usage": "Chat Interface",
+        "classes": "grid grid-cols-12 h-[calc(100vh-4rem)] overflow-hidden",
+        "rules": [
+          "Sidebar: col-span-12 md:col-span-4 lg:col-span-3 border-r",
+          "Chat Area: col-span-12 md:col-span-8 lg:col-span-9"
+        ]
+      }
+    ]
+  },
+  "visual_enhancers": {
+    "surface_styles": [
+      {
+        "name": "Glassmorphism (Crystal)",
+        "usage": "Sticky Headers, Floating Chat Actions",
+        "classes": "bg-white/70 dark:bg-black/60 backdrop-blur-xl border-b border-white/20 dark:border-white/10"
+      },
+      {
+        "name": "Tracing Beam",
+        "usage": "Featured Artist Cards",
+        "description": "A subtle gradient border that animates on hover."
+      }
+    ],
+    "animations": {
+      "library": "framer-motion",
+      "defaults": {
+        "hover": "scale-105 transition-transform duration-300 ease-out",
+        "click": "scale-95",
+        "page_transition": "opacity-0 to opacity-100 duration-500"
+      }
+    }
+  },
+  "components": {
+    "buttons": {
+      "base": "rounded-full font-medium tracking-wide transition-all duration-300",
+      "variants": {
+        "primary": "bg-primary text-primary-foreground hover:opacity-90 hover:shadow-lg",
+        "ghost": "hover:bg-accent/10 hover:text-accent"
+      }
+    },
+    "inputs": {
+      "base": "bg-transparent border-b border-border focus:border-primary focus:outline-none px-0 py-2 rounded-none transition-colors",
+      "note": "Use 'Underline' style inputs for a cleaner, less 'SaaS' look."
+    },
+    "cards": {
+      "base": "group relative overflow-hidden rounded-xl border border-border/50 bg-card hover:border-accent/50 transition-colors duration-500",
+      "content_padding": "p-6"
+    }
+  },
+  "image_assets": {
+    "hero_section": {
+      "url": "https://images.unsplash.com/photo-1636155177192-cb46dba1c569?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Abstract modern art background",
+      "usage": "Hero background with overlay"
+    },
+    "featured_artists": [
+      {
+        "url": "https://images.unsplash.com/photo-1773592620698-672a97954d2a?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Digital Artist Portrait",
+        "role": "Digital Artist"
+      },
+      {
+        "url": "https://images.pexels.com/photos/7561851/pexels-photo-7561851.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "alt": "Musician Portrait",
+        "role": "Music Producer"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1771986918201-0bd73288f95e?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Designer Portrait",
+        "role": "Visual Designer"
+      }
+    ],
+    "artworks": [
+      {
+        "url": "https://images.unsplash.com/photo-1559041343-ae464772921d?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Abstract Red Blue"
+      },
+      {
+        "url": "https://images.pexels.com/photos/1668211/pexels-photo-1668211.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "alt": "Expressionism Blue Orange"
+      }
+    ]
+  },
+  "tech_stack_specifics": {
+    "frontend": "React.js (No TypeScript)",
+    "styling": "Tailwind CSS + Shadcn UI (Customized)",
+    "icons": "Lucide React (Default)",
+    "state_management": "React Context or Zustand",
+    "routing": "React Router DOM"
+  },
+  "instructions_to_main_agent": [
+    "1. SETUP: Install fonts immediately via @import in index.css.",
+    "2. COMPONENTS: Use existing Shadcn components but STRIP the default 'radius-md' and 'border' styles. Make them 'Ghost' or 'Underline' styles to fit the Art aesthetic.",
+    "3. LANDING PAGE: Do NOT use a standard hero. Use an asymmetrical split or a full-screen immersive image with big bold typography.",
+    "4. DASHBOARD: Keep it dense (Mode B). Artists need to see messages and stats quickly.",
+    "5. IMAGES: Use the provided URLs for placeholders. Do not leave empty boxes.",
+    "6. MESSAGING: Implement the 'Glassmorphism' effect on the message bubbles (sent messages).",
+    "7. UNIVERSAL: Add data-testid to all interactive elements."
+  ],
+  "universal_guidelines": [
+    "Do not apply 'transition: all'.",
+    "Do not center-align the app container.",
+    "Use 'sonner' for toasts.",
+    "Components must use named exports.",
+    "Pages must use default exports.",
+    "Mobile-first responsive design is mandatory."
+  ]
+}

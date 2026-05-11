@@ -1,0 +1,47 @@
+/* Global app styles */
+
+/* Ensure smooth transitions for theme changes */
+/* IMPORTANT: Radix UI portals (Select, Popover, Dialog) are excluded.
+   A global transition on * causes Radix to fire a dismiss event on the same
+   frame as the open event, making dropdowns close instantly on click. */
+*:not([data-radix-popper-content-wrapper]):not([data-radix-popper-content-wrapper] *):not([data-radix-select-viewport]):not([data-radix-select-viewport] *) {
+    transition-property: color, background-color, border-color;
+    transition-duration: 150ms;
+    transition-timing-function: ease-in-out;
+}
+
+/* Override for elements that shouldn't animate */
+.no-transition {
+    transition: none !important;
+}
+
+/* Custom focus styles */
+:focus-visible {
+    outline: 2px solid hsl(var(--accent));
+    outline-offset: 2px;
+}
+
+/* Line clamp utilities */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Selection color */
+::selection {
+    background-color: hsl(var(--accent) / 0.3);
+}
+
+/* Smooth scroll */
+html {
+    scroll-behavior: smooth;
+}
