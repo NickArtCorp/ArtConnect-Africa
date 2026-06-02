@@ -16,8 +16,9 @@ function PersonnePhysiqueForm({ onSuccess }) {
   const [formData, setFormData] = useState({
     email: '', password: '', first_name: '', last_name: '',
     country: '', city: '', subregion: '', gender: '', sector: '', domain: '',
-    year_started: new Date().getFullYear() - 5, bio: '', additional_info: '', role: 'personne_physique',
-    profile_tag: 'artist', contact_person_name: '', contact_person_email: ''
+    bio: '', additional_info: '', role: 'personne_physique',
+    profile_tag: 'artist', reference_person_name: '', reference_person_email: '',
+    phone: '', address: '', website: ''
   });
 
   const bioLimit = 3000;
@@ -26,7 +27,7 @@ function PersonnePhysiqueForm({ onSuccess }) {
   useEffect(() => { fetchReferenceData(); }, [fetchReferenceData]);
 
   const handleChange = (e) => {
-    const value = (e.target.name === 'email' || e.target.name === 'contact_person_email') 
+    const value = (e.target.name === 'email' || e.target.name === 'reference_person_email') 
       ? e.target.value.toLowerCase() 
       : e.target.value;
     setFormData({ ...formData, [e.target.name]: value });
@@ -47,9 +48,7 @@ function PersonnePhysiqueForm({ onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const cleanedData = { 
-      ...formData,
-      contact_person_email: formData.contact_person_email || null,
-      contact_person_name: formData.contact_person_name || null
+      ...formData
     };
     const result = await register(cleanedData);
     if (result.success) onSuccess('personne_physique');
@@ -186,17 +185,8 @@ function PersonnePhysiqueForm({ onSuccess }) {
       </div>
 
       <div className="space-y-2">
-        <Label>{t.auth.yearStarted} *</Label>
-        <Input
-          name="year_started" type="number"
-          min="1950" max={new Date().getFullYear()}
-          value={formData.year_started} onChange={handleChange} required
-        />
-      </div>
-
-      <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <Label>{t.auth.bio}</Label>
+          <Label>{formData.profile_tag === 'artist' ? t.auth.biographyArtist : t.auth.presentationIndividual}</Label>
           <span className={`text-xs font-medium ${formData.bio.length >= bioWarningAt ? (formData.bio.length >= bioLimit ? 'text-destructive' : 'text-amber-500') : 'text-muted-foreground'}`}>
             {formData.bio.length} / {bioLimit}
           </span>
@@ -208,7 +198,7 @@ function PersonnePhysiqueForm({ onSuccess }) {
             if (e.target.value.length <= bioLimit) handleChange(e);
           }} 
           rows={5}
-          placeholder={t.auth.bioPlaceholder} 
+          placeholder={formData.profile_tag === 'artist' ? t.auth.bioPlaceholder : (t.auth.presentationIndividual + '...')} 
         />
         {formData.bio.length >= bioLimit && (
           <p className="text-[10px] text-destructive font-medium uppercase tracking-wider mt-1 animate-pulse">Max character limit reached</p>
@@ -221,17 +211,36 @@ function PersonnePhysiqueForm({ onSuccess }) {
           placeholder={t.auth.additionalInfoPlaceholder} />
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>{t.auth.phone}</Label>
+          <Input name="phone" type="tel" value={formData.phone} onChange={handleChange}
+            placeholder="+1 (555) 000-0000" />
+        </div>
+        <div className="space-y-2">
+          <Label>{t.auth.website}</Label>
+          <Input name="website" type="url" value={formData.website} onChange={handleChange}
+            placeholder="https://..." />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>{t.auth.address}</Label>
+        <Textarea name="address" value={formData.address} onChange={handleChange} rows={2}
+          placeholder={t.auth.addressPlaceholder} />
+      </div>
+
       <div className="p-4 bg-secondary/50 border border-secondary/30 rounded-xl text-sm space-y-4">
         <p className="text-muted-foreground font-medium">{t.auth.contactPersonInfo}</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>{t.auth.contactPersonName}</Label>
-            <Input name="contact_person_name" value={formData.contact_person_name} onChange={handleChange} 
+            <Input name="reference_person_name" value={formData.reference_person_name} onChange={handleChange} 
               placeholder="Ex: Jean Dupont" />
           </div>
           <div className="space-y-2">
             <Label>{t.auth.contactPersonEmail}</Label>
-            <Input name="contact_person_email" type="email" value={formData.contact_person_email} onChange={handleChange}
+            <Input name="reference_person_email" type="email" value={formData.reference_person_email} onChange={handleChange}
               placeholder="contact@example.com" />
           </div>
         </div>
@@ -251,17 +260,20 @@ function PersonneMoraleForm({ onSuccess }) {
   const { countries, fetchReferenceData } = useReferenceStore();
   const { register, isLoading, error } = useAuthStore();
   const [formData, setFormData] = useState({
-    email: '', password: '', first_name: '', last_name: '',
+    email: '', password: '',
     organization_name: '', country: '', city: '', subregion: '',
     gender: 'Male', sector: 'Arts & Culture', domain: 'Institution',
-    year_started: new Date().getFullYear(), bio: '', role: 'personne_morale',
-    contact_person_name: '', contact_person_email: '', employees_count: ''
+    bio: '', role: 'personne_morale',
+    reference_person_name: '', reference_person_email: '', employees_count: '',
+    phone: '', address: '', website: ''
   });
+
+  const wordLimit = 500;
 
   useEffect(() => { fetchReferenceData(); }, [fetchReferenceData]);
 
   const handleChange = (e) => {
-    const value = (e.target.name === 'email' || e.target.name === 'contact_person_email') 
+    const value = (e.target.name === 'email' || e.target.name === 'reference_person_email') 
       ? e.target.value.toLowerCase() 
       : e.target.value;
     setFormData({ ...formData, [e.target.name]: value });
@@ -272,17 +284,26 @@ function PersonneMoraleForm({ onSuccess }) {
     setFormData({ ...formData, country: value, subregion: country?.subregion || '' });
   };
 
+  const getWordCount = (text) => {
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (getWordCount(formData.bio) > wordLimit) {
+      return; // Should be blocked by UI but just in case
+    }
     const cleanedData = { 
       ...formData,
-      contact_person_email: formData.contact_person_email || null,
-      contact_person_name: formData.contact_person_name || null,
+      reference_person_email: formData.reference_person_email || null,
+      reference_person_name: formData.reference_person_name || null,
       employees_count: formData.employees_count ? parseInt(formData.employees_count) : null
     };
     const result = await register(cleanedData);
     if (result.success) onSuccess('personne_morale');
   };
+
+  const currentWordCount = getWordCount(formData.bio);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 bg-card p-8 rounded-2xl border border-border/50">
@@ -292,17 +313,6 @@ function PersonneMoraleForm({ onSuccess }) {
         <Label>{t.auth.organizationName} *</Label>
         <Input name="organization_name" value={formData.organization_name} onChange={handleChange}
           placeholder={t.auth.orgNamePlaceholder} required />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>{t.auth.contactFirstName} *</Label>
-          <Input name="first_name" value={formData.first_name} onChange={handleChange} required />
-        </div>
-        <div className="space-y-2">
-          <Label>{t.auth.contactLastName} *</Label>
-          <Input name="last_name" value={formData.last_name} onChange={handleChange} required />
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -350,9 +360,36 @@ function PersonneMoraleForm({ onSuccess }) {
       )}
 
       <div className="space-y-2">
-        <Label>{t.auth.missionDescription}</Label>
-        <Textarea name="bio" value={formData.bio} onChange={handleChange} rows={3}
+        <div className="flex justify-between items-center">
+          <Label>{t.auth.presentationOrg}</Label>
+          <span className={`text-xs font-medium ${currentWordCount > wordLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
+            {currentWordCount} / {wordLimit} mots
+          </span>
+        </div>
+        <Textarea name="bio" value={formData.bio} onChange={handleChange} rows={4}
           placeholder={t.auth.missionPlaceholder} />
+        {currentWordCount > wordLimit && (
+          <p className="text-xs text-destructive">La présentation ne peut pas dépasser {wordLimit} mots.</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>{t.auth.phone}</Label>
+          <Input name="phone" type="tel" value={formData.phone} onChange={handleChange}
+            placeholder="+1 (555) 000-0000" />
+        </div>
+        <div className="space-y-2">
+          <Label>{t.auth.website}</Label>
+          <Input name="website" type="url" value={formData.website} onChange={handleChange}
+            placeholder="https://..." />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>{t.auth.address}</Label>
+        <Textarea name="address" value={formData.address} onChange={handleChange} rows={2}
+          placeholder={t.auth.addressPlaceholder} />
       </div>
 
       <div className="p-4 bg-secondary/50 border border-secondary/30 rounded-xl text-sm space-y-4">
@@ -360,25 +397,18 @@ function PersonneMoraleForm({ onSuccess }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>{t.auth.contactPersonName}</Label>
-            <Input name="contact_person_name" value={formData.contact_person_name} onChange={handleChange} 
+            <Input name="reference_person_name" value={formData.reference_person_name} onChange={handleChange} 
               placeholder="Ex: Jean Dupont" />
           </div>
           <div className="space-y-2">
             <Label>{t.auth.contactPersonEmail}</Label>
-            <Input name="contact_person_email" type="email" value={formData.contact_person_email} onChange={handleChange}
+            <Input name="reference_person_email" type="email" value={formData.reference_person_email} onChange={handleChange}
               placeholder="contact@example.com" />
           </div>
         </div>
       </div>
 
-      <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl text-sm space-y-1">
-        <p className="font-semibold text-primary">{t.auth.statsAccessTitle}</p>
-        <p className="text-muted-foreground">
-          {t.auth.statsAccessInfo}
-        </p>
-      </div>
-
-      <Button type="submit" className="w-full rounded-full" disabled={isLoading}>
+      <Button type="submit" className="w-full rounded-full" disabled={isLoading || currentWordCount > wordLimit}>
         {isLoading
           ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t.auth.creating}</>
           : t.auth.createInstitution}
@@ -394,17 +424,24 @@ function VisitorForm({ onSuccess }) {
   const [formData, setFormData] = useState({
     email: '', password: '', first_name: '', last_name: '',
     country: '', city: '', subregion: '',
-    gender: null, sector: null, domain: null, year_started: null,
+    gender: null, sector: null, domain: null,
     visitor_type: 'individual',
     organization_name: '',
     role: 'visitor',
-    contact_person_name: '', contact_person_email: ''
+    bio: '',
+    phone: '', address: '', website: ''
   });
+
+  const wordLimit = 500;
 
   useEffect(() => { fetchReferenceData(); }, [fetchReferenceData]);
 
+  const getWordCount = (text) => {
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
+
   const handleChange = (e) => {
-    const value = (e.target.name === 'email' || e.target.name === 'contact_person_email') 
+    const value = (e.target.name === 'email' || e.target.name === 'reference_person_email') 
       ? e.target.value.toLowerCase() 
       : e.target.value;
     setFormData({ ...formData, [e.target.name]: value });
@@ -421,14 +458,19 @@ function VisitorForm({ onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.visitor_type === 'organisation' && getWordCount(formData.bio) > wordLimit) {
+      return;
+    }
     const cleanedData = { 
       ...formData,
-      contact_person_email: formData.contact_person_email || null,
-      contact_person_name: formData.contact_person_name || null
+      reference_person_email: formData.reference_person_email || null,
+      reference_person_name: formData.reference_person_name || null
     };
     const result = await register(cleanedData);
     if (result.success) onSuccess('visitor');
   };
+
+  const currentWordCount = getWordCount(formData.bio);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 bg-card p-8 rounded-2xl border border-border/50">
@@ -461,16 +503,41 @@ function VisitorForm({ onSuccess }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>{t.auth.firstName} *</Label>
-          <Input name="first_name" value={formData.first_name} onChange={handleChange} required />
+      {formData.visitor_type === 'individual' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>{t.auth.firstName} *</Label>
+            <Input name="first_name" value={formData.first_name} onChange={handleChange} required />
+          </div>
+          <div className="space-y-2">
+            <Label>{t.auth.lastName} *</Label>
+            <Input name="last_name" value={formData.last_name} onChange={handleChange} required />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label>{t.auth.lastName} *</Label>
-          <Input name="last_name" value={formData.last_name} onChange={handleChange} required />
-        </div>
-      </div>
+      )}
+
+      {formData.visitor_type === 'organisation' && (
+        <>
+          <div className="space-y-2">
+            <Label>{t.auth.organisationName} *</Label>
+            <Input name="organization_name" value={formData.organization_name} onChange={handleChange} required />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <Label>{t.auth.presentationOrg}</Label>
+              <span className={`text-xs font-medium ${currentWordCount > wordLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {currentWordCount} / {wordLimit} mots
+              </span>
+            </div>
+            <Textarea name="bio" value={formData.bio} onChange={handleChange} rows={4}
+              placeholder={t.auth.missionPlaceholder} />
+            {currentWordCount > wordLimit && (
+              <p className="text-xs text-destructive">La présentation ne peut pas dépasser {wordLimit} mots.</p>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -482,13 +549,6 @@ function VisitorForm({ onSuccess }) {
           <Input name="password" type="password" value={formData.password} onChange={handleChange} required minLength={6} />
         </div>
       </div>
-
-      {formData.visitor_type === 'organisation' && (
-        <div className="space-y-2">
-          <Label>{t.auth.organisationName} *</Label>
-          <Input name="organization_name" value={formData.organization_name} onChange={handleChange} required />
-        </div>
-      )}
 
       <div className="space-y-2">
         <Label>{t.auth.country} *</Label>
@@ -516,20 +576,23 @@ function VisitorForm({ onSuccess }) {
         </div>
       )}
 
-      <div className="p-4 bg-secondary/50 border border-secondary/30 rounded-xl text-sm space-y-4">
-        <p className="text-muted-foreground font-medium">{t.auth.contactPersonInfo}</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>{t.auth.contactPersonName}</Label>
-            <Input name="contact_person_name" value={formData.contact_person_name} onChange={handleChange} 
-              placeholder="Ex: Jean Dupont" />
-          </div>
-          <div className="space-y-2">
-            <Label>{t.auth.contactPersonEmail}</Label>
-            <Input name="contact_person_email" type="email" value={formData.contact_person_email} onChange={handleChange}
-              placeholder="contact@example.com" />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>{t.auth.phone}</Label>
+          <Input name="phone" type="tel" value={formData.phone} onChange={handleChange}
+            placeholder="+1 (555) 000-0000" />
         </div>
+        <div className="space-y-2">
+          <Label>{t.auth.website}</Label>
+          <Input name="website" type="url" value={formData.website} onChange={handleChange}
+            placeholder="https://..." />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>{t.auth.address}</Label>
+        <Textarea name="address" value={formData.address} onChange={handleChange} rows={2}
+          placeholder={t.auth.addressPlaceholder} />
       </div>
 
       <Button type="submit" className="w-full rounded-full" disabled={isLoading}>

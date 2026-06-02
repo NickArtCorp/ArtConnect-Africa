@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, CheckCircle, XCircle, Eye, Mail, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { translateSector, translateDomain } from '@/lib/utils';
+import axios from 'axios';
 
 function AdminApproval() {
   const { t, language } = useLanguageStore();
@@ -29,18 +30,13 @@ function AdminApproval() {
   useEffect(() => {
     const fetchPendingApprovals = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/admin/pending-approvals`, {
+        const response = await axios.get(`${API_BASE_URL}/admin/pending-approvals`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch pending approvals');
-        }
-
-        const data = await response.json();
-        setPendingUsers(data);
+        setPendingUsers(response.data);
       } catch (error) {
         console.error('Error fetching pending approvals:', error);
       } finally {
@@ -60,23 +56,16 @@ function AdminApproval() {
 
     setIsProcessing(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/approve-user`, {
-        method: 'POST',
+      await axios.post(`${API_BASE_URL}/admin/approve-user`, {
+        user_id: selectedUser.id,
+        status: 'approved',
+      }, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          user_id: selectedUser.id,
-          status: 'approved',
-        }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to approve user');
-      }
-
-      setSuccessMessage(`User ${selectedUser.first_name} approved successfully!`);
+      setSuccessMessage(t.admin.approvedSuccess);
       setSelectedUser(null);
       setRejectionReason('');
       setShowDetails(false);
@@ -87,7 +76,7 @@ function AdminApproval() {
       setTimeout(() => setSuccessMessage(''), 5000);
     } catch (error) {
       console.error('Error approving user:', error);
-      alert('Failed to approve user');
+      alert(t.common.error);
     } finally {
       setIsProcessing(false);
     }
@@ -95,30 +84,23 @@ function AdminApproval() {
 
   const handleReject = async () => {
     if (!selectedUser || !rejectionReason.trim()) {
-      alert('Please provide a rejection reason');
+      alert(t.admin.rejectionReason);
       return;
     }
 
     setIsProcessing(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/approve-user`, {
-        method: 'POST',
+      await axios.post(`${API_BASE_URL}/admin/approve-user`, {
+        user_id: selectedUser.id,
+        status: 'rejected',
+        rejection_reason: rejectionReason,
+      }, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          user_id: selectedUser.id,
-          status: 'rejected',
-          rejection_reason: rejectionReason,
-        }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to reject user');
-      }
-
-      setSuccessMessage(`User ${selectedUser.first_name} rejected successfully!`);
+      setSuccessMessage(t.admin.rejectedSuccess);
       setSelectedUser(null);
       setRejectionReason('');
       setShowDetails(false);
@@ -129,7 +111,7 @@ function AdminApproval() {
       setTimeout(() => setSuccessMessage(''), 5000);
     } catch (error) {
       console.error('Error rejecting user:', error);
-      alert('Failed to reject user');
+      alert(t.common.error);
     } finally {
       setIsProcessing(false);
     }
@@ -150,15 +132,15 @@ function AdminApproval() {
           <div>
             <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
               <Mail className="w-8 h-8" />
-              Admin Panel: User Approvals
+              {t.admin.userApprovals}
             </h1>
             <p className="text-muted-foreground">
-              Review and approve/reject pending user registrations
+              {t.admin.reviewRegistrations}
             </p>
           </div>
           <Button onClick={() => navigate('/admin/create-partner')} className="rounded-full gap-2">
             <Plus className="w-4 h-4" />
-            Create Partner
+            {t.admin.createPartner}
           </Button>
         </div>
 
@@ -173,11 +155,11 @@ function AdminApproval() {
           <div className="lg:col-span-1">
             <div className="bg-card rounded-xl border border-border p-6">
               <h2 className="text-lg font-semibold mb-4">
-                Pending Users ({pendingUsers.length})
+                {t.admin.pendingUsers} ({pendingUsers.length})
               </h2>
 
               {pendingUsers.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No pending approvals</p>
+                <p className="text-muted-foreground text-sm">{t.admin.noPending}</p>
               ) : (
                 <div className="space-y-2">
                   {pendingUsers.map((user) => (
@@ -194,7 +176,7 @@ function AdminApproval() {
                       }`}
                     >
                       <p className="font-medium text-sm">
-                        {user.first_name} {user.last_name}
+                        {user.organization_name || `${user.first_name} ${user.last_name}`}
                       </p>
                       <p className="text-xs opacity-75">{user.email}</p>
                       <p className="text-xs opacity-75 mt-1 capitalize">
@@ -217,16 +199,23 @@ function AdminApproval() {
               >
                 {/* User Information */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">User Information</h3>
+                  <h3 className="text-lg font-semibold mb-4">{t.admin.userInfo}</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
+                    {selectedUser.organization_name ? (
+                      <div>
+                        <p className="text-muted-foreground">{t.auth.organizationName}</p>
+                        <p className="font-medium">{selectedUser.organization_name}</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-muted-foreground">{t.auth.firstName} & {t.auth.lastName}</p>
+                        <p className="font-medium">
+                          {selectedUser.first_name} {selectedUser.last_name}
+                        </p>
+                      </div>
+                    )}
                     <div>
-                      <p className="text-muted-foreground">Name</p>
-                      <p className="font-medium">
-                        {selectedUser.first_name} {selectedUser.last_name}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Email</p>
+                      <p className="text-muted-foreground">{t.auth.email}</p>
                       <p className="font-medium break-all">{selectedUser.email}</p>
                     </div>
                     <div>
@@ -234,28 +223,28 @@ function AdminApproval() {
                       <p className="font-medium capitalize">{selectedUser.role}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Profile Tag</p>
+                      <p className="text-muted-foreground">{t.auth.profileTag}</p>
                       <p className="font-medium capitalize">
                         {selectedUser.profile_tag || 'N/A'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Country</p>
+                      <p className="text-muted-foreground">{t.auth.country}</p>
                       <p className="font-medium">{selectedUser.country}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Subregion</p>
+                      <p className="text-muted-foreground">{t.auth.subregion}</p>
                       <p className="font-medium">{selectedUser.subregion || 'N/A'}</p>
                     </div>
                     {selectedUser.sector && (
                       <div>
-                        <p className="text-muted-foreground">Sector</p>
+                        <p className="text-muted-foreground">{t.auth.sector}</p>
                         <p className="font-medium">{translateSector(selectedUser.sector, sectors, language)}</p>
                       </div>
                     )}
                     {selectedUser.domain && (
                       <div>
-                        <p className="text-muted-foreground">Domain</p>
+                        <p className="text-muted-foreground">{t.auth.domain}</p>
                         <p className="font-medium">{translateDomain(selectedUser.domain, domains, selectedUser.sector, language)}</p>
                       </div>
                     )}
@@ -265,7 +254,11 @@ function AdminApproval() {
                 {/* Bio */}
                 {selectedUser.bio && (
                   <div>
-                    <h4 className="font-medium mb-2">Bio</h4>
+                    <h4 className="font-medium mb-2">
+                      {selectedUser.role === 'partenaire' || selectedUser.role === 'personne_morale' || (selectedUser.role === 'visitor' && selectedUser.visitor_type === 'organisation')
+                        ? t.auth.presentationOrg
+                        : (selectedUser.profile_tag === 'artist' ? t.auth.biographyArtist : t.auth.presentationIndividual)}
+                    </h4>
                     <p className="text-sm text-muted-foreground">{selectedUser.bio}</p>
                   </div>
                 )}
@@ -273,7 +266,7 @@ function AdminApproval() {
                 {/* Additional Info */}
                 {selectedUser.additional_info && (
                   <div>
-                    <h4 className="font-medium mb-2">Additional Information</h4>
+                    <h4 className="font-medium mb-2">{t.auth.additionalInfo}</h4>
                     <p className="text-sm text-muted-foreground">
                       {selectedUser.additional_info}
                     </p>
@@ -284,11 +277,11 @@ function AdminApproval() {
                 {showDetails && (
                   <div>
                     <Label htmlFor="rejection-reason" className="mb-2 block">
-                      Rejection Reason (if rejecting)
+                      {t.admin.rejectionReason}
                     </Label>
                     <Textarea
                       id="rejection-reason"
-                      placeholder="e.g., Profile information does not match requirements, Missing verification documents, etc."
+                      placeholder={t.admin.rejectionPlaceholder}
                       value={rejectionReason}
                       onChange={(e) => setRejectionReason(e.target.value)}
                       className="resize-none h-24"
@@ -308,7 +301,7 @@ function AdminApproval() {
                     ) : (
                       <CheckCircle className="w-4 h-4 mr-2" />
                     )}
-                    Approve
+                    {t.admin.approve}
                   </Button>
                   <Button
                     onClick={handleReject}
@@ -321,7 +314,7 @@ function AdminApproval() {
                     ) : (
                       <XCircle className="w-4 h-4 mr-2" />
                     )}
-                    Reject
+                    {t.admin.reject}
                   </Button>
                 </div>
               </motion.div>
@@ -329,7 +322,7 @@ function AdminApproval() {
               <div className="bg-card rounded-xl border border-border p-12 text-center">
                 <Eye className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <p className="text-muted-foreground">
-                  Select a user from the list to view details and approve/reject
+                  {t.admin.selectUser}
                 </p>
               </div>
             )}

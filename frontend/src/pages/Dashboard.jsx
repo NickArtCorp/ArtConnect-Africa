@@ -42,7 +42,6 @@ export default function Dashboard() {
   const fullName = `${user.first_name} ${user.last_name}`;
   const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase();
   const unreadCount = conversations.reduce((acc, conv) => acc + conv.unread_count, 0);
-  const yearsExperience = new Date().getFullYear() - (user.year_started || 2020);
   const portfolio = user.portfolio || { documents: [], images: [], videos: [] };
   const avatarUrl = getMediaUrl(user.avatar);
 
@@ -92,7 +91,7 @@ export default function Dashboard() {
             {t.nav.dashboard}
           </span>
           <h1 className="text-4xl font-bold tracking-tight mt-2">
-            {t.dashboard.welcome}, {user.first_name}
+            {t.dashboard.welcome}, {user.first_name || user.organization_name}
           </h1>
         </motion.div>
 
@@ -121,10 +120,6 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <MapPin className="w-4 h-4" />
                   <span>{user.country}</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>{yearsExperience} {t.profile.yearsExperience}</span>
                 </div>
               </div>
 
@@ -222,7 +217,7 @@ export default function Dashboard() {
                           ref={fileInputRef}
                           onChange={handleFileUpload}
                           accept={
-                            uploadType === 'image' ? 'image/*' :
+                            uploadType === 'image' ? 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp,image/tiff,image/heic,image/heif,image/avif' :
                               uploadType === 'video' ? 'video/mp4,video/mov,video/webm,video/ogv' :
                                 '.pdf,.doc,.docx'
                           }

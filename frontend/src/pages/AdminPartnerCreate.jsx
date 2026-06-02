@@ -8,6 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import axios from 'axios';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 export default function AdminPartnerCreate() {
   const { t } = useLanguageStore();
@@ -22,23 +25,18 @@ export default function AdminPartnerCreate() {
   const [generatedCode, setGeneratedCode] = useState('');
 
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
     email: '',
     password: '',
     organization_name: '',
     country: '',
     city: '',
-    gender: '',
-    sector: '',
-    domain: '',
+    subregion: '',
     bio: '',
     website: '',
     additional_info: '',
-    profile_tag: '',
+    first_name: '',
+    last_name: '',
   });
-
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
   useEffect(() => {
     fetchReferenceData();
@@ -58,24 +56,17 @@ export default function AdminPartnerCreate() {
     }));
   };
 
-  const handleSelectChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
   const handleCountryChange = (value) => {
     const country = countries.find((c) => c.name === value);
     setFormData((prev) => ({
       ...prev,
       country: value,
-      city: country?.subregion || '',
+      subregion: country?.subregion || '',
     }));
   };
 
   const validateForm = () => {
-    const requiredFields = ['first_name', 'last_name', 'email', 'password', 'organization_name', 'country', 'gender', 'sector', 'domain'];
+    const requiredFields = ['email', 'password', 'organization_name', 'country', 'subregion'];
     const missing = requiredFields.filter((field) => !formData[field]);
 
     if (missing.length > 0) {
@@ -113,49 +104,34 @@ export default function AdminPartnerCreate() {
         role: 'partenaire',
       };
 
-      const response = await fetch(`${API_BASE_URL}/admin/create-partner`, {
-        method: 'POST',
+      const response = await axios.post(`${API_URL}/api/admin/create-partner`, payload, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create partner');
-      }
-
-      const data = await response.json();
+      const data = response.data;
       setGeneratedCode(data.partner_code);
       setSuccess(true);
-      setSuccessMessage(`Partner ${formData.first_name} ${formData.last_name} created successfully!`);
+      setSuccessMessage(`${t.auth.partner} ${formData.organization_name} ${t.common.success}!`);
 
       // Reset form
       setFormData({
-        first_name: '',
-        last_name: '',
         email: '',
         password: '',
         organization_name: '',
         country: '',
         city: '',
-        gender: '',
-        sector: '',
-        domain: '',
+        subregion: '',
         bio: '',
         website: '',
         additional_info: '',
-        profile_tag: '',
+        first_name: '',
+        last_name: '',
       });
-
-      // Auto-redirect to admin panel after 3 seconds
-      setTimeout(() => {
-        navigate('/admin/approvals');
-      }, 3000);
     } catch (err) {
-      setError(err.message || 'An error occurred while creating the partner');
+      const message = err.response?.data?.detail || err.message || 'An error occurred while creating the partner';
+      setError(message);
       console.error('Error creating partner:', err);
     } finally {
       setIsLoading(false);
@@ -186,10 +162,10 @@ export default function AdminPartnerCreate() {
               </p>
             </div>
             <p className="text-sm text-muted-foreground mb-6">
-              {t.auth?.redirectingToAdmin || 'Redirecting to admin panel in 3 seconds...'}
+              {t.auth?.copyCodeInstruction || 'Veuillez copier ce code avant de quitter cette page.'}
             </p>
-            <Button onClick={() => navigate('/admin/approvals')} className="w-full rounded-full">
-              {t.auth?.backToAdmin || 'Back to Admin Panel'}
+            <Button onClick={() => navigate('/admin/institutions')} className="w-full rounded-full">
+              {t.admin?.institutions || 'Gérer les Institutions'}
             </Button>
           </div>
         </motion.div>
@@ -202,11 +178,11 @@ export default function AdminPartnerCreate() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="mb-6">
           <button
-            onClick={() => navigate('/admin/approvals')}
+            onClick={() => navigate('/admin/institutions')}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
-            {t.auth?.backToAdmin || 'Back to Admin'}
+            {t.admin?.institutions || 'Gérer les Institutions'}
           </button>
           <h1 className="text-3xl font-bold mb-2">{t.auth?.createPartnerAccount || 'Create Partner Account'}</h1>
           <p className="text-muted-foreground">
@@ -226,36 +202,13 @@ export default function AdminPartnerCreate() {
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">{t.auth?.basicInfo || 'Basic Information'}</h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{t.auth?.firstName} *</Label>
-                <Input
-                  name="first_name"
-                  value={formData.first_name}
-                  onChange={handleChange}
-                  placeholder="John"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t.auth?.lastName} *</Label>
-                <Input
-                  name="last_name"
-                  value={formData.last_name}
-                  onChange={handleChange}
-                  placeholder="Doe"
-                  required
-                />
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label>{t.auth?.organizationName} *</Label>
               <Input
                 name="organization_name"
                 value={formData.organization_name}
                 onChange={handleChange}
-                placeholder="Partner Organization"
+                placeholder={t.auth?.orgNamePlaceholder}
                 required
               />
             </div>
@@ -317,7 +270,7 @@ export default function AdminPartnerCreate() {
                   <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
                     {countries.map((c) => (
                       <SelectItem key={c.name} value={c.name}>
-                        {c.name}
+                        {t.common?.isFrench ? (c.name_fr || c.name) : c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -335,101 +288,29 @@ export default function AdminPartnerCreate() {
             </div>
           </div>
 
-          {/* Professional Info */}
+          {/* Presentation Info */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">{t.auth?.professionalInfo || 'Professional Information'}</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>{t.auth?.gender} *</Label>
-                <Select value={formData.gender} onValueChange={(value) => handleSelectChange('gender', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t.auth?.selectGender} />
-                  </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={4} className="z-[100]">
-                    {Array.isArray(genders) && genders.map((g) => {
-                      const label = typeof g === 'string' ? g : (g?.name || String(g));
-                      return (
-                        <SelectItem key={label} value={label}>
-                          {label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t.auth?.sector} *</Label>
-                <Select value={formData.sector} onValueChange={(value) => handleSelectChange('sector', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t.auth?.selectSector} />
-                  </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
-                    {Array.isArray(sectors) && sectors.map((s) => {
-                      const label = typeof s === 'string' ? s : (s?.name || String(s));
-                      return (
-                        <SelectItem key={label} value={label}>
-                          {label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t.auth?.domain} *</Label>
-                <Select value={formData.domain} onValueChange={(value) => handleSelectChange('domain', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t.auth?.selectDomain} />
-                  </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
-                    {Array.isArray(domains) && domains.map((d) => {
-                      const label = typeof d === 'string' ? d : (d?.name || String(d));
-                      return (
-                        <SelectItem key={label} value={label}>
-                          {label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Info */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">{t.auth?.additionalInfo || 'Additional Information'}</h3>
+            <h3 className="font-semibold text-lg">{t.auth?.presentationOrg}</h3>
 
             <div className="space-y-2">
-              <Label>{t.auth?.bio || 'Bio'}</Label>
+              <Label>{t.auth?.presentationOrg}</Label>
               <Textarea
                 name="bio"
                 value={formData.bio}
                 onChange={handleChange}
-                placeholder={t.auth?.tellAboutPartner || 'Tell us about this partner...'}
-                rows={3}
+                placeholder={t.auth?.missionPlaceholder}
+                rows={4}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>{t.auth?.additionalDetails || 'Additional Details'}</Label>
+              <Label>{t.auth?.additionalInfo || 'Additional Details'}</Label>
               <Textarea
                 name="additional_info"
                 value={formData.additional_info}
                 onChange={handleChange}
-                placeholder={t.auth?.additionalDetailsPlaceholder || 'Any additional information...'}
+                placeholder={t.auth?.additionalInfoPlaceholder}
                 rows={2}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t.auth?.profileTag || 'Profile Tag'}</Label>
-              <Input
-                name="profile_tag"
-                value={formData.profile_tag}
-                onChange={handleChange}
-                placeholder="e.g., Featured, Verified, Trusted"
               />
             </div>
           </div>

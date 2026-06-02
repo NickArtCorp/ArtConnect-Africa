@@ -26,12 +26,16 @@ export const availableLanguages = [
 export const translations = {
   en: {
     nav: {
-      home: 'Home', discover: 'Discover', feed: 'Feed', projects: 'Projects',
-      messages: 'Messages', dashboard: 'Dashboard', statistics: 'Statistics',
+      home: 'Home', discover: 'Discover', feed: 'Community', projects: 'Collaboration',
+      news: 'News',
+      messages: 'Interconnections', dashboard: 'Profile', statistics: 'Statistics',
       signIn: 'Sign In', getStarted: 'Get Started', logout: 'Logout',
       institutionAccess: 'Institutional Access',
       visitorBadge: 'Visitor',
-      languages: 'Languages'
+      languages: 'Languages',
+      network: 'Network',
+      myAccount: 'My Account',
+      profileSettings: 'Profile Settings'
     },
 
    
@@ -46,6 +50,49 @@ export const translations = {
         portfolio: { title: 'Digital Portfolio', desc: 'Showcase your work with documents, images, and videos' },
         network: { title: 'Pan-African Network', desc: 'Connect with artists from all over Africa' },
         collaborate: { title: 'Collaborate', desc: 'Find partners for your artistic projects' }
+      },
+      about: {
+        title: 'Who are we?',
+        description: 'ArtConnect Africa is a platform for cultural cooperation and exchange in Africa, with a particular focus on relations between North Africa and sub-Saharan Africa.',
+        genesis: 'Founded on the initiative of REPAC (Regrouping of Arts and Culture Professionals from Central Africa) during MASA 2018 in Abidjan.',
+        digitalSpace: {
+          title: 'Digital Space',
+          desc: 'A digital platform consisting of an informative website and an application allowing actors to register and benefit from a personalized space.'
+        },
+        actionProgram: {
+          title: 'Action Program',
+          desc: 'The active part of the platform: highlighting projects, calls for proposals, and offering facilitation schemes (grants, funding...).'
+        }
+      },
+      missions: {
+        title: 'Our Missions',
+        m1: { title: 'Connecting Actors', desc: 'Bringing African cultural actors together across linguistic and cultural barriers.' },
+        m2: { title: 'Strong Community', desc: 'Creating a strong and united African cultural community.' },
+        m3: { title: 'Inter-regional Collaboration', desc: 'Promoting collaborations between North, West, Central, East, and Southern Africa.' },
+        m4: { title: 'Global Visibility', desc: 'Offering African artists visibility on the international market.' }
+      },
+      coverage: {
+        title: 'Geographic Coverage',
+        north: 'North Africa',
+        subSaharan: 'Sub-Saharan Africa',
+        world: 'Rest of the World',
+        description: 'From Casablanca to Cape Town, we connect the entire continent with the world.'
+      },
+      howToJoin: {
+        title: 'How to Join?',
+        step1: { title: 'Create Profile', desc: 'Register and showcase your artistic background.' },
+        step2: { title: 'Connect', desc: 'Find collaborators and interact with the community.' },
+        step3: { title: 'Collaborate', desc: 'Launch projects and gain pan-African visibility.' }
+      },
+      testimonials: {
+        title: 'What Artists Say',
+        t1: { author: 'Amara (Senegal)', content: 'ArtConnect changed my vision of collaboration. I found partners in Morocco for my next exhibition.' },
+        t2: { author: 'Kofi (Ghana)', content: 'The action program helped me fund my latest music project. A real opportunity for African creators.' }
+      },
+      footer: {
+        address: '109 Rue 1108 Koumassi, 12113 Douala – Cameroon',
+        contact: 'Contact Us',
+        followUs: 'Follow Us'
       },
       joinCTA: "Join the African\nartistic community"
     },
@@ -63,9 +110,19 @@ export const translations = {
       visitorType: 'Account Type', individual: 'Individual', organisation: 'Organisation',
       organisationName: 'Organisation Name',
       visitorInfo: 'As a visitor you can explore artist profiles and portfolios. You cannot access the Feed, post content, or send messages.',
-      welcomeBack: 'Welcome back', signInTo: 'Sign in to Art Connect Africa',
+      welcome: 'Welcome', signInTo: 'Sign in to Art Connect Africa',
       signingIn: 'Signing in...', demoAccounts: 'Demo accounts:',
+      userLogin: 'User Login',
+      partnerCodeLogin: 'Partner Code',
+      accessPlatform: 'Access Platform',
+      enterPartnerCode: 'Enter your partner code to access the platform',
+      partnerCodePlaceholder: 'Enter your unique partner code',
+      partnerCodeHelp: 'This code was provided to you by Art Connect Africa',
       chooseAccountType: 'Choose your account type', joinACA: 'Join Art Connect Africa',
+      presentationOrg: 'Presentation of the organization/institution',
+      presentationIndividual: 'Presentation',
+      biographyArtist: 'Biography',
+      missionDescription: 'Presentation of the organization/institution',
       personnePhysique: 'Individual (Personne physique)', personneMorale: 'Organization (Personne morale)', partenaire: 'Partner', visitor: 'Visitor',
       portfolioNetwork: 'Portfolio & Network', statsAccess: 'Statistics Access',
       exploreDiscover: 'Explore & Discover',
@@ -82,24 +139,36 @@ export const translations = {
       orgNamePlaceholder: 'Ex: Ministry of Culture of Senegal',
       missionPlaceholder: "Describe your organization's mission...",
       emailPlaceholder: 'contact@organization.org',
-      contactPersonName: 'Contact Person Name',
-      contactPersonEmail: 'Contact Person Email',
-      contactPersonInfo: 'Reference contact (optional) - Your relay can contact this person to verify your information if you are not well-known.'
+      contactPersonName: 'Reference Person Name',
+      contactPersonEmail: 'Reference Person Email',
+      partnerCode: 'Partner Code',
+      partnerCodeInfo: 'Use this code to log in via Institutional Access:',
+      contactPersonInfo: 'Reference contact (optional) - Your relay can contact this person to verify your information if you are not well-known.',
+      phone: 'Phone Number',
+      address: 'Address',
+      addressPlaceholder: 'Street address, city, postal code...',
+      partnerCodeGenerated: 'Partner code has been generated and sent via email',
+      codeSharedViaEmail: 'Code has been shared via email',
+      copyCodeInstruction: 'Please copy this code before leaving this page.',
+      redirectingToAdmin: 'Redirecting to admin panel in 3 seconds...',
+      backToAdmin: 'Back to Admin Panel',
+      createPartnerAccount: 'Create Partner Account',
+      createPartnerDesc: 'Create a new partner account manually. The partner will receive their unique access code via email.'
     },
     profile: {
       portfolio: 'Portfolio', about: 'About', contact: 'Contact',
-      sendMessage: 'Send Message', editProfile: 'Edit Profile',
+      sendMessage: 'Interconnection', editProfile: 'Edit Profile',
       uploadDocument: 'Upload Document', uploadImage: 'Upload Image',
       addVideo: 'Add Video Link', documents: 'Documents', images: 'Images',
       videos: 'Videos', memberSince: 'Member since', yearsExperience: 'years of experience',
       collaborationsCount: 'collaboration(s)', noCollaborations: 'No collaborations yet',
       visitorBadge: 'VISITOR', backToDiscover: 'Back', 
-      messageSent: 'Message sent!', messageFailed: 'Failed to send message',
+      messageSent: 'Interconnection sent!', messageFailed: 'Failed to send message',
       writeMessage: 'Write your message...', send: 'Send', cancel: 'Cancel',
       yrs: 'yrs', view: 'view', views: 'vues', emptyPortfolio: 'No portfolio items yet'
     },
     dashboard: {
-      welcome: 'Welcome', conversations: 'Conversations', recentMessages: 'Recent Messages',
+      welcome: 'Welcome', conversations: 'Interconnections', recentMessages: 'Recent Interconnections',
       new: 'new', findArtists: 'Find Artists', add: 'Add', title: 'Title',
       description: 'Description', upload: 'Upload', chooseFile: 'Choose File',
       noImages: 'No images yet', noDocuments: 'No documents yet', noVideos: 'No videos yet',
@@ -107,47 +176,25 @@ export const translations = {
       addVideo: 'Add Video', image: 'Image', document: 'Document', video: 'Video'
     },
     projects: {
-      title: 'Collaboration Projects', createProject: 'Create Project',
+      title: 'Collaboration Projects', createProject: 'Create Collaboration',
       lookingFor: 'Looking for', apply: 'Apply', applications: 'applications',
-      openProjects: 'Open Projects', myProjects: 'My Projects',
+      openProjects: 'Open Collaborations', myProjects: 'My Collaborations',
       upcoming: 'Upcoming', ongoing: 'Ongoing', past: 'Past', 
       typeLocal: 'Local', typeIntra: 'Intra-African',
       startDate: 'Start Date', endDate: 'End Date (Optional / Open-ended)',
-      noProjects: 'No projects yet', noUpcoming: 'No upcoming projects',
-      noOngoing: 'No ongoing projects', noPast: 'No past projects',
-      projectCreated: 'Project created!', fillRequiredFields: 'Please fill required fields',
+      noProjects: 'No collaborations yet', noUpcoming: 'No upcoming collaborations',
+      noOngoing: 'No ongoing collaborations', noPast: 'No past collaborations',
+      projectCreated: 'Collaboration created!', fillRequiredFields: 'Please fill required fields',
       applicationSent: 'Application sent!', starts: 'Starts', ends: 'Ends',
       findCollaborators: 'Find collaborators for your artistic projects',
-      type: 'Collaboration Type', location: 'Location', projectTitle: 'Project Title',
-      createProjectBtn: 'Create Project', sendApplication: 'Send Application'
-    },
-    statistics: {
-      title: 'Statistics & Analytics', overview: 'Overview', byGender: 'By Gender',
-      byCountry: 'By Country', byRegion: 'By Region', bySector: 'By Sector',
-      requestAccess: 'Request Institutional Access', totalArtists: 'Total Artists',
-      detailedStats: 'Detailed Statistics',
-      projectCollaborations: 'Collaborations',
-      statsByType: 'By Type', statsByStatus: 'By Status',
-      statsTimeline: 'Timeline', statsTopCountries: 'Top Countries',
-      interCountryGender: 'Inter-Country Collaborations by Gender',
-      genderByDomain: 'Artists by Gender & Domain',
-      visitorInterest: 'Visitor Interest by Profile',
-      women: 'Women', men: 'Men', other: 'Other',
-      countryPair: 'Country Pair', visitorViews: 'Visitor Views', artistCount: 'Artists',
-      collaborations: 'Collaborations', genderDomain: 'Gender & Domain',
-      visitors: 'Visitors', postsActivity: 'Posts & Activity',
-      local: 'Local', intraAfrican: 'Intra-African',
-      visitorMessages: 'Visitor Messages', mostMessaged: 'Most Messaged Domain',
-      trendVsLastMonth: 'vs last month', topCountryPair: 'Most Active Pair',
-      genderSplit: 'Gender Distribution', typeSplit: 'Type Distribution',
-      monthlyEvolution: 'Monthly Evolution', countryPairs: 'Country Pairs (Intra-African)',
-      detailedData: 'Detailed Data', loading: 'Loading...'
+      type: 'Collaboration Type', location: 'Location', projectTitle: 'Collaboration Title',
+      createProjectBtn: 'Create Collaboration', sendApplication: 'Send Application'
     },
     messages: {
-      title: 'Messages', noConversations: 'No conversations yet',
+      title: 'Interconnections', noConversations: 'No interconnections yet',
       findArtists: 'Find Artists', typeMessage: 'Type a message...',
-      selectConversation: 'Select a conversation',
-      back: 'Back to conversations',
+      selectConversation: 'Select an interconnection',
+      back: 'Back to interconnections',
       noMessages: 'No messages'
     },
     settings: {
@@ -155,11 +202,11 @@ export const translations = {
       updateProfile: 'Update Profile', saving: 'Saving...',
       profileUpdated: 'Profile updated!', updateFailed: 'Update failed',
       uploadFailed: 'Upload failed', photoUpdated: 'Profile photo updated!',
-      invalidFileType: 'Invalid file type. Use JPG, PNG, GIF or WebP',
+      invalidFileType: 'Invalid file type. Supported: JPG, PNG, GIF, WebP, SVG, HEIC, etc.',
       fileTooLarge: 'File too large. Maximum 5MB'
     },
     feed: {
-      title: 'Feed', shareSomething: 'Share something...', post: 'Post',
+      title: 'Community', shareSomething: 'Share something...', post: 'Post',
       noPosts: 'No posts yet', loadMore: 'Load more', 
       deletePost: 'Delete Post', deleteConfirm: 'Are you sure you want to delete this post?',
       comments: 'Comments', addComment: 'Add a comment...', commentPlaceholder: 'Write a comment...',
@@ -167,7 +214,7 @@ export const translations = {
       postPublished: 'Post published!', postDeleted: 'Post deleted',
       publishing: 'Publishing...', firstToShare: 'Be the first to share!',
       seenItAll: "You've seen it all!", partnerNoInteract: 'Partners cannot interact',
-      partnerWarning: '⚠️ As a partner, you can view the feed but cannot interact (like, comment, post).',
+      partnerWarning: '⚠️ As a partner, you can view the community but cannot interact (like, comment, post).',
       noComments: 'No comments yet', text: 'Text', clickToAdd: 'Click to add'
     },
     visitorProfile: {
@@ -216,24 +263,80 @@ export const translations = {
       cancel: 'Cancel', delete: 'Delete', edit: 'Edit', loading: 'Loading...',
       noResults: 'No results found', viewProfile: 'View Profile',
       explore: 'Explore', discover: 'Discover', back: 'Back',
-      send: 'Send', welcome: 'Welcome', success: 'Success', error: 'Error',
+      send: 'Send', welcome: 'Welcome', success: 'Success', error: 'An error occurred',
       isFrench: false, langCode: 'en',
       collaboration: 'collaboration', collaborations: 'collaborations',
-      noCollaborations: 'No collaborations yet'
+      noCollaborations: 'No collaborations yet',
+      experience: 'Experience', website: 'Website',
+      additionalInfo: 'Additional Information', activities: 'Activities', posts: 'Posts'
     },
     discover: {
       searchPlaceholder: 'Search by name...',
       resultsCount: 'Discover {total} artists from across Africa'
+    },
+    news: {
+      title: 'Art News', noNews: 'No news at the moment',
+      addNews: 'Add News', editNews: 'Edit News', deleteNews: 'Delete News',
+      newsTitle: 'Title', newsContent: 'Content', mediaUrl: 'Video or Image Link',
+      save: 'Save News', created: 'News created!', deleted: 'News deleted!',
+      onlyAdmins: 'Only administrators can manage news'
+    },
+    admin: {
+      title: 'Administration',
+      institutions: 'Manage Partners',
+      approvals: 'Pending Approvals',
+      createPartner: 'Create Partner',
+      regenerateCode: 'Regenerate Code',
+      partnerCode: 'Partner Code',
+      codeRegenerated: 'Code regenerated successfully!',
+      manageAccess: 'Manage access and partner codes.',
+      searchPlaceholder: 'Search by name or email...',
+      noInstitutions: 'No partners found.',
+      codeCopied: 'Code copied!',
+      confirmRegenerate: 'Are you sure you want to regenerate this code? The old code will no longer work.',
+      regenerationFailed: 'Regeneration failed',
+      fetchInstitutionsFailed: 'Failed to fetch partners',
+      tools: 'Admin Tools',
+      manageRegistrations: 'Manage registrations',
+      managePartnerCodes: 'Manage partner codes',
+      addNews: 'Add News',
+      publishContent: 'Publish content',
+      editNews: 'Edit News',
+      newsTitle: 'Title',
+      newsContent: 'Content',
+      mediaUrl: 'Media URL (YouTube, Vimeo or Image)',
+      save: 'Save',
+      noNews: 'No news published yet',
+      operationFailed: 'Operation failed',
+      deleteFailed: 'Delete failed',
+      fetchFailed: 'Failed to fetch news',
+      mediaHelp: 'YouTube, Vimeo links or direct images only',
+      userApprovals: 'User Approvals',
+      reviewRegistrations: 'Review and approve/reject pending registrations',
+      pendingUsers: 'Pending Users',
+      noPending: 'No pending approvals',
+      userInfo: 'User Information',
+      rejectionReason: 'Rejection Reason (if rejecting)',
+      rejectionPlaceholder: 'e.g., Profile information does not match requirements...',
+      approve: 'Approve',
+      reject: 'Reject',
+      selectUser: 'Select a user from the list to view details',
+      approvedSuccess: 'User approved successfully!',
+      rejectedSuccess: 'User rejected.'
     }
   },
   fr: {
     nav: {
-      home: 'Accueil', discover: 'Découvrir', feed: 'Fil', projects: 'Projets',
-      messages: 'Messages', dashboard: 'Tableau de bord', statistics: 'Statistiques',
+      home: 'Accueil', discover: 'Découvrir', feed: 'Communauté', projects: 'Collaboration',
+      news: 'Actualités',
+      messages: 'Interconnexions', dashboard: 'Profil', statistics: 'Statistiques',
       signIn: 'Connexion', getStarted: 'Commencer', logout: 'Déconnexion',
       institutionAccess: 'Accès Institutionnel',
       visitorBadge: 'Visiteur',
-      languages: 'Langues'
+      languages: 'Langues',
+      network: 'Réseau',
+      myAccount: 'Mon Compte',
+      profileSettings: 'Paramètres du profil'
     },
     home: {
       tagline: 'Écosystème Artistique Africain',
@@ -246,6 +349,49 @@ export const translations = {
         portfolio: { title: 'Portfolio Numérique', desc: 'Présentez vos travaux avec documents, images et vidéos' },
         network: { title: 'Réseau Panafricain', desc: "Connectez-vous avec des artistes de toute l'Afrique" },
         collaborate: { title: 'Collaborer', desc: 'Trouvez des partenaires pour vos projets artistiques' }
+      },
+      about: {
+        title: 'Qui sommes-nous ?',
+        description: "ArtConnect Africa est une plateforme de coopération et d'échanges culturels en Afrique, avec un accent particulier sur les relations entre l'Afrique du Nord et l'Afrique subsaharienne.",
+        genesis: "Fondée à l'initiative du REPAC « Regroupement des Professionnels des Arts et Culture d'Afrique Centrale » en marge du MASA 2018 à Abidjan.",
+        digitalSpace: {
+          title: 'Espace Numérique',
+          desc: "Une plateforme numérique composée d'un site internet informatif et d'une application permettant aux acteurs de s'inscrire et de bénéficier d'un espace personnalisé."
+        },
+        actionProgram: {
+          title: 'Programme d\'Actions',
+          desc: "La partie active de la plateforme : mise en évidence de projets retenus, d'appels à projets et proposition de schémas de facilitation (bourses, financements...)."
+        }
+      },
+      missions: {
+        title: 'Nos Missions',
+        m1: { title: 'Rapprocher les Acteurs', desc: 'Réunir les acteurs culturels africains par-delà les barrières linguistiques et culturelles.' },
+        m2: { title: 'Communauté Forte', desc: 'Créer une communauté culturelle africaine forte et solidaire.' },
+        m3: { title: 'Collaboration Inter-régionale', desc: "Favoriser les collaborations entre l'Afrique du Nord, de l'Ouest, Centrale, de l'Est et Australe." },
+        m4: { title: 'Visibilité Mondiale', desc: 'Offrir aux artistes africains une visibilité sur le marché international.' }
+      },
+      coverage: {
+        title: 'Couverture Géographique',
+        north: 'Afrique du Nord',
+        subSaharan: 'Afrique Subsaharienne',
+        world: 'Reste du Monde',
+        description: 'De Casablanca au Cap, nous connectons tout le continent avec le monde.'
+      },
+      howToJoin: {
+        title: 'Comment Rejoindre ?',
+        step1: { title: 'Créer un Profil', desc: 'Inscrivez-vous et mettez en avant votre parcours artistique.' },
+        step2: { title: 'Se Connecter', desc: 'Trouvez des collaborateurs et échangez avec la communauté.' },
+        step3: { title: 'Collaborer', desc: 'Lancez des projets et gagnez en visibilité panafricaine.' }
+      },
+      testimonials: {
+        title: 'Ce que disent les artistes',
+        t1: { author: 'Amara (Sénégal)', content: "ArtConnect a changé ma vision de la collaboration. J'ai trouvé des partenaires au Maroc pour ma prochaine expo." },
+        t2: { author: 'Kofi (Ghana)', content: "Le programme d'actions m'a aidé à financer mon dernier projet musical. Une vraie chance pour les créateurs africains." }
+      },
+      footer: {
+        address: '109 Rue 1108 Koumassi, 12113 Douala – Cameroun',
+        contact: 'Contactez-nous',
+        followUs: 'Suivez-nous'
       },
       joinCTA: "Rejoignez la communauté\nartistique africaine"
     },
@@ -263,16 +409,26 @@ export const translations = {
       selectDomain: 'Sélectionnez votre domaine', selectGender: 'Sélectionnez le genre',
       visitorType: 'Type de compte', individual: 'Particulier', organisation: 'Organisation',
       organisationName: "Nom de l'organisation",
-      visitorInfo: "En tant que visiteur vous pouvez explorer les profils et portfolios des artistes. Vous ne pouvez pas accéder au Fil, publier du contenu ou envoyer des messages.",
-      welcomeBack: 'Bon retour', signInTo: 'Connectez-vous à Art Connect Africa',
+      visitorInfo: "En tant que visiteur vous pouvez explorer les profils et portfolios des artistes. Vous ne pouvez pas accéder à la Communauté, publier du contenu ou envoyer des messages.",
+      welcome: 'Bienvenu', signInTo: 'Connectez-vous à Art Connect Africa',
       signingIn: 'Connexion...', demoAccounts: 'Comptes de démonstration :',
-      chooseAccountType: 'Choisissez votre type de compte', joinACA: 'Rejoignez Art Connect Africa',
+      userLogin: 'Connexion Utilisateur',
+      partnerCodeLogin: 'Code Partenaire',
+      accessPlatform: 'Accéder à la plateforme',
+      enterPartnerCode: 'Entrez votre code partenaire pour accéder à la plateforme',
+      partnerCodePlaceholder: 'Entrez votre code partenaire unique',
+      partnerCodeHelp: 'Ce code vous a été fourni par Art Connect Africa',
+      chooseAccountType: 'Choisissez votre type de compte', joinACA: 'Bienvenu à ArtConnectAfrica',
+      presentationOrg: "Présentation de l'organisation/institution",
+      presentationIndividual: "Présentation",
+      biographyArtist: "Biographie",
+      missionDescription: "Présentation de l'organisation/institution",
       personnePhysique: 'Personne physique', personneMorale: 'Personne morale', partenaire: 'Partenaire', visitor: 'Visiteur',
       portfolioNetwork: 'Portfolio & Réseau', statsAccess: 'Accès aux statistiques',
       exploreDiscover: 'Explorer & Découvrir',
       employeeCount: 'Nombre d\'employés',
       organizationName: "Nom de l'organisation", contactFirstName: 'Prénom du contact',
-      contactLastName: 'Nom du contact', missionDescription: "Mission / Description de l'organisation",
+      contactLastName: 'Nom du contact',
       statsAccessTitle: '📊 Accès aux statistiques',
       statsAccessInfo: "Après inscription, vous devrez effectuer un paiement fictif pour obtenir votre code d'accès et consulter les statistiques détaillées.",
       creating: 'Création...', createInstitution: 'Créer le compte Institution', createPartner: 'Créer le compte Partenaire',
@@ -283,24 +439,36 @@ export const translations = {
       orgNamePlaceholder: 'Ex: Ministère de la Culture du Sénégal',
       missionPlaceholder: "Décrivez la mission de votre organisation...",
       emailPlaceholder: 'contact@organisation.org',
-      contactPersonName: 'Nom de la personne de contact',
-      contactPersonEmail: 'Email de la personne de contact',
-      contactPersonInfo: 'Personne de référence (optionnel) - Votre relais peut contacter cette personne pour vérifier vos informations si vous ne êtes pas très connu.'
+      contactPersonName: 'Nom de la personne de référence',
+      contactPersonEmail: 'Email de la personne de référence',
+      partnerCode: 'Code Partenaire',
+      partnerCodeInfo: 'Utilisez ce code pour vous connecter via l\'accès institutionnel :',
+      contactPersonInfo: 'Personne de référence (optionnel) - Votre relais peut contacter cette personne pour vérifier vos informations si vous ne êtes pas très connu.',
+      phone: 'Numéro de téléphone',
+      address: 'Adresse',
+      addressPlaceholder: 'Adresse complète, ville, code postal...',
+      partnerCodeGenerated: 'Le code partenaire a été généré et envoyé par e-mail',
+      codeSharedViaEmail: 'Le code a été partagé par e-mail',
+      copyCodeInstruction: 'Veuillez copier ce code avant de quitter cette page.',
+      redirectingToAdmin: 'Redirection vers le panneau d\'administration dans 3 secondes...',
+      backToAdmin: 'Retour au panneau d\'administration',
+      createPartnerAccount: 'Créer un compte partenaire',
+      createPartnerDesc: 'Créez manuellement un nouveau compte partenaire. Le partenaire recevra son code d\'accès unique par e-mail.'
     },
     profile: {
       portfolio: 'Portfolio', about: 'À propos', contact: 'Contact',
-      sendMessage: 'Envoyer un Message', editProfile: 'Modifier le Profil',
+      sendMessage: 'Interconnexion', editProfile: 'Modifier le Profil',
       uploadDocument: 'Télécharger un Document', uploadImage: 'Télécharger une Image',
       addVideo: 'Ajouter un Lien Vidéo', documents: 'Documents', images: 'Images',
       videos: 'Vidéos', memberSince: 'Membre depuis', yearsExperience: "ans d'expérience",
       collaborationsCount: 'collaboration(s)', noCollaborations: 'Aucune collaboration',
       visitorBadge: 'VISITEUR', backToDiscover: 'Retour',
-      messageSent: 'Message envoyé !', messageFailed: "Échec de l'envoi",
+      messageSent: 'Interconnexion envoyée !', messageFailed: "Échec de l'envoi",
       writeMessage: 'Écrivez votre message...', send: 'Envoyer', cancel: 'Annuler',
       yrs: 'ans', view: 'vue', views: 'vues', emptyPortfolio: 'Aucun élément dans le portfolio'
     },
     dashboard: {
-      welcome: 'Bienvenue', conversations: 'Conversations', recentMessages: 'Messages récents',
+      welcome: 'Bienvenue', conversations: 'Interconnexions', recentMessages: 'Interconnexions récentes',
       new: 'nouveau', findArtists: 'Trouver des Artistes', add: 'Ajouter', title: 'Titre',
       description: 'Description', upload: 'Télécharger', chooseFile: 'Choisir un fichier',
       noImages: 'Aucune image', noDocuments: 'Aucun document', noVideos: 'Aucune vidéo',
@@ -308,47 +476,25 @@ export const translations = {
       addVideo: 'Ajouter la vidéo', image: 'Image', document: 'Document', video: 'Vidéo'
     },
     projects: {
-      title: 'Projets de Collaboration', createProject: 'Créer un Projet',
+      title: 'Collaborations', createProject: 'Créer une Collaboration',
       lookingFor: 'Recherche', apply: 'Postuler', applications: 'candidatures',
-      openProjects: 'Projets Ouverts', myProjects: 'Mes Projets',
+      openProjects: 'Collaborations Ouvertes', myProjects: 'Mes Collaborations',
       upcoming: 'À venir', ongoing: 'En cours', past: 'Passés',
-      typeLocal: 'Local', typeIntra: 'Intra-Africain',
+      typeLocal: 'Locale', typeIntra: 'Intra-Africaine',
       startDate: 'Date de début', endDate: 'Date de fin (Optionnel / En continu)',
-      noProjects: 'Aucun projet pour le moment', noUpcoming: 'Aucun projet à venir',
-      noOngoing: 'Aucun projet en cours', noPast: 'Aucun projet passé',
-      projectCreated: 'Projet créé !', fillRequiredFields: 'Veuillez remplir les champs obligatoires',
+      noProjects: 'Aucune collaboration pour le moment', noUpcoming: 'Aucune collaboration à venir',
+      noOngoing: 'Aucune collaboration en cours', noPast: 'Aucune collaboration passée',
+      projectCreated: 'Collaboration créée !', fillRequiredFields: 'Veuillez remplir les champs obligatoires',
       applicationSent: 'Candidature envoyée !', starts: 'Début', ends: 'Fin',
       findCollaborators: 'Trouvez des collaborateurs pour vos projets artistiques',
-      type: 'Type de collaboration', location: 'Lieu', projectTitle: 'Titre du projet',
-      createProjectBtn: 'Créer le projet', sendApplication: 'Envoyer ma candidature'
-    },
-    statistics: {
-      title: 'Statistiques & Analyses', overview: "Vue d'ensemble",
-      byGender: 'Par Genre', byCountry: 'Par Pays', byRegion: 'Par Région',
-      bySector: 'Par Secteur', requestAccess: 'Demander un Accès Institutionnel',
-      totalArtists: 'Total Artistes', detailedStats: 'Statistiques Détaillées',
-      projectCollaborations: 'Collaborations',
-      statsByType: 'Par Type', statsByStatus: 'Par Statut',
-      statsTimeline: 'Historique', statsTopCountries: 'Pays Principaux',
-      interCountryGender: 'Collaborations Interpays par Genre',
-      genderByDomain: 'Artistes par Genre et Domaine',
-      visitorInterest: 'Intérêt des Visiteurs par Profil',
-      women: 'Femmes', men: 'Hommes', other: 'Autre',
-      countryPair: 'Paire de pays', visitorViews: 'Vues Visiteurs', artistCount: 'Artistes',
-      collaborations: 'Collaborations', genderDomain: 'Genre & Domaine',
-      visitors: 'Visiteurs', postsActivity: 'Posts & Activité',
-      local: 'Locale', intraAfrican: 'Intra-Africaine',
-      visitorMessages: 'Messages Visiteurs', mostMessaged: 'Domaine le plus contacté',
-      trendVsLastMonth: 'vs mois dernier', topCountryPair: 'Paire la plus active',
-      genderSplit: 'Répartition par Genre', typeSplit: 'Répartition par Type',
-      monthlyEvolution: 'Évolution Mensuelle', countryPairs: 'Paires de Pays (Intra-Africain)',
-      detailedData: 'Données Détaillées', loading: 'Chargement...'
+      type: 'Type de collaboration', location: 'Lieu', projectTitle: 'Titre de la collaboration',
+      createProjectBtn: 'Créer la collaboration', sendApplication: 'Envoyer ma candidature'
     },
     messages: {
-      title: 'Messages', noConversations: 'Aucune conversation',
+      title: 'Interconnexions', noConversations: 'Aucune interconnexion',
       findArtists: 'Trouver des Artistes', typeMessage: 'Écrivez un message...',
-      selectConversation: 'Sélectionnez une conversation',
-      back: 'Retour aux conversations',
+      selectConversation: 'Sélectionnez une interconnexion',
+      back: 'Retour aux interconnexions',
       noMessages: 'Aucun message'
     },
     settings: {
@@ -356,11 +502,11 @@ export const translations = {
       updateProfile: 'Mettre à jour le profil', saving: 'Enregistrement...',
       profileUpdated: 'Profil mis à jour !', updateFailed: 'Échec de la mise à jour',
       uploadFailed: "Échec de l'upload", photoUpdated: 'Photo de profil mise à jour !',
-      invalidFileType: 'Type de fichier invalide. Utilisez JPG, PNG, GIF ou WebP',
+      invalidFileType: 'Type de fichier invalide. Supportés : JPG, PNG, GIF, WebP, SVG, HEIC, etc.',
       fileTooLarge: 'Fichier trop volumineux. Maximum 5MB'
     },
     feed: {
-      title: 'Fil d\'actualité', shareSomething: 'Partagez quelque chose...', post: 'Publier',
+      title: 'Communauté', shareSomething: 'Partagez quelque chose...', post: 'Publier',
       noPosts: 'Aucun post pour le moment', loadMore: 'Charger plus',
       deletePost: 'Supprimer le post', deleteConfirm: 'Êtes-vous sûr de vouloir supprimer ce post ?',
       comments: 'Commentaires', addComment: 'Ajouter un commentaire...', commentPlaceholder: 'Écrivez un commentaire...',
@@ -368,7 +514,7 @@ export const translations = {
       postPublished: 'Post publié !', postDeleted: 'Post supprimé',
       publishing: 'Publication...', firstToShare: 'Soyez le premier à partager !',
       seenItAll: 'Vous avez tout vu !', partnerNoInteract: 'Les partenaires ne peuvent pas interagir',
-      partnerWarning: '⚠️ En tant que partenaire, vous pouvez consulter le feed mais pas interagir (liker, commenter, publier).',
+      partnerWarning: '⚠️ En tant que partenaire, vous pouvez consulter la communauté mais pas interagir (liker, commenter, publier).',
       noComments: 'Aucun commentaire', text: 'Texte', clickToAdd: 'Cliquez pour ajouter'
     },
     visitorProfile: {
@@ -418,14 +564,66 @@ export const translations = {
       loading: 'Chargement...', noResults: 'Aucun résultat trouvé',
       viewProfile: 'Voir le Profil',
       explore: 'Explorer', discover: 'Découvrir', back: 'Retour',
-      send: 'Envoyer', welcome: 'Bienvenue', success: 'Succès', error: 'Erreur',
+      send: 'Envoyer', welcome: 'Bienvenue', success: 'Succès', error: 'Une erreur est survenue',
       isFrench: true, langCode: 'fr',
       collaboration: 'collaboration', collaborations: 'collaborations',
-      noCollaborations: 'Aucune collaboration'
+      noCollaborations: 'Aucune collaboration',
+      experience: 'Expérience', website: 'Site Web',
+      additionalInfo: 'Informations complémentaires', activities: 'Activités', posts: 'Publications'
     },
     discover: {
       searchPlaceholder: 'Rechercher par nom...',
       resultsCount: 'Découvrez {total} artistes de toute l\'Afrique'
+    },
+    news: {
+      title: 'Actualités de l\'Art', noNews: 'Aucune actualité pour le moment',
+      addNews: 'Ajouter une Actualité', editNews: 'Modifier l\'Actualité', deleteNews: 'Supprimer l\'Actualité',
+      newsTitle: 'Titre', newsContent: 'Contenu', mediaUrl: 'Lien Vidéo ou Image',
+      save: 'Enregistrer l\'Actualité', created: 'Actualité créée !', deleted: 'Actualité supprimée !',
+      onlyAdmins: 'Seuls les administrateurs peuvent gérer les actualités'
+    },
+    admin: {
+      title: 'Administration',
+      institutions: 'Gérer les Partenaires',
+      approvals: 'Approbations en attente',
+      createPartner: 'Créer un Partenaire',
+      regenerateCode: 'Régénérer le Code',
+      partnerCode: 'Code Partenaire',
+      codeRegenerated: 'Code régénéré avec succès !',
+      manageAccess: 'Gérez les accès et codes partenaires.',
+      searchPlaceholder: 'Rechercher par nom ou email...',
+      noInstitutions: 'Aucun partenaire trouvé.',
+      codeCopied: 'Code copié !',
+      confirmRegenerate: 'Êtes-vous sûr de vouloir régénérer ce code ? L\'ancien code ne fonctionnera plus.',
+      regenerationFailed: 'La régénération a échoué',
+      fetchInstitutionsFailed: 'Échec de la récupération des partenaires',
+      tools: 'Outils Admin',
+      manageRegistrations: 'Gérer les inscriptions',
+      managePartnerCodes: 'Gérer les codes partenaires',
+      addNews: 'Ajouter Actualité',
+      publishContent: 'Publier du contenu',
+      editNews: 'Modifier l\'Actualité',
+      newsTitle: 'Titre',
+      newsContent: 'Contenu',
+      mediaUrl: 'URL Média (YouTube, Vimeo ou Image)',
+      save: 'Enregistrer',
+      noNews: 'Aucune actualité publiée pour le moment',
+      operationFailed: 'L\'opération a échoué',
+      deleteFailed: 'La suppression a échoué',
+      fetchFailed: 'Échec de la récupération des actualités',
+      mediaHelp: 'Liens YouTube, Vimeo ou images directes uniquement',
+      userApprovals: 'Approbations Utilisateurs',
+      reviewRegistrations: 'Examiner et approuver/rejeter les inscriptions en attente',
+      pendingUsers: 'Utilisateurs en attente',
+      noPending: 'Aucune approbation en attente',
+      userInfo: 'Informations Utilisateur',
+      rejectionReason: 'Motif du rejet (si rejet)',
+      rejectionPlaceholder: 'ex: Les informations du profil ne correspondent pas...',
+      approve: 'Approuver',
+      reject: 'Rejeter',
+      selectUser: 'Sélectionnez un utilisateur pour voir les détails',
+      approvedSuccess: 'Utilisateur approuvé avec succès !',
+      rejectedSuccess: 'Utilisateur rejeté.'
     }
   },
   // Deep copies for other languages (placeholders)
@@ -598,15 +796,17 @@ export const translations = {
       viewPublicStats: 'Ver estatísticas públicas', processing: 'A processar...'
     },
     common: {
-      search: 'Pesquisar', filter: 'Filtrar', all: 'Tudo', save: 'Guardar',
+      search: 'Pesquisar', filter: 'Filtrer', all: 'Tudo', save: 'Guardar',
       cancel: 'Cancelar', delete: 'Eliminar', edit: 'Editar',
       loading: 'A carregar...', noResults: 'Nenhum resultado encontrado',
       viewProfile: 'Ver Perfil',
       explore: 'Explorar', discover: 'Descobrir', back: 'Voltar',
-      send: 'Enviar', welcome: 'Bem-vindo', success: 'Sucesso', error: 'Erro',
+      send: 'Enviar', welcome: 'Bem-vindo', success: 'Sucesso', error: 'Ocorreu um erro',
       isFrench: false, langCode: 'pt',
       collaboration: 'colaboração', collaborations: 'colaborações',
-      noCollaborations: 'Nenhuma colaboração'
+      noCollaborations: 'Nenhuma colaboração',
+      experience: 'Experience', website: 'Website',
+      additionalInfo: 'Additional Information', activities: 'Activities', posts: 'Posts'
     },
     discover: {
       searchPlaceholder: 'Pesquisar por nome...',
@@ -788,10 +988,12 @@ es: {
       loading: 'Cargando...', noResults: 'No se encontraron resultados',
       viewProfile: 'Ver Perfil',
       explore: 'Explorar', discover: 'Descubrir', back: 'Volver',
-      send: 'Enviar', welcome: 'Bienvenido', success: 'Éxito', error: 'Error',
+      send: 'Enviar', welcome: 'Bienvenido', success: 'Éxito', error: 'Ocurrió un error',
       isFrench: false, langCode: 'es',
       collaboration: 'colaboración', collaborations: 'colaboraciones',
-      noCollaborations: 'Sin colaboraciones'
+      noCollaborations: 'Sin colaboraciones',
+      experience: 'Experience', website: 'Website',
+      additionalInfo: 'Additional Information', activities: 'Activities', posts: 'Posts'
     },
     discover: {
       searchPlaceholder: 'Buscar por nombre...',
@@ -1131,12 +1333,14 @@ ar: {
       send: 'إرسال',
       welcome: 'مرحباً',
       success: 'نجاح',
-      error: 'خطأ',
+      error: 'حدث خطأ ما',
       isFrench: false,
       langCode: 'ar',
       collaboration: 'تعاون',
       collaborations: 'تعاونات',
-      noCollaborations: 'لا توجد تعاونات'
+      noCollaborations: 'لا توجد تعاونات',
+      experience: 'Experience', website: 'Website',
+      additionalInfo: 'Additional Information', activities: 'Activities', posts: 'Posts'
     },
     discover: {
       searchPlaceholder: 'بحث بالاسم...',
@@ -1477,12 +1681,14 @@ sw: {
       send: 'Tuma',
       welcome: 'Karibu',
       success: 'Mafanikio',
-      error: 'Hitilafu',
+      error: 'Hitilafu imetokea',
       isFrench: false,
       langCode: 'sw',
       collaboration: 'ushirikiano',
       collaborations: 'ushirikiano',
-      noCollaborations: 'Hakuna ushirikiano'
+      noCollaborations: 'Hakuna ushirikiano',
+      experience: 'Experience', website: 'Website',
+      additionalInfo: 'Additional Information', activities: 'Activities', posts: 'Posts'
     },
     discover: {
       searchPlaceholder: 'Tafuta kwa jina...',
@@ -3343,18 +3549,24 @@ export const useAuthStore = create((set, get) => ({
       });
       set({ user: response.data });
     } catch (error) {
-      localStorage.removeItem('aca_token');
-      set({ user: null, token: null });
+      // Only logout if it's a 401 Unauthorized or 403 Forbidden
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        localStorage.removeItem('aca_token');
+        set({ user: null, token: null });
+      }
+      console.error('Fetch user error:', error);
     }
   },
 
   updateProfile: async (data) => {
-    const { token } = get();
+    const { token, user: currentUser } = get();
     try {
       const response = await axios.put(`${API}/artists/me`, data, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      set({ user: response.data });
+      // Merge the new data with the current user data to ensure no fields are lost
+      const updatedUser = { ...currentUser, ...response.data };
+      set({ user: updatedUser });
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || 'Update failed' };
@@ -3866,19 +4078,33 @@ export const useFeedStore = create((set, get) => ({
     const token = useAuthStore.getState().token;
     if (!token) return { success: false, error: 'Not authenticated' };
     const formData = new FormData();
-    formData.append('file', file);
+    if (file) {
+      formData.append('file', file);
+    }
     formData.append('content_type', contentType);
     formData.append('text_content', textContent || '');
     set({ isLoading: true });
     try {
       const response = await axios.post(`${API}/posts/upload`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
       });
       set((state) => ({ posts: [response.data, ...state.posts], isLoading: false }));
       return { success: true, post: response.data };
     } catch (error) {
       set({ isLoading: false });
-      return { success: false, error: error.response?.data?.detail || 'Failed to upload post' };
+      let errorMsg = 'Failed to upload post';
+      const detail = error.response?.data?.detail;
+      if (typeof detail === 'string') {
+        errorMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail[0]?.msg || 'Validation error';
+      } else if (detail && typeof detail === 'object') {
+        errorMsg = detail.msg || 'Validation error';
+      }
+      return { success: false, error: errorMsg };
     }
   },
   toggleLike: async (postId) => {
@@ -3970,7 +4196,16 @@ export const usePortfolioStore = create((set) => ({
       return { success: true };
     } catch (err) {
       set({ isUploading: false });
-      return { success: false, error: err.response?.data?.detail || 'Upload failed' };
+      let errorMsg = 'Upload failed';
+      const detail = err.response?.data?.detail;
+      if (typeof detail === 'string') {
+        errorMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail[0]?.msg || 'Validation error';
+      } else if (detail && typeof detail === 'object') {
+        errorMsg = detail.msg || 'Validation error';
+      }
+      return { success: false, error: errorMsg };
     }
   },
   
@@ -3988,7 +4223,16 @@ export const usePortfolioStore = create((set) => ({
       await useAuthStore.getState().fetchUser();
       return { success: true, video: response.data };
     } catch (error) {
-      return { success: false, error: error.response?.data?.detail || 'Failed to add video' };
+      let errorMsg = 'Failed to add video';
+      const detail = error.response?.data?.detail;
+      if (typeof detail === 'string') {
+        errorMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail[0]?.msg || 'Validation error';
+      } else if (detail && typeof detail === 'object') {
+        errorMsg = detail.msg || 'Validation error';
+      }
+      return { success: false, error: errorMsg };
     }
   },
   deleteItem: async (itemType, itemId) => {

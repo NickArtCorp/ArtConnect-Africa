@@ -1,5 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from typing import List, Optional, Dict, Any, Literal
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -7,22 +7,59 @@ from starlette.middleware.cors import CORSMiddleware
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
-import uuid
 import secrets
-from database import engine, SessionLocal, Base, get_db, User, Post, Like, Comment, Message, Project, VisitorView, StatisticsCache
-from auth_utils import security, active_tokens, ROLES, hash_password, generate_token, sanitize_user, get_current_user, get_optional_user, require_paid_partner
-from statistics_routes import stats_router
-from datetime import datetime, timezone, timedelta
 import shutil
 import sqlite3
 import json
+import mimetypes
+import uuid
+import copy
+from datetime import datetime, timezone, timedelta
+from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from sqlalchemy import Column, String, Integer, Boolean, Text, JSON, DateTime, ForeignKey, Table, func, and_, or_
 from sqlalchemy.orm import Session, relationship
+from sqlalchemy.exc import OperationalError, ProgrammingError, DatabaseError
+
+from database import engine, SessionLocal, Base, get_db, User, Post, Like, Comment, Message, Project, VisitorView, StatisticsCache, News
+from auth_utils import security, active_tokens, ROLES, hash_password, generate_token, sanitize_user, get_current_user, get_optional_user, require_paid_partner
+from statistics_routes import stats_router
+
+def validate_image_file(file: UploadFile):
+    """
+    Robustly validate an image file by checking its extension and content type.
+    Returns the extension to be used for saving.
+    """
+    allowed_extensions = {
+        ".jpg", ".jpeg", ".png", ".webp", ".gif", 
+        ".svg", ".bmp", ".tiff", ".tif", ".heic", ".heif", ".avif"
+    }
+    
+    filename = file.filename or ""
+    ext = Path(filename).suffix.lower()
+    
+    # If extension is missing, try to infer it from content type
+    if not ext and file.content_type:
+        inferred_ext = mimetypes.guess_extension(file.content_type)
+        if inferred_ext:
+            ext = inferred_ext.lower()
+    
+    # Normalize .jpeg to .jpg for consistency if desired, but here we keep original
+    if ext not in allowed_extensions:
+        # Final check: is the content type an image?
+        if file.content_type and file.content_type.startswith("image/"):
+            # It's an image but with an unknown extension, we allow it with inferred extension
+            if not ext:
+                ext = ".png" # Default fallback
+        else:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid image type. Supported: {', '.join(sorted(allowed_extensions))}"
+            )
+    
+    return ext
 
 # IMPORTANT: Load .env variables FIRST, before importing modules that depend on them
-from pathlib import Path as _Path
-_ROOT_DIR = _Path(__file__).parent
+_ROOT_DIR = Path(__file__).parent
 load_dotenv(_ROOT_DIR / '.env')
 
 # Now import email service (after .env is loaded)
@@ -52,6 +89,53 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 
 # Create the main app
 app = FastAPI(title="Art Connect Africa API (SQLite Mode)")
+
+# CORS Middleware (Must be added before including routers)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000").split(","),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── Health & Readiness Endpoints for Northflank (Required for monitoring) ──
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint for Northflank liveness probe.
+    Returns the current status of the application.
+    """
+    return {
+        "status": "healthy",
+        "service": "ArtConnect-Africa API",
+        "version": "1.0.0",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/ready")
+async def readiness_check(db: Session = Depends(get_db)):
+    """
+    Readiness check endpoint for Northflank readiness probe.
+    Verifies that the database connection is working properly.
+    """
+    try:
+        # Test database connection
+        db.execute(__import__("sqlalchemy").text("SELECT 1"))
+        return {
+            "ready": True,
+            "database": "connected",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Readiness check failed: {str(e)}")
+        return {
+            "ready": False,
+            "database": "disconnected",
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
 app.include_router(stats_router)
 api_router = APIRouter(prefix="/api")
 
@@ -73,7 +157,7 @@ def _run_migrations():
                     __import__("sqlalchemy").text(f"ALTER TABLE users ADD COLUMN {col} {definition}")
                 )
                 conn.commit()
-            except Exception:
+            except (OperationalError, ProgrammingError, DatabaseError):
                 pass  # Column already exists — ignore
         for col, definition in [
             ("collaboration_type", "VARCHAR DEFAULT 'local'"),
@@ -86,7 +170,7 @@ def _run_migrations():
                     __import__("sqlalchemy").text(f"ALTER TABLE projects ADD COLUMN {col} {definition}")
                 )
                 conn.commit()
-            except Exception:
+            except (OperationalError, ProgrammingError, DatabaseError):
                 pass
         # Visitor columns
         for col, definition in [
@@ -97,7 +181,7 @@ def _run_migrations():
                     __import__("sqlalchemy").text(f"ALTER TABLE users ADD COLUMN {col} {definition}")
                 )
                 conn.commit()
-            except Exception:
+            except (OperationalError, ProgrammingError, DatabaseError):
                 pass
         # Message columns for visitor and sender_type
         for col, definition in [
@@ -109,7 +193,20 @@ def _run_migrations():
                     __import__("sqlalchemy").text(f"ALTER TABLE messages ADD COLUMN {col} {definition}")
                 )
                 conn.commit()
-            except Exception:
+            except (OperationalError, ProgrammingError, DatabaseError):
+                pass
+
+        # Phone and address columns for all users
+        for col, definition in [
+            ("phone", "VARCHAR"),
+            ("address", "TEXT"),
+        ]:
+            try:
+                conn.execute(
+                    __import__("sqlalchemy").text(f"ALTER TABLE users ADD COLUMN {col} {definition}")
+                )
+                conn.commit()
+            except (OperationalError, ProgrammingError, DatabaseError):
                 pass
 
         # Gender normalization (only Male/Female allowed)
@@ -133,7 +230,7 @@ def _run_migrations():
                   AND gender NOT IN ('Male','Female');
             """))
             conn.commit()
-        except Exception:
+        except (OperationalError, ProgrammingError, DatabaseError):
             pass
 
 
@@ -380,25 +477,26 @@ class PaymentStatusResponse(BaseModel):
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
-    first_name: str
-    last_name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     country: Optional[str] = None
     city: Optional[str] = None
     subregion: Optional[str] = None
     gender: Optional[str] = None
     sector: Optional[str] = None
     domain: Optional[str] = None
-    year_started: Optional[int] = None
     bio: Optional[str] = ""
     additional_info: Optional[str] = ""
     website: Optional[str] = ""
+    phone: Optional[str] = None
+    address: Optional[str] = None
     role: Literal['personne_physique', 'personne_morale', 'partenaire', 'visitor'] = 'personne_physique'
-    profile_tag: Optional[Literal['artist', 'professional', 'media']] = None
+    profile_tag: Optional[str] = None
     organization_name: Optional[str] = None
     employees_count: Optional[int] = None
     visitor_type: Optional[Literal['individual', 'organisation']] = None
-    contact_person_name: Optional[str] = None
-    contact_person_email: Optional[EmailStr] = None
+    reference_person_name: Optional[str] = None
+    reference_person_email: Optional[EmailStr] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -416,15 +514,16 @@ class UserUpdate(BaseModel):
     gender: Optional[str] = None
     sector: Optional[str] = None
     domain: Optional[str] = None
-    year_started: Optional[int] = None
     bio: Optional[str] = None
     additional_info: Optional[str] = None
     website: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
     avatar: Optional[str] = None
-    profile_tag: Optional[Literal['artist', 'professional', 'media']] = None
+    profile_tag: Optional[str] = None
     employees_count: Optional[int] = None
-    contact_person_name: Optional[str] = None
-    contact_person_email: Optional[EmailStr] = None
+    reference_person_name: Optional[str] = None
+    reference_person_email: Optional[EmailStr] = None
 
 
 def normalize_gender(value: Optional[str]) -> Optional[str]:
@@ -441,6 +540,8 @@ def normalize_gender(value: Optional[str]) -> Optional[str]:
         return "Male"
     if v in {"female", "women", "f", "woman", "femme"}:
         return "Female"
+    if v in {"other", "autre", "o"}:
+        return "Other"
     return None
 
 class PostCreate(BaseModel):
@@ -465,6 +566,17 @@ class ProjectCreate(BaseModel):
     start_date: str
     end_date: Optional[str] = None
     location: Optional[str] = None
+
+class NewsCreate(BaseModel):
+    title: str
+    content: str
+    media_url: Optional[str] = None
+
+class NewsUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    media_url: Optional[str] = None
+    is_active: Optional[bool] = None
 
 # ============== REFERENCE DATA ROUTES ==============
 
@@ -502,19 +614,33 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     if user_data.role == 'visitor':
         if not user_data.visitor_type:
             raise HTTPException(status_code=400, detail="visitor_type is required for visitor accounts")
-        if user_data.visitor_type == 'organisation' and not user_data.organization_name:
-            raise HTTPException(status_code=400, detail="organisation_name is required for organisation visitors")
+        # For organisation visitors: require organization_name
+        if user_data.visitor_type == 'organisation':
+            if not user_data.organization_name:
+                raise HTTPException(status_code=400, detail="organisation_name is required for organisation visitors")
+        # For individual visitors: require first_name and last_name
+        elif user_data.visitor_type == 'individual':
+            if not user_data.first_name or not user_data.last_name:
+                raise HTTPException(status_code=400, detail="first_name and last_name are required for individual visitors")
     elif user_data.role in ('personne_physique', 'personne_morale'):
+        # Required fields for artists/professionals
+        if not user_data.first_name or not user_data.last_name:
+            raise HTTPException(status_code=400, detail="first_name and last_name are required")
         missing = [f for f in ['country', 'subregion', 'gender', 'sector', 'domain'] if not getattr(user_data, f)]
         if missing:
             raise HTTPException(status_code=400, detail=f"Missing required fields: {', '.join(missing)}")
         user_data.gender = normalize_gender(user_data.gender)
         if not user_data.gender:
             raise HTTPException(status_code=400, detail="Invalid gender. Allowed: Male, Female")
-        # For personne_morale, require organization_name and employees_count
+        # For personne_morale, require organization_name and employees_count, limit mission to 500 words
         if user_data.role == 'personne_morale':
             if not user_data.organization_name:
                 raise HTTPException(status_code=400, detail="organization_name is required for personne_morale")
+            # Validate bio (mission) doesn't exceed 500 words
+            if user_data.bio:
+                word_count = len(user_data.bio.split())
+                if word_count > 500:
+                    raise HTTPException(status_code=400, detail="Mission (bio) cannot exceed 500 words")
     elif user_data.role == 'partenaire':
         raise HTTPException(status_code=403, detail="Partners cannot self-register. Please contact support for partner account creation.")
     else:
@@ -548,10 +674,11 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         gender=user_data.gender if user_data.role != 'visitor' else None,
         sector=user_data.sector if user_data.role != 'visitor' else None,
         domain=user_data.domain if user_data.role != 'visitor' else None,
-        year_started=user_data.year_started if user_data.role != 'visitor' else None,
         bio=user_data.bio or "",
         additional_info=user_data.additional_info or "",
         website=user_data.website or "",
+        phone=user_data.phone,
+        address=user_data.address,
         avatar=avatar,
         portfolio={"documents": [], "images": [], "videos": []},
         role=user_data.role,
@@ -563,8 +690,8 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         is_verified=False,
         is_featured=False,
         approval_status="pending",  # Set to pending instead of approved
-        contact_person_name=user_data.contact_person_name,
-        contact_person_email=user_data.contact_person_email
+        contact_person_name=user_data.reference_person_name,
+        contact_person_email=user_data.reference_person_email
     )
 
     db.add(new_user)
@@ -572,16 +699,17 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
 
     # Send pending approval email
+    user_name = user_data.organization_name if user_data.role == 'visitor' and user_data.visitor_type == 'organisation' else f"{user_data.first_name or ''} {user_data.last_name or ''}".strip()
     email_service.send_pending_approval_email(
         email=user_data.email.lower(),
-        first_name=user_data.first_name,
-        last_name=user_data.last_name
+        first_name=user_data.first_name or user_data.reference_person_name or "User",
+        last_name=user_data.last_name or ""
     )
 
     # Send admin notification
     email_service.send_admin_notification(
         user_email=user_data.email,
-        user_name=f"{user_data.first_name} {user_data.last_name}",
+        user_name=user_name,
         user_role=user_data.role,
         user_country=user_data.country or "Not specified",
         profile_tag=user_data.profile_tag or "Not specified"
@@ -625,8 +753,8 @@ async def partner_login(credentials: PartnerLogin, db: Session = Depends(get_db)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid partner code")
     
-    # Verify user is a partner
-    if user.role != "partenaire":
+    # Verify user is a partner or institution
+    if user.role not in ["partenaire", "personne_morale"]:
         raise HTTPException(status_code=403, detail="This code is not valid for partner access")
     
     # Check if user is approved
@@ -704,7 +832,7 @@ class ApprovalRequest(BaseModel):
     access_code: Optional[str] = None
 
 @api_router.get("/admin/pending-approvals")
-async def get_pending_approvals(admin_user = Depends(require_admin), db: Session = Depends(get_db)):
+async def get_pending_approvals(user = Depends(require_admin), db: Session = Depends(get_db)):
     """Get all users pending approval"""
     pending_users = db.query(User).filter(User.approval_status == "pending").all()
     
@@ -716,33 +844,49 @@ async def get_pending_approvals(admin_user = Depends(require_admin), db: Session
     return users_data
 
 @api_router.post("/admin/approve-user")
-async def approve_user(approval: ApprovalRequest, admin_user = Depends(require_admin), db: Session = Depends(get_db)):
+async def approve_user(approval: ApprovalRequest, user = Depends(require_admin), db: Session = Depends(get_db)):
     """Admin approves a user registration"""
-    user = db.query(User).filter(User.id == approval.user_id).first()
-    if not user:
+    # user parameter used by require_admin dependency for authorization
+    user_obj = db.query(User).filter(User.id == approval.user_id).first()
+    if not user_obj:
         raise HTTPException(status_code=404, detail="User not found")
     
     if approval.status == "approved":
         access_code = approval.access_code or secrets.token_urlsafe(16)
-        user.approval_status = "approved"
-        user.is_verified = True
-        user.access_code = access_code
+        user_obj.approval_status = "approved"
+        user_obj.is_verified = True
+        user_obj.access_code = access_code
+        
+        # Also generate partner_code for institutions (personne_morale)
+        if user_obj.role == 'personne_morale' and not user_obj.partner_code:
+            user_obj.partner_code = secrets.token_urlsafe(16).upper()
+            user_obj.has_paid = True # Institutions have automatic access once approved
+            
         db.commit()
-        email_service.send_approval_email(email=user.email, first_name=user.first_name, access_code=access_code)
-        return {"message": "User approved successfully", "user_id": user.id, "access_code": access_code}
+        
+        # Use partner_code as access_code if it exists (for simpler login)
+        final_code = user_obj.partner_code or access_code
+        
+        email_service.send_approval_email(
+            email=user_obj.email, 
+            first_name=user_obj.first_name or user_obj.organization_name, 
+            access_code=final_code
+        )
+        return {"message": "User approved successfully", "user_id": user_obj.id, "access_code": final_code}
         
     elif approval.status == "rejected":
         if not approval.rejection_reason:
             raise HTTPException(status_code=400, detail="rejection_reason is required when rejecting")
-        user.approval_status = "rejected"
-        user.rejection_reason = approval.rejection_reason
+        user_obj.approval_status = "rejected"
+        user_obj.rejection_reason = approval.rejection_reason
         db.commit()
-        email_service.send_rejection_email(email=user.email, first_name=user.first_name, rejection_reason=approval.rejection_reason)
-        return {"message": "User rejected successfully", "user_id": user.id}
+        email_service.send_rejection_email(email=user_obj.email, first_name=user_obj.first_name, rejection_reason=approval.rejection_reason)
+        return {"message": "User rejected successfully", "user_id": user_obj.id}
         
 @api_router.post("/admin/create-partner")
-async def create_partner(user_data: UserCreate, admin_user = Depends(require_admin), db: Session = Depends(get_db)):
+async def create_partner(user_data: UserCreate, user = Depends(require_admin), db: Session = Depends(get_db)):
     """Admin creates a partner account with auto-generated code"""
+    # user parameter used by require_admin dependency for authorization
     
     # Ensure role is partenaire
     if user_data.role != 'partenaire':
@@ -754,9 +898,16 @@ async def create_partner(user_data: UserCreate, admin_user = Depends(require_adm
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # Validate required fields for partner
-    missing = [f for f in ['country', 'subregion', 'gender', 'sector', 'domain'] if not getattr(user_data, f)]
-    if missing:
-        raise HTTPException(status_code=400, detail=f"Missing required fields: {', '.join(missing)}")
+    if not user_data.country:
+        raise HTTPException(status_code=400, detail="Missing required field: country")
+    if not user_data.subregion:
+        raise HTTPException(status_code=400, detail="Missing required field: subregion")
+    if not user_data.organization_name:
+        raise HTTPException(status_code=400, detail="Missing required field: organization_name")
+    
+    # Partners don't necessarily have first/last name, gender, sector or domain
+    # Use organization_name for emails if first_name is missing
+    display_name = user_data.first_name or user_data.organization_name
     
     user_id = str(uuid.uuid4())
     
@@ -776,9 +927,9 @@ async def create_partner(user_data: UserCreate, admin_user = Depends(require_adm
         country=user_data.country,
         city=user_data.city,
         subregion=user_data.subregion,
-        gender=user_data.gender,
-        sector=user_data.sector,
-        domain=user_data.domain,
+        gender=None,
+        sector=None,
+        domain=None,
         bio=user_data.bio or "",
         additional_info=user_data.additional_info or "",
         website=user_data.website or "",
@@ -790,6 +941,7 @@ async def create_partner(user_data: UserCreate, admin_user = Depends(require_adm
         partner_code=partner_code,
         is_verified=True,
         is_featured=False,
+        has_paid=False, # Partners must pay to see statistics
         approval_status="approved",  # Auto-approve when created by admin
     )
     
@@ -801,11 +953,11 @@ async def create_partner(user_data: UserCreate, admin_user = Depends(require_adm
     try:
         email_service.send_approval_email(
             email=user_data.email.lower(),
-            first_name=user_data.first_name,
+            first_name=display_name,
             access_code=partner_code
         )
-    except Exception as e:
-        print(f"Email notification failed: {e}")
+    except (OSError, IOError, RuntimeError):
+        logging.error("Email notification failed when creating partner account")
     
     user_dict = sanitize_user({c.name: getattr(new_user, c.name) for c in new_user.__table__.columns})
     
@@ -816,22 +968,23 @@ async def create_partner(user_data: UserCreate, admin_user = Depends(require_adm
     }
 
 @api_router.put("/admin/update-approval/{user_id}")
-async def update_approval(user_id: str, approval: ApprovalRequest, admin_user = Depends(require_admin), db: Session = Depends(get_db)):
+async def update_approval(user_id: str, approval: ApprovalRequest, user = Depends(require_admin), db: Session = Depends(get_db)):
     """Update approval status of a user"""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    # user parameter used by require_admin dependency for authorization
+    user_obj = db.query(User).filter(User.id == user_id).first()
+    if not user_obj:
         raise HTTPException(status_code=404, detail="User not found")
     
     if approval.status == "approved":
         access_code = approval.access_code or secrets.token_urlsafe(16)
-        user.approval_status = "approved"
-        user.is_verified = True
-        user.access_code = access_code
+        user_obj.approval_status = "approved"
+        user_obj.is_verified = True
+        user_obj.access_code = access_code
         db.commit()
         
         email_service.send_approval_email(
-            email=user.email,
-            first_name=user.first_name,
+            email=user_obj.email,
+            first_name=user_obj.first_name,
             access_code=access_code
         )
         
@@ -841,13 +994,13 @@ async def update_approval(user_id: str, approval: ApprovalRequest, admin_user = 
         if not approval.rejection_reason:
             raise HTTPException(status_code=400, detail="rejection_reason is required")
         
-        user.approval_status = "rejected"
-        user.rejection_reason = approval.rejection_reason
+        user_obj.approval_status = "rejected"
+        user_obj.rejection_reason = approval.rejection_reason
         db.commit()
         
         email_service.send_rejection_email(
-            email=user.email,
-            first_name=user.first_name,
+            email=user_obj.email,
+            first_name=user_obj.first_name,
             rejection_reason=approval.rejection_reason
         )
         
@@ -886,7 +1039,7 @@ async def get_artists(
         d = sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns})
         d['collaborations_count'] = compute_collaborations_count(a.id, db)
         d['visitor_views_count'] = db.query(func.count(func.distinct(VisitorView.visitor_id))).filter(
-            VisitorView.artist_id == a.id, VisitorView.visitor_id != None
+            VisitorView.artist_id == a.id, VisitorView.visitor_id.isnot(None)
         ).scalar() or 0
         d['visitor_messages_count'] = db.query(func.count(Message.id)).filter(
             Message.receiver_id == a.id, Message.sender_type == "visitor"
@@ -903,7 +1056,7 @@ async def get_featured_artists(limit: int = 6, db: Session = Depends(get_db)):
         d = sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns})
         d['collaborations_count'] = compute_collaborations_count(a.id, db)
         d['visitor_views_count'] = db.query(func.count(func.distinct(VisitorView.visitor_id))).filter(
-            VisitorView.artist_id == a.id, VisitorView.visitor_id != None
+            VisitorView.artist_id == a.id, VisitorView.visitor_id.isnot(None)
         ).scalar() or 0
         d['visitor_messages_count'] = db.query(func.count(Message.id)).filter(
             Message.receiver_id == a.id, Message.sender_type == "visitor"
@@ -916,17 +1069,28 @@ async def get_artist(artist_id: str, db: Session = Depends(get_db)):
     a = db.query(User).filter(User.id == artist_id, User.role.in_(["personne_physique", "personne_morale"])).first()
     if not a:
         raise HTTPException(status_code=404, detail="Artist not found")
-    d = sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns})
-    d['collaborations_count'] = compute_collaborations_count(a.id, db)
-    # Calculate visitor metrics
+    return await get_user_profile_data(a, db)
+
+@api_router.get("/users/{user_id}")
+async def get_user_profile(user_id: str, db: Session = Depends(get_db)):
+    """Fetch profile data for ANY user role (artists or visitors)."""
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found")
+    return await get_user_profile_data(u, db)
+
+async def get_user_profile_data(u: User, db: Session):
+    d = sanitize_user({c.name: getattr(u, c.name) for c in u.__table__.columns})
+    d['collaborations_count'] = compute_collaborations_count(u.id, db)
+    # Calculate visitor metrics (primarily for artists, but harmless for visitors)
     d['visitor_views_count'] = db.query(func.count(func.distinct(VisitorView.visitor_id))).filter(
-        VisitorView.artist_id == artist_id, VisitorView.visitor_id != None
+        VisitorView.artist_id == u.id, VisitorView.visitor_id.isnot(None)
     ).scalar() or 0
     d['visitor_messages_count'] = db.query(func.count(Message.id)).filter(
-        Message.receiver_id == artist_id, Message.sender_type == "visitor"
+        Message.receiver_id == u.id, Message.sender_type == "visitor"
     ).scalar() or 0
-    # Attach recent collaborations for profile display
-    owned = db.query(Project).filter(Project.creator_id == artist_id).all()
+    # Attach recent collaborations
+    owned = db.query(Project).filter(Project.creator_id == u.id).all()
     now = datetime.utcnow()
     project_list = []
     for p in owned:
@@ -968,6 +1132,13 @@ async def track_profile_view(
 @api_router.put("/artists/me")
 async def update_profile(update_data: UserUpdate, user = Depends(get_current_user), db: Session = Depends(get_db)):
     update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    
+    # Map reference_person fields to database contact_person fields
+    if "reference_person_name" in update_dict:
+        update_dict["contact_person_name"] = update_dict.pop("reference_person_name")
+    if "reference_person_email" in update_dict:
+        update_dict["contact_person_email"] = update_dict.pop("reference_person_email")
+        
     if "gender" in update_dict:
         update_dict["gender"] = normalize_gender(update_dict["gender"])
         if not update_dict["gender"]:
@@ -981,9 +1152,7 @@ async def update_profile(update_data: UserUpdate, user = Depends(get_current_use
 
 @api_router.post("/artists/me/avatar")
 async def upload_avatar(file: UploadFile = File(...), user = Depends(get_current_user), db: Session = Depends(get_db)):
-    ext = Path(file.filename).suffix.lower()
-    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
-        raise HTTPException(status_code=400, detail="Invalid image type")
+    ext = validate_image_file(file)
     
     fid = str(uuid.uuid4())
     path = UPLOADS_DIR / 'avatars' / f"{fid}{ext}"
@@ -997,26 +1166,39 @@ async def upload_avatar(file: UploadFile = File(...), user = Depends(get_current
 
 @api_router.post("/posts/upload")
 async def upload_post_media(
-    file: UploadFile = File(...),
+    file: Optional[UploadFile] = File(None),
     content_type: str = Form(...),
     text_content: str = Form(""),
     user = Depends(require_creator_or_admin),
     db: Session = Depends(get_db)
 ):
-    ext = Path(file.filename).suffix.lower()
-    folder = 'images' if 'image' in content_type else 'videos'
-    fid = str(uuid.uuid4())
-    path = UPLOADS_DIR / folder / f"{fid}{ext}"
+    # Validation for images if content_type suggests it's an image
+    is_image = 'image' in content_type.lower()
     
-    with open(path, "wb") as buf:
-        shutil.copyfileobj(file.file, buf)
-    
-    media_url = f"/uploads/{folder}/{fid}{ext}"
+    media_url = None
+    if file and file.filename:
+        if is_image:
+            ext = validate_image_file(file)
+        else:
+            ext = Path(file.filename).suffix.lower()
+            # Fallback for videos/others if extension is missing
+            if not ext and file.content_type:
+                ext = mimetypes.guess_extension(file.content_type) or ""
+
+        folder = 'images' if is_image else 'videos'
+        (UPLOADS_DIR / folder).mkdir(parents=True, exist_ok=True)
+        fid = str(uuid.uuid4())
+        path = UPLOADS_DIR / folder / f"{fid}{ext}"
+        
+        with open(path, "wb") as buf:
+            shutil.copyfileobj(file.file, buf)
+        
+        media_url = f"/uploads/{folder}/{fid}{ext}"
     
     new_post = Post(
         id=str(uuid.uuid4()),
         author_id=user["id"],
-        content_type='image' if 'image' in content_type else 'video',
+        content_type='image' if is_image else ('video' if 'video' in content_type.lower() else 'text'),
         text_content=text_content,
         media_url=media_url
     )
@@ -1239,12 +1421,19 @@ async def get_msgs(user_id: str, user = Depends(get_current_user), db: Session =
 async def upload_portfolio_item(
     file: UploadFile = File(...),
     file_type: str = Form(...),
-    title: str = Form(...),
+    title: str = Form("Untitled"),
     description: str = Form(""),
     user = Depends(require_creator_or_admin),
     db: Session = Depends(get_db)
 ):
-    ext = Path(file.filename).suffix.lower()
+    # Enhanced image validation for portfolio
+    if file_type == 'image':
+        ext = validate_image_file(file)
+    else:
+        ext = Path(file.filename).suffix.lower()
+        if not ext and file.content_type:
+            ext = mimetypes.guess_extension(file.content_type) or ""
+
     # Map file_type to folder
     folder_map = {'image': 'portfolio/images', 'document': 'portfolio/docs', 'video': 'portfolio/videos'}
     folder = folder_map.get(file_type, 'portfolio/others')
@@ -1258,23 +1447,42 @@ async def upload_portfolio_item(
     
     url = f"/uploads/{folder}/{fid}{ext}"
     
+    # Robust portfolio initialization
     db_user = db.query(User).filter(User.id == user["id"]).first()
-    portfolio = dict(db_user.portfolio)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # Get current portfolio and ensure it's a dict with all necessary keys
+    current_portfolio = db_user.portfolio
+    if not current_portfolio or not isinstance(current_portfolio, dict):
+        current_portfolio = {"documents": [], "images": [], "videos": []}
+    
+    # Create a deep copy to ensure we're not modifying a tracked object in a way that doesn't trigger updates
+    portfolio = copy.deepcopy(current_portfolio)
+    
+    for k in ["documents", "images", "videos"]:
+        if k not in portfolio:
+            portfolio[k] = []
     
     item = {"id": fid, "url": url, "title": title, "description": description, "filename": file.filename}
     
-    if file_type == 'image': portfolio["images"].append(item)
-    elif file_type == 'video': portfolio["videos"].append(item)
-    else: portfolio["documents"].append(item)
+    if file_type == 'image': 
+        portfolio["images"].append(item)
+    elif file_type == 'video': 
+        portfolio["videos"].append(item)
+    else: 
+        portfolio["documents"].append(item)
     
-    db.query(User).filter(User.id == user["id"]).update({"portfolio": portfolio})
+    # Update using a direct assignment to ensure SQLAlchemy detects the change
+    db_user.portfolio = portfolio
+    db.add(db_user)
     db.commit()
     return item
 
 @api_router.post("/portfolio/video")
 async def upload_portfolio_video(
     file: UploadFile = File(...),
-    title: str = Form(...),
+    title: str = Form("Untitled Video"),
     description: str = Form(""),
     user = Depends(require_creator_or_admin),
     db: Session = Depends(get_db)
@@ -1526,7 +1734,6 @@ def get_sector_engagement(db: Session, country: str, city: str, sector: str) -> 
 @api_router.get("/statistics/v2/by-country/{country}")
 async def get_statistics_by_country(
     country: str,
-    user = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """Get comprehensive statistics for a specific country - hierarchical drill-down"""
@@ -1554,19 +1761,19 @@ async def get_statistics_by_country(
     # By city
     city_dist = users_query.with_entities(
         User.city, func.count(User.id)
-    ).filter(User.city != None).group_by(User.city).order_by(func.count(User.id).desc()).all()
+    ).filter(User.city.isnot(None)).group_by(User.city).order_by(func.count(User.id).desc()).all()
     by_city = [{"city": c[0], "artist_count": c[1]} for c in city_dist]
     
     # By sector
     sector_dist = users_query.with_entities(
         User.sector, func.count(User.id)
-    ).filter(User.sector != None).group_by(User.sector).order_by(func.count(User.id).desc()).all()
+    ).filter(User.sector.isnot(None)).group_by(User.sector).order_by(func.count(User.id).desc()).all()
     by_sector = [{"sector": s[0], "artist_count": s[1]} for s in sector_dist]
     
     # By domain
     domain_dist = users_query.with_entities(
         User.domain, func.count(User.id)
-    ).filter(User.domain != None).group_by(User.domain).order_by(func.count(User.id).desc()).limit(20).all()
+    ).filter(User.domain.isnot(None)).group_by(User.domain).order_by(func.count(User.id).desc()).limit(20).all()
     by_domain = [{"domain": d[0], "artist_count": d[1]} for d in domain_dist]
     
     # Collaborations
@@ -1611,7 +1818,6 @@ async def get_statistics_by_country(
 async def get_statistics_by_city(
     country: str,
     city: str,
-    user = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """Get statistics for a specific city within a country"""
@@ -1640,13 +1846,13 @@ async def get_statistics_by_city(
     # By sector
     sector_dist = users_query.with_entities(
         User.sector, func.count(User.id)
-    ).filter(User.sector != None).group_by(User.sector).order_by(func.count(User.id).desc()).all()
+    ).filter(User.sector.isnot(None)).group_by(User.sector).order_by(func.count(User.id).desc()).all()
     by_sector = [{"sector": s[0], "artist_count": s[1], "engagement": get_sector_engagement(db, country, city, s[0])} for s in sector_dist]
     
     # By domain
     domain_dist = users_query.with_entities(
         User.domain, func.count(User.id)
-    ).filter(User.domain != None).group_by(User.domain).order_by(func.count(User.id).desc()).limit(15).all()
+    ).filter(User.domain.isnot(None)).group_by(User.domain).order_by(func.count(User.id).desc()).limit(15).all()
     by_domain = [{"domain": d[0], "artist_count": d[1]} for d in domain_dist]
     
     # Collaborations
@@ -1691,7 +1897,6 @@ async def get_statistics_by_city(
 async def get_statistics_by_sector(
     country: str,
     sector: str,
-    user = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """Get statistics for a specific sector within a country"""
@@ -1720,13 +1925,13 @@ async def get_statistics_by_sector(
     # By city
     city_dist = users_query.with_entities(
         User.city, func.count(User.id)
-    ).filter(User.city != None).group_by(User.city).order_by(func.count(User.id).desc()).all()
+    ).filter(User.city.isnot(None)).group_by(User.city).order_by(func.count(User.id).desc()).all()
     by_city = [{"city": c[0], "artist_count": c[1]} for c in city_dist]
     
     # By domain
     domain_dist = users_query.with_entities(
         User.domain, func.count(User.id)
-    ).filter(User.domain != None).group_by(User.domain).order_by(func.count(User.id).desc()).all()
+    ).filter(User.domain.isnot(None)).group_by(User.domain).order_by(func.count(User.id).desc()).all()
     by_domain = [{"domain": d[0], "artist_count": d[1]} for d in domain_dist]
     
     # Collaborations
@@ -1767,7 +1972,6 @@ async def get_statistics_by_sector(
 async def get_timeline_by_country(
     country: str,
     months: int = Query(12, ge=1, le=36),
-    user = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """Get monthly evolution of statistics for a country"""
@@ -1900,7 +2104,7 @@ async def get_countries_with_artists(db: Session = Depends(get_db)):
         User.country, 
         func.count(User.id).label("artist_count")
     ).filter(
-        User.country != None,
+        User.country.isnot(None),
         User.role.in_(["personne_physique", "personne_morale"])
     ).group_by(User.country).order_by(func.count(User.id).desc()).all()
     
@@ -1913,6 +2117,72 @@ async def get_countries_with_artists(db: Session = Depends(get_db)):
             } for c in countries
         ]
     }
+
+# ============== NEWS ROUTES ==============
+
+@api_router.get("/news")
+async def get_news(limit: int = 20, db: Session = Depends(get_db)):
+    news_list = db.query(News).filter(News.is_active == True).order_by(News.created_at.desc()).limit(limit).all()
+    return news_list
+
+@api_router.post("/admin/news")
+async def create_news(news_data: NewsCreate, user = Depends(require_admin), db: Session = Depends(get_db)):
+    nid = str(uuid.uuid4())
+    new_news = News(
+        id=nid,
+        title=news_data.title,
+        content=news_data.content,
+        media_url=news_data.media_url
+    )
+    db.add(new_news)
+    db.commit()
+    db.refresh(new_news)
+    return new_news
+
+@api_router.put("/admin/news/{news_id}")
+async def update_news(news_id: str, news_data: NewsUpdate, user = Depends(require_admin), db: Session = Depends(get_db)):
+    news_item = db.query(News).filter(News.id == news_id).first()
+    if not news_item:
+        raise HTTPException(status_code=404, detail="News item not found")
+    
+    update_dict = {k: v for k, v in news_data.model_dump().items() if v is not None}
+    for k, v in update_dict.items():
+        setattr(news_item, k, v)
+    
+    db.commit()
+    db.refresh(news_item)
+    return news_item
+
+@api_router.delete("/admin/news/{news_id}")
+async def delete_news(news_id: str, user = Depends(require_admin), db: Session = Depends(get_db)):
+    news_item = db.query(News).filter(News.id == news_id).first()
+    if not news_item:
+        raise HTTPException(status_code=404, detail="News item not found")
+    
+    db.delete(news_item)
+    db.commit()
+    return {"message": "News item deleted successfully"}
+
+# ============== INSTITUTION MANAGEMENT ROUTES ==============
+
+@api_router.get("/admin/institutions")
+async def get_institutions(user = Depends(require_admin), db: Session = Depends(get_db)):
+    """Get all partners (personne_morale, partenaire) and their codes"""
+    institutions = db.query(User).filter(User.role.in_(["personne_morale", "partenaire"])).all()
+    return [sanitize_user({c.name: getattr(inst, c.name) for c in inst.__table__.columns}) for inst in institutions]
+
+@api_router.post("/admin/institutions/{user_id}/regenerate-code")
+async def regenerate_institution_code(user_id: str, user = Depends(require_admin), db: Session = Depends(get_db)):
+    """Regenerate partner_code for a partner"""
+    inst = db.query(User).filter(User.id == user_id, User.role.in_(["personne_morale", "partenaire"])).first()
+    if not inst:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    new_code = secrets.token_urlsafe(16).upper()
+    inst.partner_code = new_code
+    db.commit()
+    
+    return {"partner_code": new_code}
 
 # ============== STATISTICS ROUTES V1 (LEGACY) ==============
 @api_router.get("/statistics/collaborations")
@@ -2006,9 +2276,10 @@ async def get_collaboration_statistics(sector: Optional[str] = None, user = Depe
 
     # 6. By Gender + Domain: artist counts by domain and gender
     domain_gender_q = db.query(User.domain, User.sector, User.gender, func.count(User.id))\
-        .filter(User.role.in_(["personne_physique", "personne_morale"]), User.domain != None, User.gender != None)
+        .filter(User.role.in_(["personne_physique", "personne_morale"]), User.domain.isnot(None), User.gender.isnot(None))
     if sector:
         domain_gender_q = domain_gender_q.filter(User.sector == sector)
+    
     domain_gender_rows = domain_gender_q.group_by(User.domain, User.sector, User.gender).all()
 
     domain_gender_map = {}
@@ -2034,7 +2305,7 @@ async def get_collaboration_statistics(sector: Optional[str] = None, user = Depe
 
     # 7. By Country + Gender + Domain (artists + visitor interest)
     cg_domain_q = db.query(User.country, User.gender, User.domain, User.sector, func.count(User.id))\
-        .filter(User.role.in_(["personne_physique", "personne_morale"]), User.country != None, User.gender != None, User.domain != None)
+        .filter(User.role.in_(["personne_physique", "personne_morale"]), User.country.isnot(None), User.gender.isnot(None), User.domain.isnot(None))
     if sector:
         cg_domain_q = cg_domain_q.filter(User.sector == sector)
     cg_domain_rows = cg_domain_q.group_by(User.country, User.gender, User.domain, User.sector).all()
@@ -2061,7 +2332,7 @@ async def get_collaboration_statistics(sector: Optional[str] = None, user = Depe
             ).scalar() or 0
             visitor_views = db.query(VisitorView).filter(
                 VisitorView.artist_id.in_(artist_id_list),
-                VisitorView.visitor_id != None
+                VisitorView.visitor_id.isnot(None)
             ).count()
             
         by_country_gender_domain.append({
@@ -2097,8 +2368,8 @@ async def get_statistics_overview(user = Depends(get_optional_user), db: Session
     total_collaborations = db.query(Project).filter(Project.collaborators != "[]").count()
     total_intra_african = db.query(Project).filter(Project.collaboration_type == "intra_african").count()
     
-    sectors = db.query(User.sector, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.sector != None).group_by(User.sector).all()
-    subregions = db.query(User.subregion, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.subregion != None).group_by(User.subregion).all()
+    sectors = db.query(User.sector, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.sector.isnot(None)).group_by(User.sector).all()
+    subregions = db.query(User.subregion, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.subregion.isnot(None)).group_by(User.subregion).all()
     
     return {
         "total_artists": total_artists,
@@ -2133,7 +2404,7 @@ async def get_detailed_statistics(
         project_query = project_query.filter(Project.sector == sector)
     
     # === GENDER DISTRIBUTION ===
-    genders = db.query(User.gender, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.gender != None)
+    genders = db.query(User.gender, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.gender.isnot(None))
     if sector: genders = genders.filter(User.sector == sector)
     if profile_tag and profile_tag != "all": genders = genders.filter(User.profile_tag == profile_tag)
     genders = genders.group_by(User.gender).all()
@@ -2146,18 +2417,18 @@ async def get_detailed_statistics(
     total_collaborations = project_query.filter(Project.collaborators != "[]").count()
     
     # === BY COUNTRY & DOMAIN ===
-    countries_query = db.query(User.country, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.country != None)
+    countries_query = db.query(User.country, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.country.isnot(None))
     if sector: countries_query = countries_query.filter(User.sector == sector)
     if profile_tag and profile_tag != "all": countries_query = countries_query.filter(User.profile_tag == profile_tag)
     countries = countries_query.group_by(User.country).order_by(func.count(User.id).desc()).limit(60).all()
     
-    domains_query = db.query(User.domain, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.domain != None)
+    domains_query = db.query(User.domain, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.domain.isnot(None))
     if sector: domains_query = domains_query.filter(User.sector == sector)
     if profile_tag and profile_tag != "all": domains_query = domains_query.filter(User.profile_tag == profile_tag)
     domains = domains_query.group_by(User.domain).order_by(func.count(User.id).desc()).limit(50).all()
     
     # === GENDER BY SUBREGION ===
-    gender_subreq_query = db.query(User.subregion, User.gender, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.subregion != None, User.gender != None)
+    gender_subreq_query = db.query(User.subregion, User.gender, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.subregion.isnot(None), User.gender.isnot(None))
     if sector: gender_subreq_query = gender_subreq_query.filter(User.sector == sector)
     if profile_tag and profile_tag != "all": gender_subreq_query = gender_subreq_query.filter(User.profile_tag == profile_tag)
     gender_subreq = gender_subreq_query.group_by(User.subregion, User.gender).all()
@@ -2190,8 +2461,8 @@ async def get_detailed_statistics(
 @api_router.post("/payments/mock-checkout")
 async def mock_checkout(user = Depends(get_current_user), db: Session = Depends(get_db)):
     """Simulate payment for institution — grants access_code"""
-    if user.get("role") != "institution":
-        raise HTTPException(status_code=403, detail="Only institutions can purchase access")
+    if user.get("role") not in ["personne_morale", "partenaire"]:
+        raise HTTPException(status_code=403, detail="Only institutions/partners can purchase access")
 
     db_user = db.query(User).filter(User.id == user["id"]).first()
     if not db_user:
@@ -2301,13 +2572,6 @@ async def health(): return {"status": "ok"}
 
 app.include_router(api_router)
 app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 if __name__ == "__main__":
     import uvicorn

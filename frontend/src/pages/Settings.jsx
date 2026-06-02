@@ -31,8 +31,10 @@ export default function Settings() {
     bio: '',
     additional_info: '',
     website: '',
-    contact_person_name: '',
-    contact_person_email: ''
+    reference_person_name: '',
+    reference_person_email: '',
+    phone: '',
+    address: ''
   });
 
   useEffect(() => {
@@ -52,13 +54,18 @@ export default function Settings() {
       bio: user.bio || '',
       additional_info: user.additional_info || '',
       website: user.website || '',
-      contact_person_name: user.contact_person_name || '',
-      contact_person_email: user.contact_person_email || ''
+      reference_person_name: user.reference_person_name || '',
+      reference_person_email: user.reference_person_email || '',
+      phone: user.phone || '',
+      address: user.address || ''
     });
   }, [user, navigate, fetchReferenceData]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const value = (e.target.name === 'reference_person_email') 
+      ? e.target.value.toLowerCase() 
+      : e.target.value;
+    setFormData({ ...formData, [e.target.name]: value });
   };
 
   const handleCountryChange = (value) => {
@@ -79,9 +86,12 @@ export default function Settings() {
     if (!file) return;
 
     // Validate file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const validTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'image/svg+xml', 'image/bmp', 'image/tiff', 'image/heic', 'image/heif', 'image/avif'
+    ];
     if (!validTypes.includes(file.type)) {
-      toast.error(t.settings.invalidFileType);
+      toast.error(t.settings.invalidFileType || "Invalid file type");
       return;
     }
 
@@ -105,12 +115,29 @@ export default function Settings() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const cleanedData = {
-      ...formData,
-      contact_person_email: formData.contact_person_email || null,
-      contact_person_name: formData.contact_person_name || null
-    };
-    const result = await updateProfile(cleanedData);
+    
+    // Only send fields that have actually changed or are not empty
+    const changedData = {};
+    Object.keys(formData).forEach(key => {
+      // If the value in formData is different from the value in the user object
+      if (formData[key] !== (user[key] || '')) {
+        // Special handling for reference person fields to allow nulls
+        if (key === 'reference_person_email' || key === 'reference_person_name') {
+          changedData[key] = formData[key] || null;
+        } else {
+          changedData[key] = formData[key];
+        }
+      }
+    });
+
+    // If no changes, don't bother the server
+    if (Object.keys(changedData).length === 0) {
+      setSaving(false);
+      toast.info(t.common.noChanges || 'No changes to save');
+      return;
+    }
+
+    const result = await updateProfile(changedData);
     setSaving(false);
 
     if (result.success) {
@@ -170,7 +197,7 @@ export default function Settings() {
                   type="file"
                   ref={fileInputRef}
                   onChange={handleAvatarUpload}
-                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp,image/tiff,image/heic,image/heif,image/avif"
                   className="hidden"
                 />
               </div>
@@ -197,28 +224,30 @@ export default function Settings() {
             </div>
 
             {/* Name row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="first_name">{t.auth.firstName}</Label>
-                <Input
-                  id="first_name"
-                  name="first_name"
-                  value={formData.first_name}
-                  onChange={handleChange}
-                  data-testid="settings-firstname"
-                />
+            {user.role !== 'partenaire' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="first_name">{t.auth.firstName}</Label>
+                  <Input
+                    id="first_name"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleChange}
+                    data-testid="settings-firstname"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="last_name">{t.auth.lastName}</Label>
+                  <Input
+                    id="last_name"
+                    name="last_name"
+                    value={formData.last_name}
+                    onChange={handleChange}
+                    data-testid="settings-lastname"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="last_name">{t.auth.lastName}</Label>
-                <Input
-                  id="last_name"
-                  name="last_name"
-                  value={formData.last_name}
-                  onChange={handleChange}
-                  data-testid="settings-lastname"
-                />
-              </div>
-            </div>
+            )}
 
             {/* Country */}
             <div className="space-y-2">
@@ -294,26 +323,32 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Bio */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="bio">{t.auth.bio}</Label>
-                <span className={`text-xs font-medium ${(formData.bio?.length || 0) >= 2800 ? ((formData.bio?.length || 0) >= 3000 ? 'text-destructive' : 'text-amber-500') : 'text-muted-foreground'}`}>
-                  {formData.bio?.length || 0} / 3000
-                </span>
+            {/* Bio / Presentation */}
+            {!(user.role === 'visitor' && user.visitor_type === 'individual') && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="bio">
+                    {user.role === 'partenaire' || user.role === 'personne_morale' || (user.role === 'visitor' && user.visitor_type === 'organisation')
+                      ? t.auth.presentationOrg
+                      : (user.profile_tag === 'artist' ? t.auth.biographyArtist : t.auth.presentationIndividual)}
+                  </Label>
+                  <span className={`text-xs font-medium ${(formData.bio?.length || 0) >= 2800 ? ((formData.bio?.length || 0) >= 3000 ? 'text-destructive' : 'text-amber-500') : 'text-muted-foreground'}`}>
+                    {formData.bio?.length || 0} / 3000
+                  </span>
+                </div>
+                <Textarea
+                  id="bio"
+                  name="bio"
+                  value={formData.bio}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 3000) handleChange(e);
+                  }}
+                  rows={6}
+                  data-testid="settings-bio"
+                  placeholder={user.profile_tag === 'artist' ? t.auth.bioPlaceholder : (t.auth.presentationIndividual + '...')}
+                />
               </div>
-              <Textarea
-                id="bio"
-                name="bio"
-                value={formData.bio}
-                onChange={(e) => {
-                  if (e.target.value.length <= 3000) handleChange(e);
-                }}
-                rows={6}
-                data-testid="settings-bio"
-                placeholder={t.auth.bioPlaceholder}
-              />
-            </div>
+            )}
 
             {/* Additional Info */}
             <div className="space-y-2">
@@ -341,33 +376,76 @@ export default function Settings() {
               />
             </div>
 
+            {/* Phone */}
+            <div className="space-y-2">
+              <Label htmlFor="phone">{t.auth.phone}</Label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="+1 (555) 000-0000"
+              />
+            </div>
+
+            {/* Address */}
+            <div className="space-y-2">
+              <Label htmlFor="address">{t.auth.address}</Label>
+              <Textarea
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                rows={2}
+                placeholder={t.auth.addressPlaceholder}
+              />
+            </div>
+
             {/* Contact Person */}
-            <div className="p-4 bg-secondary/50 border border-secondary/30 rounded-xl text-sm space-y-4">
-              <p className="text-muted-foreground font-medium">{t.auth.contactPersonInfo}</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="contact_person_name">{t.auth.contactPersonName}</Label>
-                  <Input
-                    id="contact_person_name"
-                    name="contact_person_name"
-                    value={formData.contact_person_name}
-                    onChange={handleChange}
-                    placeholder="Ex: Jean Dupont"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contact_person_email">{t.auth.contactPersonEmail}</Label>
-                  <Input
-                    id="contact_person_email"
-                    name="contact_person_email"
-                    type="email"
-                    value={formData.contact_person_email}
-                    onChange={handleChange}
-                    placeholder="contact@example.com"
-                  />
+            {user.role !== 'visitor' && (
+              <div className="p-4 bg-secondary/50 border border-secondary/30 rounded-xl text-sm space-y-4">
+                <p className="text-muted-foreground font-medium">{t.auth.contactPersonInfo}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reference_person_name">{t.auth.contactPersonName}</Label>
+                    <Input
+                      id="reference_person_name"
+                      name="reference_person_name"
+                      value={formData.reference_person_name}
+                      onChange={handleChange}
+                      placeholder="Ex: Jean Dupont"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reference_person_email">{t.auth.contactPersonEmail}</Label>
+                    <Input
+                      id="reference_person_email"
+                      name="reference_person_email"
+                      type="email"
+                      value={formData.reference_person_email}
+                      onChange={handleChange}
+                      placeholder="contact@example.com"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {(user.role === 'partenaire' || user.role === 'personne_morale') && user.partner_code && (
+              <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl text-sm space-y-2">
+                <p className="font-semibold text-primary flex items-center gap-2">
+                  <Palette className="w-4 h-4" />
+                  {t.auth.partnerCode || 'Code Partenaire'}
+                </p>
+                <p className="text-muted-foreground">
+                  {t.auth.partnerCodeInfo || 'Utilisez ce code pour vous connecter via l\'accès institutionnel :'}
+                </p>
+                <code className="block p-2 bg-background rounded border border-primary/20 font-mono text-center text-lg tracking-wider text-primary">
+                  {user.partner_code}
+                </code>
+              </div>
+            )}
 
             <div className="flex gap-4">
               <Button

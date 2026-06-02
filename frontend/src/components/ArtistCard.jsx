@@ -11,7 +11,6 @@ export function ArtistCard({ artist, featured = false }) {
   const { sectors, domains } = useReferenceStore();
   const initials = `${artist.first_name?.[0] || ''}${artist.last_name?.[0] || ''}`.toUpperCase();
   const fullName = `${artist.first_name} ${artist.last_name}`;
-  const yearsActive = new Date().getFullYear() - (artist.year_started || 2020);
   const avatarUrl = getMediaUrl(artist.avatar);
   const fallbackUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${fullName}`;
 
@@ -80,10 +79,6 @@ export function ArtistCard({ artist, featured = false }) {
               <span className="flex items-center gap-1">
                 <MapPin className="w-3 h-3" />
                 {artist.country}
-              </span>
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {yearsActive} {t.profile.yrs}
               </span>
               {artist.visitor_views_count !== undefined && (
                 <span className="flex items-center gap-1" title={t.statistics.visitorViews}>

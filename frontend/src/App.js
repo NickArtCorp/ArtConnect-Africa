@@ -21,6 +21,9 @@ import Feed from "@/pages/Feed";
 import Checkout from "@/pages/Checkout";
 import AdminApproval from "@/pages/AdminApproval";
 import AdminPartnerCreate from "@/pages/AdminPartnerCreate";
+import Actualites from "@/pages/Actualites";
+import AdminNews from "@/pages/AdminNews";
+import AdminInstitutions from "@/pages/AdminInstitutions";
 
 function ProtectedRoute({ children }) {
   const { token } = useAuthStore();
@@ -54,8 +57,11 @@ function InstitutionStatsRoute({ children }) {
     );
   }
 
-  // ✅ FIX 4d: Partenaire user who hasn't paid → checkout
-  if (user?.role === 'partenaire' && !hasPaid) return <Navigate to="/checkout" replace />;
+  // ✅ FIX 4d: User who hasn't paid/unlocked stats → checkout
+  // Both partenaire and personne_morale should have access if they've "paid" (or auto-unlocked on approval)
+  if ((user?.role === 'partenaire' || user?.role === 'personne_morale') && !hasPaid) {
+    return <Navigate to="/checkout" replace />;
+  }
 
   return children;
 }
@@ -177,6 +183,13 @@ function App() {
             } />
             <Route path="/admin/create-partner" element={
               <ApprovalRoute><ProtectedRoute><AdminPartnerCreate /></ProtectedRoute></ApprovalRoute>
+            } />
+            <Route path="/actualites" element={<Actualites />} />
+            <Route path="/admin/news" element={
+              <ApprovalRoute><ProtectedRoute><AdminNews /></ProtectedRoute></ApprovalRoute>
+            } />
+            <Route path="/admin/institutions" element={
+              <ApprovalRoute><ProtectedRoute><AdminInstitutions /></ProtectedRoute></ApprovalRoute>
             } />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

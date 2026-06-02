@@ -56,10 +56,10 @@ export default function Login() {
       >
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold tracking-tight mb-2">
-            {isPartnerMode ? 'Partner Access' : t.auth.welcomeBack}
+            {isPartnerMode ? t.auth.partnerCodeLogin : t.auth.welcome}
           </h1>
           <p className="text-muted-foreground">
-            {isPartnerMode ? 'Enter your partner code to access the platform' : t.auth.signInTo}
+            {isPartnerMode ? t.auth.enterPartnerCode : t.auth.signInTo}
           </p>
         </div>
 
@@ -77,7 +77,7 @@ export default function Login() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            User Login
+            {t.auth.userLogin}
           </button>
           <button
             type="button"
@@ -91,7 +91,7 @@ export default function Login() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Partner Code
+            {t.auth.partnerCodeLogin}
           </button>
         </div>
 
@@ -124,19 +124,19 @@ export default function Login() {
             </>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="partner-code">Partner Code</Label>
+              <Label htmlFor="partner-code">{t.auth.partnerCode}</Label>
               <Input
                 id="partner-code"
                 type="text"
                 value={partnerCode}
                 onChange={(e) => setPartnerCode(e.target.value.toUpperCase())}
-                placeholder="Enter your unique partner code"
+                placeholder={t.auth.partnerCodePlaceholder}
                 required
                 disabled={isLoading}
                 className="font-mono text-center text-lg"
               />
               <p className="text-xs text-muted-foreground">
-                This code was provided to you by Art Connect Africa
+                {t.auth.partnerCodeHelp}
               </p>
             </div>
           )}
@@ -144,7 +144,7 @@ export default function Login() {
           <Button type="submit" className="w-full rounded-full" disabled={isLoading} data-testid="login-submit">
             {isLoading ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t.auth.signingIn}</>
-            ) : isPartnerMode ? 'Access Platform' : t.auth.login}
+            ) : isPartnerMode ? t.auth.accessPlatform : t.auth.login}
           </Button>
         </form>
 

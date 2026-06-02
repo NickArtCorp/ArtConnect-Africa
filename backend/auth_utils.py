@@ -18,11 +18,17 @@ def generate_token() -> str:
 
 def sanitize_user(user: dict) -> dict:
     """Remove sensitive fields from user data"""
-    safe_fields = ['id', 'first_name', 'last_name', 'country', 'city', 'subregion', 'gender', 
-                   'sector', 'domain', 'year_started', 'bio', 'additional_info', 
+    # Rename contact_person to reference_person for the frontend
+    if 'contact_person_name' in user:
+        user['reference_person_name'] = user.pop('contact_person_name')
+    if 'contact_person_email' in user:
+        user['reference_person_email'] = user.pop('contact_person_email')
+        
+    safe_fields = ['id', 'email', 'first_name', 'last_name', 'country', 'city', 'subregion', 'gender', 
+                   'sector', 'domain', 'bio', 'additional_info', 
                    'website', 'avatar', 'role', 'is_featured', 'is_verified', 'created_at',
                    'organization_name', 'visitor_type', 'portfolio', 'has_paid', 'access_code', 'partner_code', 'paid_at', 'profile_tag',
-                   'contact_person_name', 'contact_person_email']
+                   'reference_person_name', 'reference_person_email', 'approval_status', 'rejection_reason', 'phone', 'address']
     return {k: v for k, v in user.items() if k in safe_fields}
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):

@@ -60,6 +60,8 @@ class User(Base):
     relay_contact = Column(String, nullable=True)
     contact_person_name = Column(String, nullable=True)
     contact_person_email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    address = Column(Text, nullable=True)
 
 class Post(Base):
     __tablename__ = "posts"
@@ -139,3 +141,15 @@ class StatisticsCache(Base):
     
     def is_expired(self):
         return datetime.utcnow() > self.expires_at if self.expires_at else True
+
+class News(Base):
+    __tablename__ = "news"
+    id = Column(String, primary_key=True, index=True)
+    title = Column(String)
+    content = Column(Text)
+    media_url = Column(String, nullable=True)  # Video link or thumbnail link
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+
+# Create tables
+Base.metadata.create_all(bind=engine)
