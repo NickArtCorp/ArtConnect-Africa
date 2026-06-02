@@ -2,36 +2,37 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Installation des dépendances système nécessaires (et ajout de curl pour le healthcheck)
 RUN apt-get update && apt-get install -y \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first (for better Docker layer caching)
+# Copie des dépendances (Profite du cache Docker)
 COPY requirements.txt .
 
-# Install Python dependencies
+# Installation des paquets Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copie de tout le code du backend
 COPY . .
 
-# Create directories for persistent data (database and uploads)
-RUN mkdir -p /app/data /app/uploads/avatars /app/uploads/documents /app/uploads/images /app/uploads/portfolio /app/uploads/posts
+# Création des dossiers pour les données persistantes et les uploads d'art
+RUN mkdir -p /app/data \
+             /app/uploads/avatars \
+             /app/uploads/documents \
+             /app/uploads/images \
+             /app/uploads/portfolio \
+             /app/uploads/posts
 
-# Health check for Northflank
+# Health check optimisé avec curl (plus léger et robuste que requests)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=3)"
+    CMD curl -f http://localhost:8000/health || exit 1
 
-# Expose port (must match the port in server:app)
+# Port exposé
 EXPOSE 8000
 
-# Production server with gunicorn (WSGI) + uvicorn workers (ASGI)
-# Optimized for Northflank:
-# - --workers: Auto-detect based on CPU cores
-# - --worker-class: Use uvicorn for async FastAPI
-# - --timeout: 120s for long-running requests
-# - --access-logfile: Log to stdout for Northflank
+# Lancement du serveur de production Gunicorn + Uvicorn
 CMD ["gunicorn", \
      "--workers=4", \
      "--worker-class=uvicorn.workers.UvicornWorker", \
