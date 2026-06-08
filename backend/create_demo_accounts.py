@@ -13,7 +13,8 @@ import hashlib
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from server import User, SessionLocal, engine, Base
+from server import User, SessionLocal
+from database import init_db
 
 def hash_password(password: str) -> str:
     """Hash password using SHA256 (matches server.py)"""
@@ -23,7 +24,7 @@ def create_demo_accounts():
     """Create demo user accounts"""
     
     # Ensure tables exist
-    Base.metadata.create_all(bind=engine)
+    init_db()
     
     db = SessionLocal()
     

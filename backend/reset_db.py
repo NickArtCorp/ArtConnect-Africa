@@ -13,7 +13,8 @@ import os
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from server import User, SessionLocal, engine, Base
+from server import User, SessionLocal
+from database import Base, engine, init_db
 
 def hash_password(password: str) -> str:
     """Hash password using SHA256 (matches server.py)"""
@@ -27,7 +28,7 @@ def reset_database():
     print("[OK] Dropped all tables")
     
     # Create all tables fresh
-    Base.metadata.create_all(bind=engine)
+    init_db()
     print("[OK] Created all tables")
     
     db = SessionLocal()

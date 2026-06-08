@@ -20,7 +20,7 @@ from sqlalchemy import Column, String, Integer, Boolean, Text, JSON, DateTime, F
 from sqlalchemy.orm import Session, relationship
 from sqlalchemy.exc import OperationalError, ProgrammingError, DatabaseError
 
-from database import engine, SessionLocal, Base, get_db, User, Post, Like, Comment, Message, Project, VisitorView, StatisticsCache, News
+from database import engine, SessionLocal, Base, get_db, init_db, User, Post, Like, Comment, Message, Project, VisitorView, StatisticsCache, News
 from auth_utils import security, active_tokens, ROLES, hash_password, generate_token, sanitize_user, get_current_user, get_optional_user, require_paid_partner
 from statistics_routes import stats_router
 
@@ -88,7 +88,7 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 (UPLOADS_DIR / 'avatars').mkdir(exist_ok=True)
 
 # Create the main app
-app = FastAPI(title="Art Connect Africa API (SQLite Mode)")
+app = FastAPI(title="Art Connect Africa API")
 
 # CORS Middleware (Must be added before including routers)
 app.add_middleware(
@@ -139,8 +139,12 @@ async def readiness_check(db: Session = Depends(get_db)):
 app.include_router(stats_router)
 api_router = APIRouter(prefix="/api")
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# ── Startup Event: Initialize Database ──
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on application startup"""
+    init_db()
+    _run_migrations()
 
 # ── Migration: add payment columns if they don't exist yet (safe on existing DBs) ──
 def _run_migrations():
@@ -233,8 +237,6 @@ def _run_migrations():
         except (OperationalError, ProgrammingError, DatabaseError):
             pass
 
-
-_run_migrations()
 
 # ============== CONSTANTS ==============
 

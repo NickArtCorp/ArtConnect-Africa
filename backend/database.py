@@ -1,16 +1,38 @@
 import os
 from datetime import datetime
-from sqlalchemy import create_engine, Column, String, Integer, Boolean, Text, JSON, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, Text, JSON, DateTime, ForeignKey, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import NullPool, QueuePool
 from pathlib import Path
 
 # Setup paths
 ROOT_DIR = Path(__file__).parent
 
-# SQLite Connection
-DATABASE_URL = os.environ.get('SQLITE_URL', f"sqlite:///{ROOT_DIR}/artconnect.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Detect database type from environment
+DATABASE_URL = os.environ.get('DATABASE_URL', None)
+
+if DATABASE_URL:
+    # Production: PostgreSQL on Northflank
+    engine = create_engine(
+        DATABASE_URL,
+        poolclass=QueuePool,
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        echo=False
+    )
+else:
+    # Local development: SQLite
+    sqlite_path = f"sqlite:///{ROOT_DIR}/artconnect.db"
+    engine = create_engine(
+        sqlite_path,
+        connect_args={"check_same_thread": False},
+        poolclass=NullPool,
+        echo=False
+    )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -151,5 +173,16 @@ class News(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# ============== DATABASE INITIALIZATION ==============
+
+def init_db():
+    """
+    Initialize the database. Should be called once at application startup.
+    """
+    try:
+        Base.metadata.create_all(bind=engine)
+        return True
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to initialize database: {str(e)}")
+        return False
