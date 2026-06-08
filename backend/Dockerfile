@@ -34,7 +34,7 @@ EXPOSE 8000
 
 # Lancement du serveur de production Gunicorn + Uvicorn
 CMD ["gunicorn", \
-     "--workers=4", \
+     "--workers=1", \
      "--worker-class=uvicorn.workers.UvicornWorker", \
      "--bind=0.0.0.0:8000", \
      "--timeout=120", \
