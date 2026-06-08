@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 ROOT_DIR = Path(__file__).parent
 
 # Detect database type from environment
-DATABASE_URL = os.environ.get('DATABASE_URL', None)
+# Try DATABASE_URL first (standard), then POSTGRESQL (Northflank alias)
+DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRESQL', None)
 
 if DATABASE_URL:
     # Production: PostgreSQL on Northflank
