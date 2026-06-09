@@ -14,11 +14,7 @@ logger = logging.getLogger(__name__)
 ROOT_DIR = Path(__file__).parent
 
 # Auto-detect database type from environment
-# Priority: DATABASE_URL (Render/standard) → POSTGRESQL (Northflank) → SQLite (local dev)
-# 
-# Render provides: DATABASE_URL=postgresql://...
-# Northflank provides: POSTGRESQL=postgresql://...
-# Local dev: Neither set → falls back to SQLite
+# Priority: DATABASE_URL (standard) → POSTGRESQL (Northflank) → SQLite (local)
 DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRESQL', None)
 
 if DATABASE_URL:
