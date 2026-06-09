@@ -53,6 +53,7 @@ def get_db():
     finally:
         db.close()
 
+
 # ============== SQL MODELS ==============
 
 class User(Base):
