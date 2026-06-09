@@ -7,19 +7,15 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import NullPool, QueuePool
 from pathlib import Path
 
-# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Setup paths
 ROOT_DIR = Path(__file__).parent
 
-# Detect database type from environment
 # Try DATABASE_URL first (standard), then POSTGRESQL (Northflank alias)
 DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRESQL', None)
 
 if DATABASE_URL:
-    # Production: PostgreSQL on Northflank
     logger.info(f"🟘 Using PostgreSQL: {DATABASE_URL[:50]}...")
     engine = create_engine(
         DATABASE_URL,
@@ -31,10 +27,8 @@ if DATABASE_URL:
         echo=False
     )
 else:
-    # Local development: SQLite
     sqlite_path = f"sqlite:///{ROOT_DIR}/artconnect.db"
-    logger.warning("⚠️  DATABASE_URL not set - Using SQLite (not recommended for production)")
-    logger.warning(f"📁 SQLite path: {ROOT_DIR}/artconnect.db")
+    logger.warning("⚠️  DATABASE_URL not set - Using SQLite")
     engine = create_engine(
         sqlite_path,
         connect_args={"check_same_thread": False},
@@ -45,16 +39,12 @@ else:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Dependency to get DB session
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-
-
-# ============== SQL MODELS ==============
 
 class User(Base):
     __tablename__ = "users"
@@ -77,7 +67,7 @@ class User(Base):
     portfolio = Column(JSON, default={"documents": [], "images": [], "videos": []})
     role = Column(String, default="personne_physique")
     organization_name = Column(String, nullable=True)
-    visitor_type = Column(String, nullable=True)  # 'individual' | 'organisation'
+    visitor_type = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False)
     is_featured = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -179,25 +169,15 @@ class News(Base):
     id = Column(String, primary_key=True, index=True)
     title = Column(String)
     content = Column(Text)
-    media_url = Column(String, nullable=True)  # Video link or thumbnail link
+    media_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
-# ============== DATABASE INITIALIZATION ==============
-
 def init_db():
-    """
-    Initialize the database. Should be called once at application startup.
-    Uses CREATE TABLE IF NOT EXISTS to safely handle existing tables.
-    """
-    import logging
     try:
-        # Get all tables that need to be created
         Base.metadata.create_all(bind=engine)
-        logging.info(f"✅ Database initialized successfully (URL: {DATABASE_URL[:50]}...)")
+        logger.info(f"✅ Database initialized successfully")
         return True
     except Exception as e:
-        # If tables already exist (from previous deployment), that's fine
-        # Log and continue
-        logging.warning(f"⚠️  Database init warning: {str(e)}")
-        return True  # Don't crash, tables might already exist
+        logger.warning(f"⚠️  Database init warning: {str(e)}")
+        return True
