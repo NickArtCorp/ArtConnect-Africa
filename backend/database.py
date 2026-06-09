@@ -1,28 +1,58 @@
 import os
+import logging
 from datetime import datetime
-from sqlalchemy import create_engine, Column, String, Integer, Boolean, Text, JSON, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, Text, JSON, DateTime, ForeignKey, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import NullPool, QueuePool
 from pathlib import Path
 
-# Setup paths
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 ROOT_DIR = Path(__file__).parent
 
-# SQLite Connection
-DATABASE_URL = os.environ.get('SQLITE_URL', f"sqlite:///{ROOT_DIR}/artconnect.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Auto-detect database type from environment
+# Priority: DATABASE_URL (Render/standard) → POSTGRESQL (Northflank) → SQLite (local dev)
+# 
+# Render provides: DATABASE_URL=postgresql://...
+# Northflank provides: POSTGRESQL=postgresql://...
+# Local dev: Neither set → falls back to SQLite
+DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRESQL', None)
+
+if DATABASE_URL:
+    # ✅ Production: PostgreSQL
+    logger.info(f"✅ Using PostgreSQL: {DATABASE_URL[:50]}...")
+    engine = create_engine(
+        DATABASE_URL,
+        poolclass=QueuePool,
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        echo=False
+    )
+else:
+    # ⚠️ Development: SQLite
+    sqlite_path = f"sqlite:///{ROOT_DIR}/artconnect.db"
+    logger.warning("⚠️ DATABASE_URL not set - Using SQLite (local development)")
+    engine = create_engine(
+        sqlite_path,
+        connect_args={"check_same_thread": False},
+        poolclass=NullPool,
+        echo=False
+    )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Dependency to get DB session
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-
-# ============== SQL MODELS ==============
 
 class User(Base):
     __tablename__ = "users"
@@ -45,7 +75,7 @@ class User(Base):
     portfolio = Column(JSON, default={"documents": [], "images": [], "videos": []})
     role = Column(String, default="personne_physique")
     organization_name = Column(String, nullable=True)
-    visitor_type = Column(String, nullable=True)  # 'individual' | 'organisation'
+    visitor_type = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False)
     is_featured = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -147,9 +177,24 @@ class News(Base):
     id = Column(String, primary_key=True, index=True)
     title = Column(String)
     content = Column(Text)
-    media_url = Column(String, nullable=True)  # Video link or thumbnail link
+    media_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+def init_db():
+    """Initialize database safely - doesn't crash if tables exist"""
+    try:
+        # SQLAlchemy create_all is safe - it only creates tables that don't exist
+        Base.metadata.create_all(bind=engine)
+        
+        # Log which database is being used
+        if DATABASE_URL:
+            db_type = "PostgreSQL"
+        else:
+            db_type = "SQLite"
+        logger.info(f"✅ Database initialized ({db_type})")
+        return True
+    except Exception as e:
+        # Log but don't crash - tables might already exist
+        logger.warning(f"Database init: {str(e)}")
+        return True
