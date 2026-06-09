@@ -2,42 +2,38 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Installation des dépendances système nécessaires (et ajout de curl pour le healthcheck)
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     curl \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copie des dépendances (Profite du cache Docker)
+# Copy requirements first (leverages Docker cache)
 COPY requirements.txt .
 
-# Installation des paquets Python
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copie de tout le code du backend
+# Copy backend code
 COPY . .
 
-# Création des dossiers pour les données persistantes et les uploads d'art
-RUN mkdir -p /app/data \
-             /app/uploads/avatars \
+# Create directories for uploads (Render uses ephemeral storage, but keeping for compatibility)
+RUN mkdir -p /app/uploads/avatars \
              /app/uploads/documents \
              /app/uploads/images \
              /app/uploads/portfolio \
              /app/uploads/posts
 
-# Health check optimisé avec curl (plus léger et robuste que requests)
+# Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-10000}/health || exit 1
 
-# Port exposé
-EXPOSE 8000
+# Expose port (Render will use PORT env var)
+EXPOSE 10000
 
-# Lancement du serveur de production Gunicorn + Uvicorn
-CMD ["gunicorn", \
-     "--workers=1", \
-     "--worker-class=uvicorn.workers.UvicornWorker", \
-     "--bind=0.0.0.0:8000", \
-     "--timeout=120", \
+# Run Gunicorn + Uvicorn with config file (supports dynamic PORT env var)
+CMD ["gunicorn", "-c", "gunicorn_conf.py", "server:app"]
      "--access-logfile=-", \
      "--error-logfile=-", \
      "--log-level=info", \
