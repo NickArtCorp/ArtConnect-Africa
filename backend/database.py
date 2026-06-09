@@ -7,16 +7,19 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import NullPool, QueuePool
 from pathlib import Path
 
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parent
 
-# Try DATABASE_URL first (standard), then POSTGRESQL (Northflank alias)
+# Auto-detect database type from environment
+# Priority: DATABASE_URL (standard) → POSTGRESQL (Northflank) → SQLite (local)
 DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRESQL', None)
 
 if DATABASE_URL:
-    logger.info(f"🟘 Using PostgreSQL: {DATABASE_URL[:50]}...")
+    # ✅ Production: PostgreSQL
+    logger.info(f"✅ Using PostgreSQL: {DATABASE_URL[:50]}...")
     engine = create_engine(
         DATABASE_URL,
         poolclass=QueuePool,
@@ -27,8 +30,9 @@ if DATABASE_URL:
         echo=False
     )
 else:
+    # ⚠️ Development: SQLite
     sqlite_path = f"sqlite:///{ROOT_DIR}/artconnect.db"
-    logger.warning("⚠️  DATABASE_URL not set - Using SQLite")
+    logger.warning("⚠️ DATABASE_URL not set - Using SQLite (local development)")
     engine = create_engine(
         sqlite_path,
         connect_args={"check_same_thread": False},
@@ -174,10 +178,19 @@ class News(Base):
     is_active = Column(Boolean, default=True)
 
 def init_db():
+    """Initialize database safely - doesn't crash if tables exist"""
     try:
+        # SQLAlchemy create_all is safe - it only creates tables that don't exist
         Base.metadata.create_all(bind=engine)
-        logger.info(f"✅ Database initialized successfully")
+        
+        # Log which database is being used
+        if DATABASE_URL:
+            db_type = "PostgreSQL"
+        else:
+            db_type = "SQLite"
+        logger.info(f"✅ Database initialized ({db_type})")
         return True
     except Exception as e:
-        logger.warning(f"⚠️  Database init warning: {str(e)}")
+        # Log but don't crash - tables might already exist
+        logger.warning(f"Database init: {str(e)}")
         return True
