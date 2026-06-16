@@ -1,37 +1,21 @@
-FROM python:3.12-slim
+import multiprocessing
+import os
 
-WORKDIR /app
+# Port sur lequel le serveur va écouter
+bind = f"0.0.0.0:{os.environ.get('PORT', '8000')}"
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# Nombre de workers (processus) à lancer
+workers = multiprocessing.cpu_count() * 2 + 1
 
-# Copy requirements first
-COPY requirements.txt .
+# Classe de worker pour gérer l'asynchrone (FastAPI)
+worker_class = "uvicorn.workers.UvicornWorker"
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Temps d'attente avant de tuer un worker qui ne répond plus
+timeout = 120
 
-# Copy backend code
-COPY . .
+# Garder les connexions ouvertes pour plus de performance
+keepalive = 5
 
-# Create directories for uploads
-RUN mkdir -p /app/uploads/avatars \
-             /app/uploads/documents \
-             /app/uploads/images \
-             /app/uploads/portfolio \
-             /app/uploads/posts
-
-# Expose port (This is just documentation for Docker, not strictly enforced)
-EXPOSE 10000
-
-# Health check (This is fine, but ensure curl is installed if you keep it)
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-10000}/health || exit 1
-
-# THE FIX:
-# Use the config file (-c) which handles the PORT correctly.
-# Ensure your file is named server.py because of "server:app" at the end.
-CMD ["gunicorn", "-c", "gunicorn_conf.py", "server:app"]
+# Logs (optionnel)
+accesslog = "-"
+errorlog = "-"
