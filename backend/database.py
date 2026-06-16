@@ -14,7 +14,15 @@ logger = logging.getLogger(__name__)
 ROOT_DIR = Path(__file__).parent
 
 # Auto-detect database type from environment
+<<<<<<< HEAD
 # Priority: DATABASE_URL (standard) → POSTGRESQL (Northflank) → SQLite (local)
+=======
+# Priority: DATABASE_URL (Render/standard) → POSTGRESQL (Northflank) → SQLite (local dev)
+# 
+# Render provides: DATABASE_URL=postgresql://...
+# Northflank provides: POSTGRESQL=postgresql://...
+# Local dev: Neither set → falls back to SQLite
+>>>>>>> 835a1086a68b5034a95d4354119b45b068f62fa8
 DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRESQL', None)
 
 if DATABASE_URL:
@@ -193,4 +201,8 @@ def init_db():
     except Exception as e:
         # Log but don't crash - tables might already exist
         logger.warning(f"Database init: {str(e)}")
+<<<<<<< HEAD
         return True
+=======
+        return True
+>>>>>>> 835a1086a68b5034a95d4354119b45b068f62fa8
