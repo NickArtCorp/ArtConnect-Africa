@@ -33,8 +33,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 EXPOSE 10000
 
 # Run Gunicorn + Uvicorn with config file (supports dynamic PORT env var)
-CMD ["gunicorn", "-c", "gunicorn_conf.py", "server:app"]
-     "--access-logfile=-", \
-     "--error-logfile=-", \
-     "--log-level=info", \
-     "server:app"]
+CMD ["gunicorn", "-c", "gunicorn_conf.py", "--access-logfile=-", "--error-logfile=-", "--log-level=info", "server:app"]
