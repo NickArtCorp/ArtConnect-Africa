@@ -193,8 +193,4 @@ def init_db():
     except Exception as e:
         # Log but don't crash - tables might already exist
         logger.warning(f"Database init: {str(e)}")
-<<<<<<< HEAD
         return True
-=======
-        return True
->>>>>>> 835a1086a68b5034a95d4354119b45b068f62fa8
