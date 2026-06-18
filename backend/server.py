@@ -1,12 +1,17 @@
+from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+# IMPORTANT: Load .env FIRST before any other imports that depend on environment variables
+_ROOT_DIR = Path(__file__).parent
+load_dotenv(_ROOT_DIR / '.env')
+
 from typing import List, Optional, Dict, Any, Literal
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-import os
 import logging
-from pathlib import Path
 import secrets
 import shutil
 import sqlite3
@@ -57,10 +62,6 @@ def validate_image_file(file: UploadFile):
             )
     
     return ext
-
-# IMPORTANT: Load .env variables FIRST, before importing modules that depend on them
-_ROOT_DIR = Path(__file__).parent
-load_dotenv(_ROOT_DIR / '.env')
 
 # Now import email service (after .env is loaded)
 try:

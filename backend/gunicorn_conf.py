@@ -5,7 +5,7 @@ import os
 bind = f"0.0.0.0:{os.environ.get('PORT', '8000')}"
 
 # Nombre de workers (processus) à lancer
-workers = multiprocessing.cpu_count() * 2 + 1
+workers = 1
 
 # Classe de worker pour gérer l'asynchrone (FastAPI)
 worker_class = "uvicorn.workers.UvicornWorker"
