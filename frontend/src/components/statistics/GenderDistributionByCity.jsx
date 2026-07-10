@@ -12,7 +12,7 @@ import {
   ResponsiveContainer, Cell
 } from 'recharts';
 import { Loader2, AlertCircle } from 'lucide-react';
-import { useStatisticsStore } from '@/store';
+import { useStatisticsStore, useLanguageStore } from '@/store';
 
 const GENDER_COLORS = {
   female: '#EC4899',
@@ -26,6 +26,7 @@ const GENDER_COLORS = {
  */
 export default function GenderDistributionByCity({ country }) {
   const { countryStats, cityStats, isLoadingV2, errorV2, fetchCountryStats, fetchCityStats } = useStatisticsStore();
+  const { t } = useLanguageStore();
   const [selectedCity, setSelectedCity] = useState('');
 
   useEffect(() => {
@@ -54,7 +55,7 @@ export default function GenderDistributionByCity({ country }) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-muted-foreground text-center">Select a country to view city data</p>
+          <p className="text-muted-foreground text-center">{t.statistics.selectCountryForCityData}</p>
         </CardContent>
       </Card>
     );
@@ -65,7 +66,7 @@ export default function GenderDistributionByCity({ country }) {
       <Card>
         <CardContent className="pt-6 flex items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading city data...</span>
+          <span>{t.statistics.loadingCityData}</span>
         </CardContent>
       </Card>
     );
@@ -76,7 +77,7 @@ export default function GenderDistributionByCity({ country }) {
       <Card className="border-red-200">
         <CardContent className="pt-6 flex items-center gap-2">
           <AlertCircle className="h-4 w-4 text-red-500" />
-          <span className="text-red-500">Error: {errorV2}</span>
+          <span className="text-red-500">{t.statistics.error}: {errorV2}</span>
         </CardContent>
       </Card>
     );
@@ -85,7 +86,7 @@ export default function GenderDistributionByCity({ country }) {
   // Prepare gender data for chart
   const genderChartData = cityStats && cityStats.overview
     ? Object.entries(cityStats.overview.by_gender || {}).map(([gender, count]) => ({
-        name: gender === 'Male' ? 'Hommes' : gender === 'Female' ? 'Femmes' : gender,
+        name: gender === 'Male' ? t.statistics.men : gender === 'Female' ? t.statistics.women : gender,
         count,
         gender: gender.toLowerCase()
       }))
@@ -102,20 +103,20 @@ export default function GenderDistributionByCity({ country }) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Gender Distribution by City</CardTitle>
+          <CardTitle>{t.statistics.genderDistributionByCity}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* City Selector */}
           <div>
-            <label className="text-sm font-medium">Select City</label>
+            <label className="text-sm font-medium">{t.statistics.selectCity}</label>
             <Select value={selectedCity} onValueChange={setSelectedCity}>
               <SelectTrigger className="w-full mt-2">
-                <SelectValue placeholder="Choose a city..." />
+                <SelectValue placeholder={t.statistics.chooseCity} />
               </SelectTrigger>
               <SelectContent>
                 {cities.map((city) => (
                   <SelectItem key={city.city} value={city.city}>
-                    {city.city || 'Unknown'} ({city.artist_count} artists)
+                    {city.city || 'Unknown'} ({city.artist_count} {t.statistics.artistsLabel})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -128,21 +129,21 @@ export default function GenderDistributionByCity({ country }) {
               <div className="border-t pt-4 grid grid-cols-3 gap-3">
                 <div className="text-center">
                   <p className="text-2xl font-bold">{cityStats.overview?.total_artists || 0}</p>
-                  <p className="text-xs text-muted-foreground">Total Artists</p>
+                  <p className="text-xs text-muted-foreground">{t.statistics.totalArtistsLabel}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold">{cityStats.overview?.total_messages || 0}</p>
-                  <p className="text-xs text-muted-foreground">Messages</p>
+                  <p className="text-xs text-muted-foreground">{t.statistics.messages}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold">{cityStats.overview?.total_views || 0}</p>
-                  <p className="text-xs text-muted-foreground">Views</p>
+                  <p className="text-xs text-muted-foreground">{t.statistics.views}</p>
                 </div>
               </div>
 
               {/* Gender Distribution Chart */}
               <div>
-                <h4 className="text-sm font-medium mb-3">Gender Distribution</h4>
+                <h4 className="text-sm font-medium mb-3">{t.statistics.genderDistribution}</h4>
                 {genderChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={genderChartData}>
@@ -150,7 +151,7 @@ export default function GenderDistributionByCity({ country }) {
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="count" name="Count">
+                      <Bar dataKey="count" name={t.statistics.artists}>
                         {genderChartData.map((entry, index) => (
                           <Cell
                             key={`cell-${index}`}
@@ -161,14 +162,14 @@ export default function GenderDistributionByCity({ country }) {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-center text-muted-foreground text-sm">No gender data available</p>
+                  <p className="text-center text-muted-foreground text-sm">{t.statistics.noGenderData}</p>
                 )}
               </div>
 
               {/* Sectors in City */}
               {sectorData.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium mb-3">Top Sectors in {selectedCity}</h4>
+                  <h4 className="text-sm font-medium mb-3">{t.statistics.topSectorsInCity} {selectedCity}</h4>
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={sectorData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -176,8 +177,8 @@ export default function GenderDistributionByCity({ country }) {
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="artists" fill="#7C3AED" name="Artists" />
-                      <Bar dataKey="engagement" fill="#10B981" name="Engagement" />
+                      <Bar dataKey="artists" fill="#7C3AED" name={t.statistics.artists} />
+                      <Bar dataKey="engagement" fill="#10B981" name={t.statistics.engagement} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -186,7 +187,7 @@ export default function GenderDistributionByCity({ country }) {
               {/* Domains */}
               {cityStats.by_domain && cityStats.by_domain.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Popular Domains</h4>
+                  <h4 className="text-sm font-medium mb-2">{t.statistics.popularDomains}</h4>
                   <div className="flex flex-wrap gap-2">
                     {cityStats.by_domain.slice(0, 8).map((domain) => (
                       <div

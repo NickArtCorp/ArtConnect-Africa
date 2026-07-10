@@ -52,19 +52,29 @@ export default function Statistics() {
   const [domainFilter, setDomainFilter] = useState('all');
   const [sectorFilter, setSectorFilter] = useState('all');
   const [profileTagFilter, setProfileTagFilter] = useState('all');
+  const [error, setError] = useState(null);
 
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
-    fetchOverview();
-    fetchDetailed(sectorFilter === 'all' ? null : sectorFilter, profileTagFilter === 'all' ? null : profileTagFilter);
-    fetchCollaborationStats();
+    const fetchData = async () => {
+      setError(null);
+      try {
+        await fetchOverview();
+        await fetchDetailed(sectorFilter === 'all' ? null : sectorFilter, profileTagFilter === 'all' ? null : profileTagFilter);
+        await fetchCollaborationStats();
+      } catch (err) {
+        console.error('Statistics error:', err);
+        setError(t.statistics.failedToLoad);
+      }
+    };
+    fetchData();
   }, [fetchOverview, fetchDetailed, fetchCollaborationStats, sectorFilter, profileTagFilter]);
 
   // Sidebar sections
   const sections = [
     { id: 'overview', label: t.statistics.overview, icon: BarChart3 },
-    { id: 'geographic', label: 'Geographic Insights', icon: Globe },
+    { id: 'geographic', label: t.statistics.geographicInsights, icon: Globe },
     { id: 'collaborations', label: t.statistics.collaborations, icon: Users },
     { id: 'genderDomain', label: t.statistics.genderDomain, icon: PieChartIcon },
     { id: 'visitors', label: t.statistics.visitors, icon: Eye },
@@ -376,17 +386,17 @@ export default function Statistics() {
             {/* Country Pairs by Gender (Table) */}
             <Card>
               <CardHeader>
-                <CardTitle>{t.statistics.countryPairs} - Details</CardTitle>
+                <CardTitle>{t.statistics.countryPairs} - {t.statistics.details}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-96">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Country Pair</TableHead>
+                        <TableHead>{t.statistics.countryPair}</TableHead>
                         <TableHead>{t.statistics.women}</TableHead>
                         <TableHead>{t.statistics.men}</TableHead>
-                        <TableHead>Total</TableHead>
+                        <TableHead>{t.statistics.totalCollaborations}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -700,6 +710,15 @@ export default function Statistics() {
         {/* Main Content */}
         <div className="flex-1 lg:ml-0">
           <div className="p-6">
+            {/* Error Display */}
+            {error && (
+              <Card className="mb-6 border-red-200 bg-red-50">
+                <CardContent className="pt-6">
+                  <p className="text-red-700 text-sm">{error}</p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Mobile menu button */}
             <div className="lg:hidden mb-4">
               <Button variant="outline" onClick={() => setSidebarOpen(true)} className="gap-2">

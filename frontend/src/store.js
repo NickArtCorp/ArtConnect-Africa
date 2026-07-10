@@ -250,13 +250,82 @@ export const translations = {
       visitorViews: 'Visitor Views', visitorMessages: 'Visitor Messages',
       mostMessaged: 'Most Messaged Domain', topDomainsByMessages: 'Top Domains by Visitor Messages',
       detailedData: 'Detailed Data', typeSplit: 'Type Split', monthlyEvolution: 'Monthly Evolution',
-      byGender: 'By Gender', women: 'Women', men: 'Men', other: 'Other',
+      byGender: 'By Gender', bySector: 'By Sector', women: 'Women', men: 'Men', other: 'Other',
       local: 'Local', intraAfrican: 'Intra-African',
       countryPairs: 'Country Pairs (Intra-African)', activePair: 'Most active pair',
       genderSplit: 'Gender Split', genderByDomain: 'Gender by Domain',
       loading: 'Loading statistics...', visitorViewsShort: 'Visitor Views', visitorMessagesShort: 'Visitor Messages',
       postsActivity: 'Posts Activity', featureInDev: 'Feature in development',
-      country: 'Country', gender: 'Gender', domain: 'Domain', artists: 'Artists'
+      country: 'Country', gender: 'Gender', domain: 'Domain', artists: 'Artists',
+      geographicInsights: 'Geographic Insights',
+      totalCollaborations: 'Total', details: 'Details', countryPair: 'Country Pair',
+      failedToLoad: 'Failed to load statistics',
+      explorer: 'Statistics Explorer', refresh: 'Refresh', filters: 'Filters',
+      profileType: 'Account Type', all: 'All', professionals: 'Professionals', media: 'Media',
+      scope: 'Scope', cached24h: 'Cached (24h)', global: 'Global (entire platform)',
+      users: 'Users', cities: 'Cities', sectors: 'Sectors',
+      menWomen: 'Men / Women', artistsProsMedia: 'Artists / Pros / Media',
+      topCities: 'Top Cities', topSectors: 'Top Sectors', topDomains: 'Top Domains',
+      selectCountry: 'Select a country to view statistics', loadingV2: 'Loading statistics...',
+      error: 'Error', dashboard: 'Dashboard', cachedData: 'Cached Data',
+      totalPosts: 'Total Posts', totalCollaborations: 'Total Collaborations', totalEngagement: 'Total Engagement',
+      citiesTab: 'Cities', sectorsTab: 'Sectors', topArtistsTab: 'Top Artists',
+      genderDistribution: 'Gender Distribution', noData: 'No data available',
+      collaborationTypes: 'Collaboration Types', localCollabs: 'Local Collaborations',
+      intraAfricanCollabs: 'Intra-African Collaborations', artistsByCity: 'Artists by City',
+      noCityData: 'No city data available', artistsBySector: 'Artists by Sector',
+      noSectorData: 'No sector data available', topArtistsByEngagement: 'Top 20 Artists by Engagement',
+      noArtistsData: 'No artists data available', pts: 'pts',
+      // New translations for missing parts
+      countryDashboard: 'Country dashboard',
+      chooseCountryForDashboard: 'Choisis un pays pour voir le dashboard détaillé.',
+      chooseCountryForDashboardEn: 'Choose a country to view detailed dashboard.',
+      timeline: 'Timeline',
+      artistsTab: 'Artists',
+      selectCountryForTimeline: 'Select a country to view timeline',
+      loadingTimelineData: 'Loading timeline data...',
+      monthlyActivityTimeline: 'Monthly Activity Timeline',
+      newArtistsAndPosts: 'New Artists & Posts',
+      newArtists: 'New Artists',
+      posts: 'Posts',
+      collaborationsAndEngagement: 'Collaborations & Engagement',
+      engagementViews: 'Engagement Views',
+      totalNewArtists: 'Total New Artists',
+      selectCountryForCityData: 'Select a country to view city data',
+      loadingCityData: 'Loading city data...',
+      genderDistributionByCity: 'Gender Distribution by City',
+      selectCity: 'Select City',
+      chooseCity: 'Choose a city...',
+      artistsLabel: 'artists',
+      totalArtistsLabel: 'Total Artists',
+      messages: 'Messages',
+      views: 'Views',
+      noGenderData: 'No gender data available',
+      topSectorsInCity: 'Top Sectors in',
+      engagement: 'Engagement',
+      popularDomains: 'Popular Domains',
+      selectCountryForSectorData: 'Select a country to view sector data',
+      loadingSectorData: 'Loading sector data...',
+      sectorsDistribution: 'Sectors Distribution',
+      top5SectorsComparison: 'Top 5 Sectors Comparison',
+      detailedBreakdown: 'Detailed Breakdown',
+      noSectorDataLabel: 'No sector data',
+      totalArtistsInSectors: 'Total Artists in Sectors',
+      selectCountryLabel: 'Select Country',
+      loadingCountries: 'Loading countries...',
+      chooseCountry: 'Choose a country...',
+      topArtistsDirectory: 'Top Artists Directory',
+      searchPlaceholder: 'Search by name, sector, or domain...',
+      rank: 'Rank',
+      name: 'Name',
+      sector: 'Sector',
+      city: 'City',
+      noArtistsFound: 'No artists found matching your criteria',
+      showingArtists: 'Showing',
+      ofArtists: 'of',
+      avgEngagement: 'Avg Engagement',
+      totalViews: 'Total Views',
+      loadingArtistsData: 'Loading artists data...'
     },
     common: {
       search: 'Search', filter: 'Filter', all: 'All', save: 'Save',
@@ -550,13 +619,82 @@ export const translations = {
       visitorViews: 'Vues Visiteurs', visitorMessages: 'Messages Visiteurs',
       mostMessaged: 'Domaine le plus contacté', topDomainsByMessages: 'Top Domaines par Messages Visiteurs',
       detailedData: 'Données Détaillées', typeSplit: 'Répartition par Type', monthlyEvolution: 'Évolution Mensuelle',
-      byGender: 'Par Genre', women: 'Femmes', men: 'Hommes', other: 'Autre',
+      byGender: 'Par Genre', bySector: 'Par Secteur', women: 'Femmes', men: 'Hommes', other: 'Autre',
       local: 'Locale', intraAfrican: 'Intra-Africaine',
       countryPairs: 'Paires de Pays (Intra-Africain)', activePair: 'Paire la plus active',
       genderSplit: 'Répartition par Genre', genderByDomain: 'Genre par Domaine',
       loading: 'Chargement des statistiques...', visitorViewsShort: 'Vues Visiteurs', visitorMessagesShort: 'Messages Visiteurs',
       postsActivity: 'Activité des Posts', featureInDev: 'Fonctionnalité en développement',
-      country: 'Pays', gender: 'Genre', domain: 'Domaine', artists: 'Artistes'
+      country: 'Pays', gender: 'Genre', domain: 'Domaine', artists: 'Artistes',
+      geographicInsights: 'Aperçu Géographique',
+      totalCollaborations: 'Total', details: 'Détails', countryPair: 'Paire de Pays',
+      failedToLoad: 'Échec du chargement des statistiques',
+      explorer: 'Explorateur de Statistiques', refresh: 'Actualiser', filters: 'Filtres',
+      profileType: 'Type de compte', all: 'Tous', professionals: 'Professionnels', media: 'Médias',
+      scope: 'Portée', cached24h: 'En cache (24h)', global: 'Global (toute la plateforme)',
+      users: 'Utilisateurs', cities: 'Villes', sectors: 'Métiers',
+      menWomen: 'Hommes / Femmes', artistsProsMedia: 'Artistes / Pros / Médias',
+      topCities: 'Top Villes', topSectors: 'Top Métiers', topDomains: 'Top Domaines',
+      selectCountry: 'Sélectionnez un pays pour voir les statistiques', loadingV2: 'Chargement des statistiques...',
+      error: 'Erreur', dashboard: 'Tableau de bord', cachedData: 'Données en cache',
+      totalPosts: 'Total des posts', totalCollaborations: 'Total des collaborations', totalEngagement: 'Engagement total',
+      citiesTab: 'Villes', sectorsTab: 'Métiers', topArtistsTab: 'Top Artistes',
+      genderDistribution: 'Répartition par genre', noData: 'Aucune donnée disponible',
+      collaborationTypes: 'Types de collaboration', localCollabs: 'Collaborations locales',
+      intraAfricanCollabs: 'Collaborations intra-africaines', artistsByCity: 'Artistes par ville',
+      noCityData: 'Aucune donnée de ville disponible', artistsBySector: 'Artistes par secteur',
+      noSectorData: 'Aucune donnée de secteur disponible', topArtistsByEngagement: 'Top 20 artistes par engagement',
+      noArtistsData: 'Aucune donnée d\'artistes disponible', pts: 'pts',
+      // New translations for missing parts
+      countryDashboard: 'Tableau de bord pays',
+      chooseCountryForDashboard: 'Choisis un pays pour voir le tableau de bord détaillé.',
+      chooseCountryForDashboardEn: 'Choisis un pays pour voir le tableau de bord détaillé.',
+      timeline: 'Chronologie',
+      artistsTab: 'Artistes',
+      selectCountryForTimeline: 'Sélectionnez un pays pour voir la chronologie',
+      loadingTimelineData: 'Chargement des données de chronologie...',
+      monthlyActivityTimeline: 'Chronologie mensuelle des activités',
+      newArtistsAndPosts: 'Nouveaux artistes et posts',
+      newArtists: 'Nouveaux artistes',
+      posts: 'Posts',
+      collaborationsAndEngagement: 'Collaborations et engagement',
+      engagementViews: 'Engagement',
+      totalNewArtists: 'Total nouveaux artistes',
+      selectCountryForCityData: 'Sélectionnez un pays pour voir les données des villes',
+      loadingCityData: 'Chargement des données des villes...',
+      genderDistributionByCity: 'Répartition par genre par ville',
+      selectCity: 'Sélectionnez une ville',
+      chooseCity: 'Choisissez une ville...',
+      artistsLabel: 'artistes',
+      totalArtistsLabel: 'Total artistes',
+      messages: 'Messages',
+      views: 'Vues',
+      noGenderData: 'Aucune donnée de genre disponible',
+      topSectorsInCity: 'Top métiers dans',
+      engagement: 'Engagement',
+      popularDomains: 'Domaines populaires',
+      selectCountryForSectorData: 'Sélectionnez un pays pour voir les données des métiers',
+      loadingSectorData: 'Chargement des données des métiers...',
+      sectorsDistribution: 'Répartition des métiers',
+      top5SectorsComparison: 'Comparaison des 5 meilleurs métiers',
+      detailedBreakdown: 'Répartition détaillée',
+      noSectorDataLabel: 'Aucune donnée de métier',
+      totalArtistsInSectors: 'Total artistes par métier',
+      selectCountryLabel: 'Sélectionnez un pays',
+      loadingCountries: 'Chargement des pays...',
+      chooseCountry: 'Choisissez un pays...',
+      topArtistsDirectory: 'Répertoire des meilleurs artistes',
+      searchPlaceholder: 'Rechercher par nom, secteur ou domaine...',
+      rank: 'Rang',
+      name: 'Nom',
+      sector: 'Secteur',
+      city: 'Ville',
+      noArtistsFound: 'Aucun artiste trouvé correspondant à vos critères',
+      showingArtists: 'Affichage de',
+      ofArtists: 'sur',
+      avgEngagement: 'Engagement moyen',
+      totalViews: 'Total des vues',
+      loadingArtistsData: 'Chargement des données des artistes...'
     },
     common: {
       search: 'Rechercher', filter: 'Filtrer', all: 'Tout', save: 'Enregistrer',
@@ -3835,7 +3973,10 @@ export const useStatisticsStore = create((set) => ({
       set({ overview: response.data, isLoading: false });
     } catch (error) {
       console.error('Error fetching statistics:', error);
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to load overview';
+      console.error('Statistics error details:', errorMessage);
       set({ isLoading: false });
+      throw new Error(errorMessage);
     }
   },
   fetchDetailed: async (sector = null, profileTag = null) => {
@@ -3850,7 +3991,10 @@ export const useStatisticsStore = create((set) => ({
       set({ detailed: response.data, hasInstitutionAccess: true, isLoading: false });
     } catch (error) {
       console.error('Error fetching detailed statistics:', error);
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to load detailed statistics';
+      console.error('Detailed statistics error:', errorMessage);
       set({ isLoading: false, hasInstitutionAccess: false });
+      throw new Error(errorMessage);
     }
   },
   fetchCollaborationStats: async () => {
@@ -3868,7 +4012,10 @@ export const useStatisticsStore = create((set) => ({
       });
     } catch (error) {
       console.error('Error fetching collaboration statistics:', error);
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to load collaboration statistics';
+      console.error('Collaboration statistics error:', errorMessage);
       set({ isLoading: false });
+      throw new Error(errorMessage);
     }
   },
   

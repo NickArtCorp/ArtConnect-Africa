@@ -50,11 +50,115 @@ def get_subregion_from_country(country: str) -> str:
         # Southern Africa
         "Botswana": "Southern Africa", "Eswatini": "Southern Africa", "Lesotho": "Southern Africa",
         "Namibia": "Southern Africa", "South Africa": "Southern Africa",
-        # North Africa
+        # North Africa (as per user's diagram: Libya, Algeria, Tunisia, Egypt, Morocco, Mauritania)
         "Algeria": "North Africa", "Egypt": "North Africa", "Libya": "North Africa",
-        "Morocco": "North Africa", "Sudan": "North Africa", "Tunisia": "North Africa",
+        "Morocco": "North Africa", "Mauritania": "North Africa", "Sudan": "North Africa", "Tunisia": "North Africa",
     }
     return regions.get(country, "Unknown")
+
+
+def get_macro_region_from_country(country: str) -> str:
+    """Map country to macro region (North Africa or Sub-Saharan Africa)"""
+    subregion = get_subregion_from_country(country)
+    if subregion == "North Africa":
+        return "North Africa"
+    elif subregion in ["West Africa", "Central Africa", "East Africa", "Southern Africa"]:
+        return "Sub-Saharan Africa"
+    return "Unknown"
+
+
+def get_all_subregions_for_macro_region(macro_region: str) -> list:
+    """Get list of subregions for a given macro region"""
+    if macro_region == "North Africa":
+        return ["North Africa"]
+    elif macro_region == "Sub-Saharan Africa":
+        return ["West Africa", "Central Africa", "East Africa", "Southern Africa"]
+    return []
+
+
+def get_project_collaboration_category(project: Project, db: Session) -> str:
+    """
+    Determine the collaboration category of a project based on the user's diagram:
+    1. "intra_north_africa": Collaborations only within North Africa
+    2. "intra_subsaharan_same_subregion": Collaborations only within a single Sub-Saharan subregion
+    3. "intra_subsaharan_cross_subregion": Collaborations between different Sub-Saharan subregions
+    4. "north_subsaharan": Collaborations between North Africa and Sub-Saharan Africa
+    5. "africa_rest_of_world": Collaborations between Africa and Rest of World
+    """
+    # Get creator's country and regions
+    creator = db.query(User).filter(User.id == project.creator_id).first()
+    if not creator or not creator.country:
+        return "unknown"
+    creator_subregion = get_subregion_from_country(creator.country)
+    creator_macro = get_macro_region_from_country(creator.country)
+
+    # Get collaborators' countries and regions
+    collab_regions = set()
+    collab_subregions = set()
+    collab_countries = set()
+
+    collaborators = project.collaborators if project.collaborators else []
+    for collab in collaborators:
+        collab_user_id = None
+        if isinstance(collab, dict):
+            collab_user_id = collab.get("user_id")
+        elif isinstance(collab, str):
+            collab_user_id = collab
+
+        if collab_user_id:
+            collab_user = db.query(User).filter(User.id == collab_user_id).first()
+            if collab_user and collab_user.country:
+                collab_countries.add(collab_user.country)
+                collab_subregion = get_subregion_from_country(collab_user.country)
+                collab_subregions.add(collab_subregion)
+                collab_macro = get_macro_region_from_country(collab_user.country)
+                collab_regions.add(collab_macro)
+
+    # All regions involved (creator + collaborators)
+    all_macro_regions = {creator_macro} | collab_regions
+    all_subregions = {creator_subregion} | collab_subregions
+
+    # Check if any region is Rest of World (not North or Sub-Saharan Africa)
+    has_rest_of_world = any(
+        region not in ["North Africa", "Sub-Saharan Africa"]
+        for region in all_macro_regions
+    )
+
+    if has_rest_of_world:
+        return "africa_rest_of_world"
+    elif "North Africa" in all_macro_regions and "Sub-Saharan Africa" in all_macro_regions:
+        return "north_subsaharan"
+    elif "North Africa" in all_macro_regions:
+        return "intra_north_africa"
+    elif "Sub-Saharan Africa" in all_macro_regions:
+        if len(all_subregions) == 1:
+            return "intra_subsaharan_same_subregion"
+        else:
+            return "intra_subsaharan_cross_subregion"
+    else:
+        return "unknown"
+
+
+def calculate_collaboration_breakdown(db: Session) -> Dict[str, int]:
+    """Calculate the overall collaboration breakdown across all projects"""
+    breakdown = defaultdict(int)
+    projects = db.query(Project).all()
+    for project in projects:
+        category = get_project_collaboration_category(project, db)
+        breakdown[category] += 1
+    # Ensure all categories are present, even with 0
+    all_categories = [
+        "intra_north_africa",
+        "intra_subsaharan_same_subregion",
+        "intra_subsaharan_cross_subregion",
+        "north_subsaharan",
+        "africa_rest_of_world",
+        "unknown"
+    ]
+    for cat in all_categories:
+        if cat not in breakdown:
+            breakdown[cat] = 0
+    return dict(breakdown)
 
 
 def calculate_gender_distribution(users_query) -> Dict[str, int]:
@@ -169,9 +273,91 @@ def get_artists_by_engagement(db: Session, country: str = None, city: str = None
     return sorted(engagement_scores, key=lambda x: x["engagement_score"], reverse=True)[:limit]
 
 
+# ============ ROUTE 0: GLOBAL OVERVIEW ============
+
+@stats_router.get("/overview")
+async def get_overview(db: Session = Depends(get_db)):
+    """
+    Get global overview statistics for the entire platform
+    Public endpoint showing overall platform metrics
+    """
+    try:
+        # Base query for all registered creators (excluding visitors)
+        users_query = db.query(User).filter(User.role.in_(["personne_physique", "personne_morale"]))
+        
+        # Count basic metrics
+        total_artists = users_query.count()
+        total_countries = db.query(func.count(func.distinct(User.country))).filter(
+            User.role.in_(["personne_physique", "personne_morale"]),
+            User.country != None
+        ).scalar() or 0
+        
+        # Gender distribution
+        gender_dist = users_query.with_entities(
+            User.gender, func.count(User.id)
+        ).group_by(User.gender).all()
+        by_gender = {(g[0] or "other"): g[1] for g in gender_dist}
+        
+        # Top sectors (global)
+        sector_dist = users_query.with_entities(
+            User.sector, func.count(User.id)
+        ).filter(User.sector != None).group_by(User.sector).order_by(func.count(User.id).desc()).limit(10).all()
+        by_sector = [{"sector": s[0], "artist_count": s[1]} for s in sector_dist]
+        
+        # Top countries (global)
+        country_dist = users_query.with_entities(
+            User.country, func.count(User.id)
+        ).filter(User.country != None).group_by(User.country).order_by(func.count(User.id).desc()).limit(15).all()
+        by_country = [{"country": c[0], "artist_count": c[1]} for c in country_dist]
+        
+        # Engagement metrics
+        total_projects = db.query(func.count(Project.id)).scalar() or 0
+        total_posts = db.query(func.count(Post.id)).scalar() or 0
+        total_views = db.query(func.count(VisitorView.id)).scalar() or 0
+        total_messages = db.query(func.count(Message.id)).scalar() or 0
+        
+        # Collaboration breakdown
+        collaboration_breakdown = calculate_collaboration_breakdown(db)
+        
+        # Top artists globally
+        top_artists = get_artists_by_engagement(db, limit=10)
+        
+        return {
+            "overview": {
+                "total_artists": total_artists,
+                "total_countries": total_countries,
+                "total_projects": total_projects,
+                "total_posts": total_posts,
+                "total_views": total_views,
+                "total_messages": total_messages,
+                "by_gender": by_gender,
+                "collaboration_breakdown": collaboration_breakdown
+            },
+            "by_sector": by_sector,
+            "by_country": by_country,
+            "top_artists": top_artists,
+            "generated_at": datetime.utcnow().isoformat()
+        }
+
+
+@stats_router.get("/collaboration-breakdown")
+async def get_collaboration_breakdown(db: Session = Depends(get_db)):
+    """
+    Get detailed collaboration breakdown according to the regional structure
+    """
+    try:
+        breakdown = calculate_collaboration_breakdown(db)
+        return {
+            "collaboration_breakdown": breakdown,
+            "generated_at": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching collaboration breakdown: {str(e)}")
+
+
 # ============ ROUTE 1: STATISTICS BY COUNTRY ============
 
-@stats_router.get("/by-country/{country}")
+@stats_router.get("/v2/by-country/{country}")
 async def get_statistics_by_country(
     country: str,
     user = Depends(get_optional_user),
@@ -269,7 +455,7 @@ async def get_statistics_by_country(
 
 # ============ ROUTE 2: STATISTICS BY CITY ============
 
-@stats_router.get("/by-city/{country}/{city}")
+@stats_router.get("/v2/by-city/{country}/{city}")
 async def get_statistics_by_city(
     country: str,
     city: str,
@@ -357,7 +543,7 @@ async def get_statistics_by_city(
 
 # ============ ROUTE 3: STATISTICS BY SECTOR (PER COUNTRY) ============
 
-@stats_router.get("/by-country/{country}/sector/{sector}")
+@stats_router.get("/v2/by-country/{country}/sector/{sector}")
 async def get_statistics_by_sector(
     country: str,
     sector: str,
@@ -439,10 +625,11 @@ async def get_statistics_by_sector(
 
 # ============ ROUTE 4: TIMELINE (MONTHLY EVOLUTION) ============
 
-@stats_router.get("/timeline/{country}")
+@stats_router.get("/v2/timeline/{country}")
 async def get_timeline_by_country(
     country: str,
-    months: int = Query(12, ge=1, le=36),
+    period: str = Query('monthly', description="Period: 'monthly' (default), or use months parameter"),
+    months: int = Query(None, ge=1, le=36, description="Number of months (overrides period if provided)"),
     user = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
@@ -450,6 +637,19 @@ async def get_timeline_by_country(
     Get monthly evolution of statistics for a country
     Last N months of: new artists, posts, collaborations, engagement
     """
+    # Convert period string to months if months not specified
+    if months is None:
+        period_map = {
+            'monthly': 1,
+            '3M': 3,
+            '6M': 6,
+            '12M': 12,
+            '24M': 24,
+            'yearly': 12,
+            'all': 36
+        }
+        months = period_map.get(period.lower(), 12)
+    
     # Check cache
     cached = get_cached_statistics(db, "timeline", country=country, months=str(months))
     if cached:
@@ -523,7 +723,7 @@ async def get_timeline_by_country(
 
 # ============ ROUTE 5: COMPARISON (MULTI-COUNTRY) ============
 
-@stats_router.get("/compare")
+@stats_router.get("/v2/compare")
 async def compare_countries(
     countries: str = Query(..., description="Comma-separated country names"),
     user = Depends(require_paid_partner),

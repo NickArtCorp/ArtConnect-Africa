@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { ArrowUpDown, Search, Loader2 } from 'lucide-react';
-import { useStatisticsStore } from '@/store';
+import { useStatisticsStore, useLanguageStore } from '@/store';
 
 /**
  * DrilldownTable Component
@@ -27,6 +27,7 @@ import { useStatisticsStore } from '@/store';
  */
 export default function DrilldownTable({ country }) {
   const { countryStats, isLoadingV2, fetchCountryStats } = useStatisticsStore();
+  const { t } = useLanguageStore();
   const [sortBy, setSortBy] = useState('engagement_score');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -73,7 +74,7 @@ export default function DrilldownTable({ country }) {
       <Card>
         <CardContent className="pt-6 flex items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading artists data...</span>
+          <span>{t.statistics.loadingArtistsData}</span>
         </CardContent>
       </Card>
     );
@@ -108,7 +109,7 @@ export default function DrilldownTable({ country }) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Top Artists Directory</CardTitle>
+          <CardTitle>{t.statistics.topArtistsDirectory}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Search and Filter */}
@@ -116,7 +117,7 @@ export default function DrilldownTable({ country }) {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, sector, or domain..."
+                placeholder={t.statistics.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -130,14 +131,14 @@ export default function DrilldownTable({ country }) {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="w-12">Rank</TableHead>
-                    <SortHeader label="Name" field="name" />
-                    <SortHeader label="Sector" field="sector" />
-                    <SortHeader label="Domain" field="domain" />
-                    <SortHeader label="City" field="city" />
-                    <TableHead className="text-right">Engagement</TableHead>
-                    <TableHead className="text-right">Views</TableHead>
-                    <TableHead className="text-right">Messages</TableHead>
+                    <TableHead className="w-12">{t.statistics.rank}</TableHead>
+                    <SortHeader label={t.statistics.name} field="name" />
+                    <SortHeader label={t.statistics.sector} field="sector" />
+                    <SortHeader label={t.statistics.domain} field="domain" />
+                    <SortHeader label={t.statistics.city} field="city" />
+                    <TableHead className="text-right">{t.statistics.engagement}</TableHead>
+                    <TableHead className="text-right">{t.statistics.views}</TableHead>
+                    <TableHead className="text-right">{t.statistics.messages}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -186,7 +187,7 @@ export default function DrilldownTable({ country }) {
               </Table>
             ) : (
               <div className="p-8 text-center text-muted-foreground">
-                <p>No artists found matching your criteria</p>
+                <p>{t.statistics.noArtistsFound}</p>
               </div>
             )}
           </div>
@@ -195,11 +196,11 @@ export default function DrilldownTable({ country }) {
           {filteredAndSortedArtists.length > 0 && (
             <div className="pt-4 border-t flex justify-between items-center text-sm">
               <span className="text-muted-foreground">
-                Showing {filteredAndSortedArtists.length} of {topArtists.length} artists
+                {t.statistics.showingArtists} {filteredAndSortedArtists.length} {t.statistics.ofArtists} {topArtists.length} {t.statistics.artists}
               </span>
               <div className="flex gap-4">
                 <div>
-                  <span className="text-muted-foreground">Avg Engagement: </span>
+                  <span className="text-muted-foreground">{t.statistics.avgEngagement}: </span>
                   <span className="font-bold">
                     {Math.round(
                       filteredAndSortedArtists.reduce((sum, a) => sum + a.engagement_score, 0) /
@@ -208,7 +209,7 @@ export default function DrilldownTable({ country }) {
                   </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Total Views: </span>
+                  <span className="text-muted-foreground">{t.statistics.totalViews}: </span>
                   <span className="font-bold">
                     {filteredAndSortedArtists.reduce((sum, a) => sum + a.views, 0)}
                   </span>

@@ -21,13 +21,41 @@ import uuid
 import copy
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from sqlalchemy import Column, String, Integer, Boolean, Text, JSON, DateTime, ForeignKey, Table, func, and_, or_
+from sqlalchemy import Column, String, Integer, Boolean, Text, JSON, DateTime, ForeignKey, Table, func, and_, or_, cast
 from sqlalchemy.orm import Session, relationship
 from sqlalchemy.exc import OperationalError, ProgrammingError, DatabaseError
 
 from database import engine, SessionLocal, Base, get_db, init_db, User, Post, Like, Comment, Message, Project, VisitorView, StatisticsCache, News
 from auth_utils import security, active_tokens, ROLES, hash_password, generate_token, sanitize_user, get_current_user, get_optional_user, require_paid_partner
 from statistics_routes import stats_router
+from premium_statistics import premium_stats_router
+
+
+def has_project_collaborators(value: Any) -> bool:
+    """Return True when a project has at least one collaborator entry."""
+    if value is None:
+        return False
+
+    collaborators = getattr(value, "collaborators", value)
+    if collaborators is None:
+        return False
+
+    if isinstance(collaborators, str):
+        try:
+            collaborators = json.loads(collaborators)
+        except (TypeError, ValueError):
+            return bool(collaborators)
+
+    if isinstance(collaborators, (list, tuple, set)):
+        return len(collaborators) > 0
+
+    return bool(collaborators)
+
+
+def count_projects_with_collaborators(projects: List[Any]) -> int:
+    """Count projects whose collaborator list contains at least one item."""
+    return sum(1 for project in projects if has_project_collaborators(project))
+
 
 def validate_image_file(file: UploadFile):
     """
@@ -138,6 +166,7 @@ async def readiness_check(db: Session = Depends(get_db)):
         }
 
 app.include_router(stats_router)
+app.include_router(premium_stats_router)
 api_router = APIRouter(prefix="/api")
 
 # ── Startup Event: Initialize Database ──
@@ -246,6 +275,7 @@ AFRICAN_COUNTRIES = [
     {"name": "Egypt", "name_fr": "Égypte", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
     {"name": "Libya", "name_fr": "Libye", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
     {"name": "Morocco", "name_fr": "Maroc", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
+    {"name": "Mauritania", "name_fr": "Mauritanie", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
     {"name": "Tunisia", "name_fr": "Tunisie", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
     {"name": "Western Sahara", "name_fr": "Sahara Occidental", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
     {"name": "Sudan", "name_fr": "Soudan", "subregion": "North Africa", "subregion_fr": "Afrique du Nord"},
@@ -259,7 +289,6 @@ AFRICAN_COUNTRIES = [
     {"name": "Guinea-Bissau", "name_fr": "Guinée-Bissau", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
     {"name": "Liberia", "name_fr": "Libéria", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
     {"name": "Mali", "name_fr": "Mali", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
-    {"name": "Mauritania", "name_fr": "Mauritanie", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
     {"name": "Niger", "name_fr": "Niger", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
     {"name": "Nigeria", "name_fr": "Nigéria", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
     {"name": "Senegal", "name_fr": "Sénégal", "subregion": "West Africa", "subregion_fr": "Afrique de l'Ouest"},
@@ -1021,9 +1050,13 @@ async def get_artists(
     gender: Optional[str] = None,
     limit: int = 50,
     skip: int = 0,
+    current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     query = db.query(User).filter(User.role.in_(["personne_physique", "personne_morale"]))
+    # Only filter out media if user is a visitor
+    if current_user and current_user.role == "visitor":
+        query = query.filter((User.profile_tag != "media") | (User.profile_tag.is_(None)))
 
     if search:
         s = f"%{search}%"
@@ -1052,8 +1085,19 @@ async def get_artists(
     return {"artists": artists, "total": total}
 
 @api_router.get("/artists/featured")
-async def get_featured_artists(limit: int = 6, db: Session = Depends(get_db)):
-    objs = db.query(User).filter(User.role.in_(["personne_physique", "personne_morale"]), User.is_featured == True).limit(limit).all()
+async def get_featured_artists(
+    limit: int = 6, 
+    current_user: Optional[User] = Depends(get_optional_user), 
+    db: Session = Depends(get_db)
+):
+    query = db.query(User).filter(
+        User.role.in_(["personne_physique", "personne_morale"]), 
+        User.is_featured == True
+    )
+    # Only filter out media if user is a visitor
+    if current_user and current_user.role == "visitor":
+        query = query.filter((User.profile_tag != "media") | (User.profile_tag.is_(None)))
+    objs = query.limit(limit).all()
     results = []
     for a in objs:
         d = sanitize_user({c.name: getattr(a, c.name) for c in a.__table__.columns})
@@ -1068,8 +1112,19 @@ async def get_featured_artists(limit: int = 6, db: Session = Depends(get_db)):
     return results
 
 @api_router.get("/artists/{artist_id}")
-async def get_artist(artist_id: str, db: Session = Depends(get_db)):
-    a = db.query(User).filter(User.id == artist_id, User.role.in_(["personne_physique", "personne_morale"])).first()
+async def get_artist(
+    artist_id: str, 
+    current_user: Optional[User] = Depends(get_optional_user), 
+    db: Session = Depends(get_db)
+):
+    query = db.query(User).filter(
+        User.id == artist_id, 
+        User.role.in_(["personne_physique", "personne_morale"])
+    )
+    # Only filter out media if user is a visitor
+    if current_user and current_user.role == "visitor":
+        query = query.filter((User.profile_tag != "media") | (User.profile_tag.is_(None)))
+    a = query.first()
     if not a:
         raise HTTPException(status_code=404, detail="Artist not found")
     return await get_user_profile_data(a, db)
@@ -1666,7 +1721,10 @@ def get_subregion_from_country(country: str) -> str:
 
 def get_artists_by_engagement(db: Session, country: str = None, city: str = None, limit: int = 20) -> List[Dict]:
     """Get top artists by engagement (views + messages + likes + comments)"""
-    query = db.query(User).filter(User.role.in_(["personne_physique", "personne_morale"]))
+    query = db.query(User).filter(
+        User.role.in_(["personne_physique", "personne_morale"]), 
+        (User.profile_tag != "media") | (User.profile_tag.is_(None))
+    )
     
     if country:
         query = query.filter(User.country == country)
@@ -2368,7 +2426,7 @@ async def get_statistics_overview(user = Depends(get_optional_user), db: Session
     total_comments = db.query(Comment).filter(Comment.is_active == True).count()
     
     # Collaborations
-    total_collaborations = db.query(Project).filter(Project.collaborators != "[]").count()
+    total_collaborations = db.query(Project).filter(func.coalesce(cast(Project.collaborators, String), "[]") != "[]").count()
     total_intra_african = db.query(Project).filter(Project.collaboration_type == "intra_african").count()
     
     sectors = db.query(User.sector, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.sector.isnot(None)).group_by(User.sector).all()
@@ -2417,7 +2475,7 @@ async def get_detailed_statistics(
     gender_percentages = {g: round((c / total_artists) * 100, 1) for g, c in gender_data.items()}
     
     # === COLLABORATIONS ===
-    total_collaborations = project_query.filter(Project.collaborators != "[]").count()
+    total_collaborations = project_query.filter(func.coalesce(cast(Project.collaborators, String), "[]") != "[]").count()
     
     # === BY COUNTRY & DOMAIN ===
     countries_query = db.query(User.country, func.count(User.id)).filter(User.role.in_(["personne_physique", "personne_morale"]), User.country.isnot(None))

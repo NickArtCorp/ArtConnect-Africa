@@ -6,7 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell
 } from 'recharts';
 import { Loader2, AlertCircle } from 'lucide-react';
-import { useStatisticsStore } from '@/store';
+import { useStatisticsStore, useLanguageStore } from '@/store';
 
 const COLORS = {
   primary: '#7C3AED',
@@ -31,6 +31,7 @@ const COLOR_ARRAY = [
  */
 export default function SectorComparison({ country }) {
   const { sectorStats, isLoadingV2, errorV2, fetchSectorStats } = useStatisticsStore();
+  const { t } = useLanguageStore();
   const [selectedSector, setSelectedSector] = useState(null);
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function SectorComparison({ country }) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-muted-foreground text-center">Select a country to view sector data</p>
+          <p className="text-muted-foreground text-center">{t.statistics.selectCountryForSectorData}</p>
         </CardContent>
       </Card>
     );
@@ -54,7 +55,7 @@ export default function SectorComparison({ country }) {
       <Card>
         <CardContent className="pt-6 flex items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading sector data...</span>
+          <span>{t.statistics.loadingSectorData}</span>
         </CardContent>
       </Card>
     );
@@ -65,7 +66,7 @@ export default function SectorComparison({ country }) {
       <Card className="border-red-200">
         <CardContent className="pt-6 flex items-center gap-2">
           <AlertCircle className="h-4 w-4 text-red-500" />
-          <span className="text-red-500">Error: {errorV2}</span>
+          <span className="text-red-500">{t.statistics.error}: {errorV2}</span>
         </CardContent>
       </Card>
     );
@@ -93,12 +94,12 @@ export default function SectorComparison({ country }) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Sectors Distribution</CardTitle>
+          <CardTitle>{t.statistics.sectorsDistribution}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Bar Chart */}
           <div>
-            <h4 className="text-sm font-medium mb-3">Artists by Sector</h4>
+            <h4 className="text-sm font-medium mb-3">{t.statistics.artistsBySector}</h4>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>
@@ -106,7 +107,7 @@ export default function SectorComparison({ country }) {
                   <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="artists" name="Artists">
+                  <Bar dataKey="artists" name={t.statistics.artists}>
                     {chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
@@ -114,21 +115,21 @@ export default function SectorComparison({ country }) {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-center text-muted-foreground">No data available</p>
+              <p className="text-center text-muted-foreground">{t.statistics.noData}</p>
             )}
           </div>
 
           {/* Radar Chart for Top 5 Sectors */}
           {radarData.length > 0 && (
             <div>
-              <h4 className="text-sm font-medium mb-3">Top 5 Sectors Comparison</h4>
+              <h4 className="text-sm font-medium mb-3">{t.statistics.top5SectorsComparison}</h4>
               <ResponsiveContainer width="100%" height={300}>
                 <RadarChart data={radarData}>
                   <PolarGrid stroke="#333" />
                   <PolarAngleAxis dataKey="subject" />
                   <PolarRadiusAxis angle={90} domain={[0, 'auto']} />
                   <Radar
-                    name="Artists"
+                    name={t.statistics.artists}
                     dataKey="value"
                     stroke={COLORS.primary}
                     fill={COLORS.primary}
@@ -142,7 +143,7 @@ export default function SectorComparison({ country }) {
 
           {/* Detailed Table */}
           <div>
-            <h4 className="text-sm font-medium mb-3">Detailed Breakdown</h4>
+            <h4 className="text-sm font-medium mb-3">{t.statistics.detailedBreakdown}</h4>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {sectors.length > 0 ? (
                 sectors.map((sector, idx) => {
@@ -175,14 +176,14 @@ export default function SectorComparison({ country }) {
                   );
                 })
               ) : (
-                <p className="text-center text-muted-foreground text-sm">No sector data</p>
+                <p className="text-center text-muted-foreground text-sm">{t.statistics.noSectorDataLabel}</p>
               )}
             </div>
           </div>
 
           {/* Summary */}
           <div className="pt-4 border-t flex justify-between items-center">
-            <span className="font-medium">Total Artists in Sectors:</span>
+            <span className="font-medium">{t.statistics.totalArtistsInSectors}</span>
             <Badge variant="default" className="text-base">{totalArtists}</Badge>
           </div>
         </CardContent>

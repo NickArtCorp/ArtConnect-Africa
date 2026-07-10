@@ -6,7 +6,11 @@ import pytest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 import hashlib
+import sys
 import uuid
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # Mock the database session for testing
 @pytest.fixture
@@ -145,6 +149,23 @@ class TestStatisticsCalculations:
         
         assert local_count == 2
         assert intra_african_count == 2
+
+    def test_count_projects_with_collaborators_ignores_empty_values(self):
+        """Projects with empty or missing collaborator data should not count as collaborations"""
+        from server import count_projects_with_collaborators
+
+        class DummyProject:
+            def __init__(self, collaborators):
+                self.collaborators = collaborators
+
+        projects = [
+            DummyProject([]),
+            DummyProject(None),
+            DummyProject("[]"),
+            DummyProject([{"id": "user-1"}]),
+        ]
+
+        assert count_projects_with_collaborators(projects) == 1
 
 
 class TestSubregionMapping:

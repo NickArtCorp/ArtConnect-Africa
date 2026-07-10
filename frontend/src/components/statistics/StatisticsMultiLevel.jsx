@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { BarChart3, Globe } from 'lucide-react';
-import { useStatisticsStore } from '@/store';
+import { useStatisticsStore, useLanguageStore } from '@/store';
 
 // Import all sub-components
 import CountrySelector from './CountrySelector';
@@ -20,6 +20,7 @@ import StatisticsExplorer from './StatisticsExplorer';
  */
 export default function StatisticsMultiLevel() {
   const { countryStats } = useStatisticsStore();
+  const { t } = useLanguageStore();
   const [selectedCountry, setSelectedCountry] = useState('');
 
   const handleCountryChange = (country) => {
@@ -31,7 +32,7 @@ export default function StatisticsMultiLevel() {
       <div className="flex items-center gap-3">
         <BarChart3 className="h-7 w-7 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold">Geographic Insights</h1>
+          <h1 className="text-2xl font-bold">{t.statistics.geographicInsights}</h1>
           <p className="text-sm text-muted-foreground">
             Simple, drill-down statistics (global → country → city → métier → domaine).
           </p>
@@ -40,8 +41,8 @@ export default function StatisticsMultiLevel() {
 
       <Tabs defaultValue="explorer" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="explorer">Explorer</TabsTrigger>
-          <TabsTrigger value="country">Country dashboard</TabsTrigger>
+          <TabsTrigger value="explorer">{t.statistics.explorer}</TabsTrigger>
+          <TabsTrigger value="country">{t.statistics.countryDashboard}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="explorer" className="space-y-4">
@@ -58,7 +59,7 @@ export default function StatisticsMultiLevel() {
                 <CardContent className="pt-10 pb-10 text-center">
                   <Globe className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
                   <p className="text-sm text-muted-foreground">
-                    Choisis un pays pour voir le dashboard détaillé.
+                    {t.statistics.chooseCountryForDashboard}
                   </p>
                 </CardContent>
               </Card>
@@ -68,11 +69,11 @@ export default function StatisticsMultiLevel() {
           {selectedCountry && (
             <Tabs defaultValue="overview" className="w-full">
               <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                <TabsTrigger value="sectors">Sectors</TabsTrigger>
-                <TabsTrigger value="cities">Cities</TabsTrigger>
-                <TabsTrigger value="artists">Artists</TabsTrigger>
+                <TabsTrigger value="overview">{t.statistics.overview}</TabsTrigger>
+                <TabsTrigger value="timeline">{t.statistics.timeline}</TabsTrigger>
+                <TabsTrigger value="sectors">{t.statistics.sectorsTab}</TabsTrigger>
+                <TabsTrigger value="cities">{t.statistics.citiesTab}</TabsTrigger>
+                <TabsTrigger value="artists">{t.statistics.artistsTab}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-4">

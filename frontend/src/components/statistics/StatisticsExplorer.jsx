@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { useAuthStore } from '@/store';
+import { useAuthStore, useLanguageStore } from '@/store';
 import { Filter, Users, MapPin, Briefcase, Layers, VenusAndMars, RefreshCw } from 'lucide-react';
 
 const LazyResponsiveContainer = React.lazy(() =>
@@ -45,6 +45,7 @@ function kpiCard({ title, value, icon: Icon }) {
 
 export default function StatisticsExplorer() {
   const { token, user } = useAuthStore();
+  const { t } = useLanguageStore();
 
   const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -70,7 +71,6 @@ export default function StatisticsExplorer() {
   );
 
   const effectiveCountry = useMemo(() => {
-    // UX: artists should default to their country (security is also enforced server-side)
     if (country !== 'all') return country;
     if (user?.role && user.role !== 'admin' && user.role !== 'institution' && user?.country) return user.country;
     return 'all';
@@ -135,13 +135,12 @@ export default function StatisticsExplorer() {
       });
       setData(res.data);
     } catch (e) {
-      setError(e?.response?.data?.detail || e.message || 'Failed to load statistics');
+      setError(e?.response?.data?.detail || e.message || t.statistics.failedToLoad);
     } finally {
       setLoading(false);
     }
   };
 
-  // Initial load
   useEffect(() => {
     if (!token) return;
     (async () => {
@@ -154,11 +153,9 @@ export default function StatisticsExplorer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // Keep dependent option lists up to date
   useEffect(() => {
     if (!token) return;
     fetchCities(effectiveCountry).catch(() => {});
-    // Reset city if it no longer applies
     setCity('all');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveCountry, token]);
@@ -175,7 +172,6 @@ export default function StatisticsExplorer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveCountry, city, sector, profileTag, token]);
 
-  // Fetch explorer on any filter change (simple + predictable UX)
   useEffect(() => {
     if (!token) return;
     fetchExplorer();
@@ -185,33 +181,33 @@ export default function StatisticsExplorer() {
   const genderChart = useMemo(() => {
     const g = data?.by_gender || {};
     return [
-      { name: 'Femmes', value: g.Female || g.female || 0 },
-      { name: 'Hommes', value: g.Male || g.male || 0 },
+      { name: t.statistics.women, value: g.Female || g.female || 0 },
+      { name: t.statistics.men, value: g.Male || g.male || 0 },
     ];
-  }, [data]);
+  }, [data, t]);
 
   const roleChart = useMemo(() => {
     const r = data?.by_profile_tag || {};
     const rows = [
-      { name: 'Artists', value: r.artist || 0 },
-      { name: 'Professionals', value: r.professional || 0 },
-      { name: 'Media', value: r.media || 0 },
+      { name: t.statistics.artists, value: r.artist || 0 },
+      { name: t.statistics.professionals, value: r.professional || 0 },
+      { name: t.statistics.media, value: r.media || 0 },
     ];
     return rows.filter((x) => x.value > 0);
-  }, [data]);
+  }, [data, t]);
 
   const scopeBadges = useMemo(() => {
     const s = data?.scope || {};
     const items = [
-      ['Pays', s.country],
-      ['Ville', s.city],
-      ['Métier', s.sector],
-      ['Domaine', s.domain],
-      ['Genre', s.gender],
-      ['Type', s.profile_tag],
+      [t.statistics.country, s.country],
+      [t.statistics.cities, s.city],
+      [t.auth.sector, s.sector],
+      [t.statistics.domain, s.domain],
+      [t.statistics.gender, s.gender],
+      [t.auth.profileTag, s.profile_tag],
     ].filter(([, v]) => !!v);
     return items;
-  }, [data]);
+  }, [data, t]);
 
   return (
     <div className="space-y-6">
@@ -219,7 +215,7 @@ export default function StatisticsExplorer() {
         <div>
           <div className="flex items-center gap-2">
             <Filter className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-semibold">Statistics Explorer</h2>
+            <h2 className="text-xl font-semibold">{t.statistics.explorer}</h2>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             Filtre au détail près (pays → ville → métier → domaine) et lisibilité d’abord.
@@ -227,42 +223,41 @@ export default function StatisticsExplorer() {
         </div>
         <Button variant="outline" className="gap-2" onClick={fetchExplorer} disabled={loading}>
           <RefreshCw className="h-4 w-4" />
-          Refresh
+          {t.statistics.refresh}
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Filters */}
         <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle className="text-base">Filtres</CardTitle>
+            <CardTitle className="text-base">{t.statistics.filters}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Type de compte</label>
+              <label className="text-sm font-medium">{t.statistics.profileType}</label>
               <Select value={profileTag} onValueChange={setProfileTag}>
                 <SelectTrigger className="w-full mt-2">
-                  <SelectValue placeholder="Tous" />
+                  <SelectValue placeholder={t.statistics.all} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
-                  <SelectItem value="artist">Artistes</SelectItem>
-                  <SelectItem value="professional">Professionnels</SelectItem>
-                  <SelectItem value="media">Médias</SelectItem>
+                  <SelectItem value="all">{t.statistics.all}</SelectItem>
+                  <SelectItem value="artist">{t.statistics.artists}</SelectItem>
+                  <SelectItem value="professional">{t.statistics.professionals}</SelectItem>
+                  <SelectItem value="media">{t.statistics.media}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <label className="text-sm font-medium">Genre</label>
+              <label className="text-sm font-medium">{t.statistics.gender}</label>
               <Select value={gender} onValueChange={setGender}>
                 <SelectTrigger className="w-full mt-2">
-                  <SelectValue placeholder="Tous" />
+                  <SelectValue placeholder={t.statistics.all} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
-                  <SelectItem value="Female">Femmes</SelectItem>
-                  <SelectItem value="Male">Hommes</SelectItem>
+                  <SelectItem value="all">{t.statistics.all}</SelectItem>
+                  <SelectItem value="Female">{t.statistics.women}</SelectItem>
+                  <SelectItem value="Male">{t.statistics.men}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -270,13 +265,13 @@ export default function StatisticsExplorer() {
             <Separator />
 
             <div>
-              <label className="text-sm font-medium">Pays</label>
+              <label className="text-sm font-medium">{t.statistics.country}</label>
               <Select value={country} onValueChange={setCountry}>
                 <SelectTrigger className="w-full mt-2">
-                  <SelectValue placeholder="Tous les pays" />
+                  <SelectValue placeholder={t.statistics.all} />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="all">{t.statistics.all}</SelectItem>
                   {countries.map((c) => (
                     <SelectItem key={c.name} value={c.name}>
                       {c.name} ({c.artist_count})
@@ -292,13 +287,13 @@ export default function StatisticsExplorer() {
             </div>
 
             <div>
-              <label className="text-sm font-medium">Ville</label>
+              <label className="text-sm font-medium">{t.statistics.cities}</label>
               <Select value={city} onValueChange={setCity} disabled={effectiveCountry === 'all'}>
                 <SelectTrigger className="w-full mt-2">
-                  <SelectValue placeholder={effectiveCountry === 'all' ? 'Choisir un pays d’abord' : 'Toutes les villes'} />
+                  <SelectValue placeholder={effectiveCountry === 'all' ? 'Choisir un pays d’abord' : t.statistics.all} />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  <SelectItem value="all">Toutes</SelectItem>
+                  <SelectItem value="all">{t.statistics.all}</SelectItem>
                   {cities.map((c) => (
                     <SelectItem key={c.name} value={c.name}>
                       {c.name} ({c.users_count})
@@ -309,13 +304,13 @@ export default function StatisticsExplorer() {
             </div>
 
             <div>
-              <label className="text-sm font-medium">Métier (Secteur)</label>
+              <label className="text-sm font-medium">{t.auth.sector}</label>
               <Select value={sector} onValueChange={setSector}>
                 <SelectTrigger className="w-full mt-2">
-                  <SelectValue placeholder="Tous les métiers" />
+                  <SelectValue placeholder={t.statistics.all} />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="all">{t.statistics.all}</SelectItem>
                   {sectors.map((s) => (
                     <SelectItem key={s.name} value={s.name}>
                       {s.name} ({s.users_count})
@@ -326,13 +321,13 @@ export default function StatisticsExplorer() {
             </div>
 
             <div>
-              <label className="text-sm font-medium">Domaine</label>
+              <label className="text-sm font-medium">{t.statistics.domain}</label>
               <Select value={domain} onValueChange={setDomain}>
                 <SelectTrigger className="w-full mt-2">
-                  <SelectValue placeholder="Tous les domaines" />
+                  <SelectValue placeholder={t.statistics.all} />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="all">{t.statistics.all}</SelectItem>
                   {domains.map((d) => (
                     <SelectItem key={d.name} value={d.name}>
                       {d.name} ({d.users_count})
@@ -344,12 +339,11 @@ export default function StatisticsExplorer() {
           </CardContent>
         </Card>
 
-        {/* Results */}
         <div className="lg:col-span-8 space-y-6">
           {error && (
             <Card className="border-red-200">
               <CardContent className="pt-6">
-                <p className="text-sm text-red-600">Error: {error}</p>
+                <p className="text-sm text-red-600">{t.statistics.error}: {error}</p>
               </CardContent>
             </Card>
           )}
@@ -357,13 +351,13 @@ export default function StatisticsExplorer() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-base">Scope</CardTitle>
-                {data?.cached ? <Badge variant="outline">Cached (24h)</Badge> : null}
+                <CardTitle className="text-base">{t.statistics.scope}</CardTitle>
+                {data?.cached ? <Badge variant="outline">{t.statistics.cached24h}</Badge> : null}
               </div>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {scopeBadges.length === 0 ? (
-                <span className="text-sm text-muted-foreground">Global (toute la plateforme)</span>
+                <span className="text-sm text-muted-foreground">{t.statistics.global}</span>
               ) : (
                 scopeBadges.map(([k, v]) => (
                   <Badge key={`${k}-${v}`} variant="secondary">
@@ -375,10 +369,10 @@ export default function StatisticsExplorer() {
           </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {kpiCard({ title: 'Utilisateurs', value: loading ? '…' : data?.kpis?.total_users, icon: Users })}
-            {kpiCard({ title: 'Pays', value: loading ? '…' : data?.kpis?.countries_count, icon: MapPin })}
-            {kpiCard({ title: 'Villes', value: loading ? '…' : data?.kpis?.cities_count, icon: MapPin })}
-            {kpiCard({ title: 'Métiers', value: loading ? '…' : data?.kpis?.sectors_count, icon: Briefcase })}
+            {kpiCard({ title: t.statistics.users, value: loading ? '…' : data?.kpis?.total_users, icon: Users })}
+            {kpiCard({ title: t.statistics.country, value: loading ? '…' : data?.kpis?.countries_count, icon: MapPin })}
+            {kpiCard({ title: t.statistics.cities, value: loading ? '…' : data?.kpis?.cities_count, icon: MapPin })}
+            {kpiCard({ title: t.statistics.sectors, value: loading ? '…' : data?.kpis?.sectors_count, icon: Briefcase })}
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -386,7 +380,7 @@ export default function StatisticsExplorer() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <VenusAndMars className="h-4 w-4" />
-                  Hommes / Femmes
+                  {t.statistics.menWomen}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -415,7 +409,7 @@ export default function StatisticsExplorer() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Layers className="h-4 w-4" />
-                  Artistes / Pros / Médias
+                  {t.statistics.artistsProsMedia}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -448,7 +442,7 @@ export default function StatisticsExplorer() {
               <Card key={key}>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    Top {key === 'cities' ? 'Villes' : key === 'sectors' ? 'Métiers' : 'Domaines'}
+                    {key === 'cities' ? t.statistics.topCities : key === 'sectors' ? t.statistics.topSectors : t.statistics.topDomains}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -477,4 +471,3 @@ export default function StatisticsExplorer() {
     </div>
   );
 }
-

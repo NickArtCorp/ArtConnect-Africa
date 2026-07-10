@@ -6,7 +6,7 @@ import {
   Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { useStatisticsStore } from '@/store';
+import { useStatisticsStore, useLanguageStore } from '@/store';
 
 const COLORS = {
   new_artists: '#7C3AED',
@@ -22,6 +22,7 @@ const COLORS = {
  */
 export default function TimelineChart({ country }) {
   const { timelineData, isLoadingV2, errorV2, fetchTimeline } = useStatisticsStore();
+  const { t } = useLanguageStore();
   const [months, setMonths] = useState(12);
 
   useEffect(() => {
@@ -34,7 +35,7 @@ export default function TimelineChart({ country }) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-muted-foreground text-center">Select a country to view timeline</p>
+          <p className="text-muted-foreground text-center">{t.statistics.selectCountryForTimeline}</p>
         </CardContent>
       </Card>
     );
@@ -45,7 +46,7 @@ export default function TimelineChart({ country }) {
       <Card>
         <CardContent className="pt-6 flex items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading timeline data...</span>
+          <span>{t.statistics.loadingTimelineData}</span>
         </CardContent>
       </Card>
     );
@@ -56,7 +57,7 @@ export default function TimelineChart({ country }) {
       <Card className="border-red-200">
         <CardContent className="pt-6 flex items-center gap-2">
           <AlertCircle className="h-4 w-4 text-red-500" />
-          <span className="text-red-500">Error: {errorV2}</span>
+          <span className="text-red-500">{t.statistics.error}: {errorV2}</span>
         </CardContent>
       </Card>
     );
@@ -66,7 +67,7 @@ export default function TimelineChart({ country }) {
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>Monthly Activity Timeline</CardTitle>
+          <CardTitle>{t.statistics.monthlyActivityTimeline}</CardTitle>
           <div className="flex gap-2">
             {[3, 6, 12, 24].map((m) => (
               <Badge
@@ -83,7 +84,7 @@ export default function TimelineChart({ country }) {
         <CardContent className="space-y-6">
           {/* New Artists & Posts */}
           <div>
-            <h4 className="text-sm font-medium mb-2">New Artists & Posts</h4>
+            <h4 className="text-sm font-medium mb-2">{t.statistics.newArtistsAndPosts}</h4>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={timelineData?.timeline || []}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -95,14 +96,14 @@ export default function TimelineChart({ country }) {
                   type="monotone"
                   dataKey="new_artists"
                   stroke={COLORS.new_artists}
-                  name="New Artists"
+                  name={t.statistics.newArtists}
                   strokeWidth={2}
                 />
                 <Line
                   type="monotone"
                   dataKey="posts"
                   stroke={COLORS.posts}
-                  name="Posts"
+                  name={t.statistics.posts}
                   strokeWidth={2}
                 />
               </LineChart>
@@ -111,7 +112,7 @@ export default function TimelineChart({ country }) {
 
           {/* Collaborations & Engagement */}
           <div>
-            <h4 className="text-sm font-medium mb-2">Collaborations & Engagement</h4>
+            <h4 className="text-sm font-medium mb-2">{t.statistics.collaborationsAndEngagement}</h4>
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={timelineData?.timeline || []}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -125,7 +126,7 @@ export default function TimelineChart({ country }) {
                   stackId="1"
                   stroke={COLORS.collaborations}
                   fill={COLORS.collaborations}
-                  name="Collaborations"
+                  name={t.statistics.collaborations}
                   fillOpacity={0.6}
                 />
                 <Area
@@ -134,7 +135,7 @@ export default function TimelineChart({ country }) {
                   stackId="1"
                   stroke={COLORS.engagement}
                   fill={COLORS.engagement}
-                  name="Engagement Views"
+                  name={t.statistics.engagementViews}
                   fillOpacity={0.6}
                 />
               </AreaChart>
@@ -144,25 +145,25 @@ export default function TimelineChart({ country }) {
           {/* Summary Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="border rounded p-3">
-              <p className="text-xs text-muted-foreground">Total New Artists</p>
+              <p className="text-xs text-muted-foreground">{t.statistics.totalNewArtists}</p>
               <p className="text-lg font-bold">
                 {(timelineData?.timeline || []).reduce((sum, t) => sum + (t.new_artists || 0), 0)}
               </p>
             </div>
             <div className="border rounded p-3">
-              <p className="text-xs text-muted-foreground">Total Posts</p>
+              <p className="text-xs text-muted-foreground">{t.statistics.totalPosts}</p>
               <p className="text-lg font-bold">
                 {(timelineData?.timeline || []).reduce((sum, t) => sum + (t.posts || 0), 0)}
               </p>
             </div>
             <div className="border rounded p-3">
-              <p className="text-xs text-muted-foreground">Total Collaborations</p>
+              <p className="text-xs text-muted-foreground">{t.statistics.totalCollaborations}</p>
               <p className="text-lg font-bold">
                 {(timelineData?.timeline || []).reduce((sum, t) => sum + (t.collaborations || 0), 0)}
               </p>
             </div>
             <div className="border rounded p-3">
-              <p className="text-xs text-muted-foreground">Total Engagement</p>
+              <p className="text-xs text-muted-foreground">{t.statistics.totalEngagement}</p>
               <p className="text-lg font-bold">
                 {(timelineData?.timeline || []).reduce((sum, t) => sum + (t.engagement || 0), 0)}
               </p>

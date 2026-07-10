@@ -9,7 +9,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, LineChart, Line, Area, AreaChart
 } from 'recharts';
-import { useStatisticsStore } from '@/store';
+import { useStatisticsStore, useLanguageStore } from '@/store';
 
 const COLORS = {
   female: '#EC4899',
@@ -19,13 +19,9 @@ const COLORS = {
   orange: '#F59E0B'
 };
 
-/**
- * CountryStatsOverview Component
- * Displays comprehensive statistics for a selected country
- * Includes: overview cards, gender distribution, city breakdown, sector distribution
- */
 export default function CountryStatsOverview({ country }) {
   const { countryStats, isLoadingV2, errorV2, fetchCountryStats } = useStatisticsStore();
+  const { t } = useLanguageStore();
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
@@ -38,7 +34,7 @@ export default function CountryStatsOverview({ country }) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-muted-foreground text-center">Select a country to view statistics</p>
+          <p className="text-muted-foreground text-center">{t.statistics.selectCountry}</p>
         </CardContent>
       </Card>
     );
@@ -49,7 +45,7 @@ export default function CountryStatsOverview({ country }) {
       <Card>
         <CardContent className="pt-6 flex items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading statistics...</span>
+          <span>{t.statistics.loadingV2}</span>
         </CardContent>
       </Card>
     );
@@ -59,7 +55,7 @@ export default function CountryStatsOverview({ country }) {
     return (
       <Card className="border-red-200">
         <CardContent className="pt-6">
-          <p className="text-red-500">Error: {errorV2}</p>
+          <p className="text-red-500">{t.statistics.error}: {errorV2}</p>
         </CardContent>
       </Card>
     );
@@ -69,9 +65,8 @@ export default function CountryStatsOverview({ country }) {
 
   const { overview, by_city, by_sector, by_domain, top_artists, subregion } = countryStats;
 
-  // Prepare data for charts
   const genderData = Object.entries(overview.by_gender || {}).map(([key, value]) => ({
-    name: key === 'Male' ? 'Hommes' : key === 'Female' ? 'Femmes' : key,
+    name: key === 'Male' ? t.statistics.men : key === 'Female' ? t.statistics.women : key,
     value,
     fill: key === 'Male' ? COLORS.male : COLORS.female
   }));
@@ -88,29 +83,27 @@ export default function CountryStatsOverview({ country }) {
 
   return (
     <div className="space-y-6">
-      {/* Header with country info */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>{country} Dashboard</CardTitle>
+              <CardTitle>{country} {t.statistics.dashboard}</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 <MapPin className="inline h-3 w-3 mr-1" />
                 {subregion}
               </p>
             </div>
             {countryStats?.cached && (
-              <Badge variant="outline">Cached Data</Badge>
+              <Badge variant="outline">{t.statistics.cachedData}</Badge>
             )}
           </div>
         </CardHeader>
       </Card>
 
-      {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Artists</CardTitle>
+            <CardTitle className="text-sm font-medium">{t.statistics.totalArtists}</CardTitle>
             <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
@@ -120,7 +113,7 @@ export default function CountryStatsOverview({ country }) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
+            <CardTitle className="text-sm font-medium">{t.statistics.totalPosts}</CardTitle>
             <TrendingUp className="h-4 w-4 text-orange" />
           </CardHeader>
           <CardContent>
@@ -130,7 +123,7 @@ export default function CountryStatsOverview({ country }) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Collaborations</CardTitle>
+            <CardTitle className="text-sm font-medium">{t.statistics.totalCollaborations}</CardTitle>
             <Zap className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -140,7 +133,7 @@ export default function CountryStatsOverview({ country }) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Engagement</CardTitle>
+            <CardTitle className="text-sm font-medium">{t.statistics.totalEngagement}</CardTitle>
             <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -149,20 +142,18 @@ export default function CountryStatsOverview({ country }) {
         </Card>
       </div>
 
-      {/* Tabs for detailed views */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="cities">Cities</TabsTrigger>
-          <TabsTrigger value="sectors">Sectors</TabsTrigger>
-          <TabsTrigger value="topArtists">Top Artists</TabsTrigger>
+          <TabsTrigger value="overview">{t.statistics.overview}</TabsTrigger>
+          <TabsTrigger value="cities">{t.statistics.citiesTab}</TabsTrigger>
+          <TabsTrigger value="sectors">{t.statistics.sectorsTab}</TabsTrigger>
+          <TabsTrigger value="topArtists">{t.statistics.topArtistsTab}</TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Gender Distribution</CardTitle>
+              <CardTitle>{t.statistics.genderDistribution}</CardTitle>
             </CardHeader>
             <CardContent>
               {genderData.length > 0 ? (
@@ -184,23 +175,23 @@ export default function CountryStatsOverview({ country }) {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-center text-muted-foreground">No data available</p>
+                <p className="text-center text-muted-foreground">{t.statistics.noData}</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Collaboration Types</CardTitle>
+              <CardTitle>{t.statistics.collaborationTypes}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span>Local Collaborations</span>
+                  <span>{t.statistics.localCollabs}</span>
                   <Badge>{overview.collaborations.local}</Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span>Intra-African Collaborations</span>
+                  <span>{t.statistics.intraAfricanCollabs}</span>
                   <Badge variant="secondary">{overview.collaborations.intra_african}</Badge>
                 </div>
               </div>
@@ -208,11 +199,10 @@ export default function CountryStatsOverview({ country }) {
           </Card>
         </TabsContent>
 
-        {/* Cities Tab */}
         <TabsContent value="cities" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Artists by City</CardTitle>
+              <CardTitle>{t.statistics.artistsByCity}</CardTitle>
             </CardHeader>
             <CardContent>
               {cityData.length > 0 ? (
@@ -222,21 +212,20 @@ export default function CountryStatsOverview({ country }) {
                     <XAxis dataKey="city" angle={-45} textAnchor="end" height={80} />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="artists" fill={COLORS.primary} name="Artists" />
+                    <Bar dataKey="artists" fill={COLORS.primary} name={t.statistics.artists} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-center text-muted-foreground">No city data available</p>
+                <p className="text-center text-muted-foreground">{t.statistics.noCityData}</p>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Sectors Tab */}
         <TabsContent value="sectors" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Artists by Sector</CardTitle>
+              <CardTitle>{t.statistics.artistsBySector}</CardTitle>
             </CardHeader>
             <CardContent>
               {sectorData.length > 0 ? (
@@ -246,21 +235,20 @@ export default function CountryStatsOverview({ country }) {
                     <XAxis type="number" />
                     <YAxis dataKey="sector" type="category" width={150} />
                     <Tooltip />
-                    <Bar dataKey="artists" fill={COLORS.primary} name="Artists" />
+                    <Bar dataKey="artists" fill={COLORS.primary} name={t.statistics.artists} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-center text-muted-foreground">No sector data available</p>
+                <p className="text-center text-muted-foreground">{t.statistics.noSectorData}</p>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Top Artists Tab */}
         <TabsContent value="topArtists" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Top 20 Artists by Engagement</CardTitle>
+              <CardTitle>{t.statistics.topArtistsByEngagement}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -277,7 +265,7 @@ export default function CountryStatsOverview({ country }) {
                             {artist.sector} · {artist.domain}
                           </p>
                         </div>
-                        <Badge>{artist.engagement_score} pts</Badge>
+                        <Badge>{artist.engagement_score} {t.statistics.pts}</Badge>
                       </div>
                       <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
                         <span>👁️ {artist.views}</span>
@@ -288,7 +276,7 @@ export default function CountryStatsOverview({ country }) {
                     </div>
                   ))
                 ) : (
-                  <p className="text-center text-muted-foreground">No artists data available</p>
+                  <p className="text-center text-muted-foreground">{t.statistics.noArtistsData}</p>
                 )}
               </div>
             </CardContent>
