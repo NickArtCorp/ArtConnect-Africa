@@ -1,0 +1,6 @@
+{
+  "name": "ArtConnect Africa",
+  "description": "A pan-African artistic ecosystem for connecting and collaborating across the continent.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

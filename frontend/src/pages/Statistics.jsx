@@ -12,22 +12,24 @@ import {
   Menu, X, Filter
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, LineChart, Line, Area, AreaChart,
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
 import StatisticsMultiLevel from '@/components/statistics/StatisticsMultiLevel';
+import CollaborationAnalysis from '@/components/statistics/CollaborationAnalysis';
 
 const COLORS = {
-  primary: '#7C3AED',
-  accent: '#06B6D4',
-  pink: '#EC4899',
-  blue: '#3B82F6',
-  purple: '#8B5CF6',
-  green: '#10B981',
-  orange: '#F59E0B',
-  amber: '#F59E0B'
+  primary: '#CC551A', // Terracotta
+  accent: '#248F4D',  // Green
+  pink: '#BE185D',
+  blue: '#0369A1',
+  purple: '#7E22CE',
+  green: '#15803D',
+  orange: '#E5A542', // Gold
+  amber: '#D97706'
 };
 
 const GENDER_COLORS = {
@@ -45,36 +47,88 @@ export default function Statistics() {
   const { overview, detailed, collaborations, fetchOverview, fetchDetailed, fetchCollaborationStats, isLoading } = useStatisticsStore();
   const { user } = useAuthStore();
   const { t } = useLanguageStore();
+  const { region, country: urlCountry } = useParams();
   const [activeSection, setActiveSection] = useState('overview');
+
+  useEffect(() => {
+    if (region) {
+      setActiveSection('geographic');
+    }
+  }, [region]);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [genderFilter, setGenderFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [domainFilter, setDomainFilter] = useState('all');
   const [sectorFilter, setSectorFilter] = useState('all');
   const [profileTagFilter, setProfileTagFilter] = useState('all');
-  const [error, setError] = useState(null);
 
   const isAdmin = user?.role === 'admin';
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setError(null);
-      try {
-        await fetchOverview();
-        await fetchDetailed(sectorFilter === 'all' ? null : sectorFilter, profileTagFilter === 'all' ? null : profileTagFilter);
-        await fetchCollaborationStats();
-      } catch (err) {
-        console.error('Statistics error:', err);
-        setError(t.statistics.failedToLoad);
-      }
+  const translateDomain = (name) => {
+    if (!name) return 'N/A';
+    const mapping = {
+      'Visual Arts': t.statistics.visualArts,
+      'Arts Visuels': t.statistics.visualArts,
+      'Music': t.statistics.music,
+      'Musique': t.statistics.music,
+      'Cinema': t.statistics.cinema,
+      'Cinéma': t.statistics.cinema,
+      'Literature': t.statistics.literature,
+      'Littérature': t.statistics.literature,
+      'Performance': t.statistics.performance,
+      'Arts du Spectacle': t.statistics.performance,
+      'Fashion': t.statistics.fashion,
+      'Mode': t.statistics.fashion,
+      'Dance': t.common.langCode === 'fr' ? 'Danse' : 'Dance',
+      'Danse': t.common.langCode === 'fr' ? 'Danse' : 'Dance',
+      'Digital Art': t.common.langCode === 'fr' ? 'Art Numérique' : 'Digital Art',
+      'Art Numérique': t.common.langCode === 'fr' ? 'Art Numérique' : 'Digital Art'
     };
-    fetchData();
+    return mapping[name] || name;
+  };
+
+  const translateCountry = (name) => {
+    const mapping = {
+      'Morocco': t.statistics.morocco,
+      'Algeria': t.statistics.algeria,
+      'Tunisia': t.statistics.tunisia,
+      'Libya': t.statistics.libya,
+      'Egypt': t.statistics.egypt,
+      'Nigeria': t.statistics.nigeria,
+      'Senegal': t.statistics.senegal,
+      "Cote d'Ivoire": t.statistics.coteDIvoire,
+      'Ghana': t.statistics.ghana,
+      'Mali': t.statistics.mali,
+      'Cameroon': t.statistics.cameroon,
+      'Gabon': t.statistics.gabon,
+      'DRC': t.statistics.drc,
+      'Congo': t.statistics.congo,
+      'Chad': t.statistics.chad,
+      'Kenya': t.statistics.kenya,
+      'Ethiopia': t.statistics.ethiopia,
+      'Uganda': t.statistics.uganda,
+      'Rwanda': t.statistics.rwanda,
+      'Tanzania': t.statistics.tanzania,
+      'South Africa': t.statistics.southAfrica,
+      'Angola': t.statistics.angola,
+      'Zimbabwe': t.statistics.zimbabwe,
+      'Namibia': t.statistics.namibia,
+      'Botswana': t.statistics.botswana
+    };
+    return mapping[name] || name;
+  };
+
+  useEffect(() => {
+    fetchOverview();
+    fetchDetailed(sectorFilter === 'all' ? null : sectorFilter, profileTagFilter === 'all' ? null : profileTagFilter);
+    fetchCollaborationStats();
   }, [fetchOverview, fetchDetailed, fetchCollaborationStats, sectorFilter, profileTagFilter]);
 
   // Sidebar sections
   const sections = [
     { id: 'overview', label: t.statistics.overview, icon: BarChart3 },
-    { id: 'geographic', label: t.statistics.geographicInsights, icon: Globe },
+    { id: 'geographic', label: t.statistics.geographic, icon: Globe },
     { id: 'collaborations', label: t.statistics.collaborations, icon: Users },
     { id: 'genderDomain', label: t.statistics.genderDomain, icon: PieChartIcon },
     { id: 'visitors', label: t.statistics.visitors, icon: Eye },
@@ -86,20 +140,30 @@ export default function Statistics() {
     const matchesGender = genderFilter === 'all' || item.gender === genderFilter;
     const matchesCountry = countryFilter === 'all' || item.country === countryFilter;
     const matchesDomain = domainFilter === 'all' || item.domain === domainFilter;
-    return matchesGender && matchesCountry && matchesDomain;
+    const matchesSector = sectorFilter === 'all' || item.sector === sectorFilter;
+    const matchesProfile = profileTagFilter === 'all' ||
+      (profileTagFilter === 'artist' && (item.artist_count || 0) > 0) ||
+      (profileTagFilter === 'professional' && (item.professional_count || 0) > 0) ||
+      (profileTagFilter === 'media' && (item.media_count || 0) > 0);
+
+    return matchesGender && matchesCountry && matchesDomain && matchesSector && matchesProfile;
   }) || [];
 
-  // Prepare chart data
-  const genderPieData = Object.entries(detailed?.by_gender || {}).map(([gender, count]) => ({
-    name: gender === 'women' ? t.statistics.women : t.statistics.men,
-    value: count,
-    color: GENDER_COLORS[gender] || COLORS.blue
-  }));
+  const filteredTotalArtists = filteredVisitorData.reduce((acc, curr) => acc + (curr.artist_count || 0), 0);
+  const filteredTotalPros = filteredVisitorData.reduce((acc, curr) => acc + (curr.professional_count || 0), 0);
+  const filteredTotalMedia = filteredVisitorData.reduce((acc, curr) => acc + (curr.media_count || 0), 0);
+  const filteredTotalViews = filteredVisitorData.reduce((acc, curr) => acc + (curr.visitor_views_count || 0), 0);
+  const filteredTotalMsgs = filteredVisitorData.reduce((acc, curr) => acc + (curr.visitor_messages_count || 0), 0);
+  const filteredTotalMembers = filteredTotalArtists + filteredTotalPros + filteredTotalMedia;
 
-  const collaborationTypeData = [
-    { name: t.statistics.local, value: collaborations?.by_type?.local || 0, color: COLORS.blue },
-    { name: t.statistics.intraAfrican, value: collaborations?.by_type?.intra_african || 0, color: COLORS.green }
-  ];
+  // Prepare chart data
+  const genderPieData = Object.entries(detailed?.by_gender || {})
+    .filter(([gender]) => ['women', 'men'].includes(gender))
+    .map(([gender, count]) => ({
+      name: gender === 'women' ? t.statistics.women : t.statistics.men,
+      value: count,
+      color: GENDER_COLORS[gender] || COLORS.blue
+    }));
 
   const statusData = [
     { name: t.projects.ongoing, value: collaborations?.by_status?.ongoing || 0, color: STATUS_COLORS.ongoing },
@@ -126,27 +190,27 @@ export default function Statistics() {
     }
   ] : [];
 
-  const topCountryPairs = collaborations?.by_country_pair?.slice(0, 10).map(pair => ({
+  const topCountryPairs = (collaborations?.by_country_pair || []).slice(0, 3).map(pair => ({
     pair: `${pair.country_a} ↔ ${pair.country_b}`,
     total: pair.total,
     women: pair.women,
     men: pair.men
-  })) || [];
+  }));
 
-  const sectorDistributionData = detailed?.by_sector || [
+  const sectorDistributionData = (detailed?.by_sector || [
     { subject: 'Visual Arts', A: 120, fullMark: 150 },
     { subject: 'Music', A: 98, fullMark: 150 },
     { subject: 'Literature', A: 86, fullMark: 150 },
-    { subject: 'Dance', A: 99, fullMark: 150 },
-    { subject: 'Digital Art', A: 85, fullMark: 150 },
-    { subject: 'Fashion', A: 65, fullMark: 150 },
-  ];
+  ]).slice(0, 3).map(item => ({
+    ...item,
+    subject: translateDomain(item.subject)
+  }));
 
   const visitorViewsData = filteredVisitorData
     .sort((a, b) => (b.visitor_views_count || 0) - (a.visitor_views_count || 0))
-    .slice(0, 10)
+    .slice(0, 3)
     .map(item => ({
-      name: `${item.country} - ${item.gender} - ${item.domain}`,
+      name: `${translateCountry(item.country)} - ${item.gender === 'women' ? t.statistics.women : t.statistics.men} - ${translateDomain(item.domain)}`,
       views: item.visitor_views_count || 0,
       messages: item.visitor_messages_count || 0
     }));
@@ -215,20 +279,7 @@ export default function Statistics() {
               <CardContent>
                 <div className="text-2xl font-bold">{overview?.total_collaborations || 0}</div>
                 <p className="text-xs text-muted-foreground">
-                  {t.statistics.totalCollaborations || 'Total'}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t.statistics.intraAfrican}</CardTitle>
-                <Globe className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{overview?.total_intra_african_projects || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {t.statistics.intraAfrican}
+                  {t.statistics.totalCollaborations}
                 </p>
               </CardContent>
             </Card>
@@ -248,171 +299,126 @@ export default function Statistics() {
           </div>
         );
 
-      case 'geographic':
+      case 'geographic': {
+        const isOrgOrPartner = user && (user.role === 'partenaire' || user.role === 'personne_morale' || user.account_type === 'partner' || (user.role === 'visitor' && user.visitor_type === 'organisation'));
+        const effectiveInitialCountry = urlCountry || (isOrgOrPartner && user?.country ? user.country : undefined);
         return (
           <div className="space-y-6">
-            <StatisticsMultiLevel />
+            <StatisticsMultiLevel initialRegion={region} initialCountry={effectiveInitialCountry} />
           </div>
         );
+      }
 
       case 'collaborations':
         return (
-          <div className="space-y-6">
-            {/* Status Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {statusData.map((status, index) => (
-                <Card key={index}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{status.name}</CardTitle>
-                    <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: status.color }} />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{status.value}</div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          <div className="space-y-12">
+            <div className="space-y-8">
+              <div className="mb-4">
+                <h3 className="text-xl font-semibold mb-2">{t.statistics.hierarchicalEcosystem}</h3>
+                <p className="text-muted-foreground">{t.statistics.hierarchicalEcosystemDesc}</p>
+              </div>
 
-            {/* Type Split */}
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.statistics.typeSplit}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={collaborationTypeData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {collaborationTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              {/* Tiered Visualization */}
+              <div className="grid grid-cols-1 gap-6">
+                {collaborations?.tiers?.map((tier, index) => (
+                  <motion.div
+                    key={tier.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card className="overflow-hidden border-l-4" style={{ borderLeftColor: COLORS.primary }}>
+                      <div className="flex flex-col md:flex-row items-center p-6 gap-6">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="text-lg font-bold">{t.common.langCode === 'fr' ? tier.label_fr : tier.label}</h4>
+                            <Badge variant="outline" className="text-xs">{tier.percentage}%</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{t.common.langCode === 'fr' ? tier.description_fr : tier.description}</p>
+                        </div>
+                        <div className="flex items-center gap-8 min-w-[200px] justify-end">
+                          <div className="text-right">
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t.statistics.collaborations}</div>
+                            <div className="text-3xl font-black">{tier.count}</div>
+                          </div>
+                          <div className="w-16 h-16 rounded-full border-4 border-primary/20 flex items-center justify-center">
+                            <div className="text-sm font-bold text-primary">{tier.percentage}%</div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Progress bar at bottom */}
+                      <div className="h-1 w-full bg-muted">
+                        <motion.div 
+                          className="h-full bg-primary" 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${tier.percentage}%` }}
+                          transition={{ duration: 1, delay: 0.5 + (index * 0.1) }}
+                        />
+                      </div>
+                    </Card>
+                    
+                    {index < (collaborations?.tiers?.length || 0) - 1 && (
+                      <div className="flex justify-center my-2">
+                        <div className="w-0.5 h-4 bg-muted-foreground/30" />
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
 
-            {/* Monthly Evolution */}
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.statistics.monthlyEvolution}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="local" stroke={COLORS.blue} name={t.statistics.local} />
-                    <Line type="monotone" dataKey="intra_african" stroke={COLORS.green} name={t.statistics.intraAfrican} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* By Gender */}
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.statistics.byGender}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={genderCollaborationData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="type" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="women" stackId="a" fill={GENDER_COLORS.women} name={t.statistics.women} />
-                    <Bar dataKey="men" stackId="a" fill={GENDER_COLORS.men} name={t.statistics.men} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Country Pairs */}
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.statistics.countryPairs}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={topCountryPairs.slice(0, 5)} layout="horizontal">
-                      <CartesianGrid strokeDasharray="3 3" />
+              {/* Summary Chart */}
+              <Card className="mt-8">
+                <CardHeader>
+                  <CardTitle>{t.statistics.collaborationVolumeByTier}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={350}>
+                    <BarChart data={collaborations?.tiers || []} layout="vertical" margin={{ left: 100 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" />
-                      <YAxis dataKey="pair" type="category" width={150} />
+                      <YAxis 
+                        dataKey={t.common.langCode === 'fr' ? 'label_fr' : 'label'} 
+                        type="category" 
+                        width={120}
+                        fontSize={12}
+                      />
                       <Tooltip />
-                      <Bar dataKey="total" fill={COLORS.primary} />
+                      <Bar 
+                        dataKey="count" 
+                        fill={COLORS.primary} 
+                        radius={[0, 4, 4, 0]}
+                        barSize={40}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
+                </CardContent>
+              </Card>
 
-                  <div className="text-sm text-muted-foreground">
-                    {t.statistics.activePair}: {topCountryPairs[0]?.pair || 'N/A'}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              {/* Legend for Africa Regions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                <Card className="bg-primary/5 border-none">
+                  <CardHeader>
+                    <CardTitle className="text-sm">{t.statistics.strategicFocus}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-xs text-muted-foreground">
+                    {t.statistics.strategicFocusDesc}
+                  </CardContent>
+                </Card>
+                <Card className="bg-accent/5 border-none">
+                  <CardHeader>
+                    <CardTitle className="text-sm">{t.statistics.regionalResilience}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-xs text-muted-foreground">
+                    {t.statistics.regionalResilienceDesc}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
 
-            {/* Country Pairs by Gender (Grouped Bar Chart) */}
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.statistics.intraAfrican} {t.statistics.collaborations} - {t.statistics.byGender}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={topCountryPairs}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="pair" angle={-45} textAnchor="end" height={80} />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="women" fill={GENDER_COLORS.women} name={t.statistics.women} radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="men" fill={GENDER_COLORS.men} name={t.statistics.men} radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Country Pairs by Gender (Table) */}
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.statistics.countryPairs} - {t.statistics.details}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-96">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t.statistics.countryPair}</TableHead>
-                        <TableHead>{t.statistics.women}</TableHead>
-                        <TableHead>{t.statistics.men}</TableHead>
-                        <TableHead>{t.statistics.totalCollaborations}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {topCountryPairs.map((pair, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">{pair.pair}</TableCell>
-                          <TableCell>{pair.women}</TableCell>
-                          <TableCell>{pair.men}</TableCell>
-                          <TableCell className="font-bold">{pair.total}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+            {/* Matrix Section */}
+            <div className="pt-8 border-t border-border/50">
+              <CollaborationAnalysis />
+            </div>
           </div>
         );
 
@@ -439,7 +445,7 @@ export default function Statistics() {
               <CardHeader>
                 <CardTitle>{t.statistics.genderSplit}</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="w-full min-w-0 overflow-hidden">
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
@@ -448,7 +454,7 @@ export default function Statistics() {
                       cy="50%"
                       outerRadius={80}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, value, percent }) => `${name} : ${value} (${(percent * 100).toFixed(0)}%)`}
                     >
                       {genderPieData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -460,46 +466,22 @@ export default function Statistics() {
               </CardContent>
             </Card>
 
-            {/* Sector Distribution */}
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.statistics.bySector}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <ResponsiveContainer width="100%" height={400}>
-                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sectorDistributionData}>
-                    <PolarGrid stroke="#333" />
-                    <PolarAngleAxis dataKey="subject" />
-                    <PolarRadiusAxis angle={30} domain={[0, 150]} />
-                    <Radar
-                      name="Artists"
-                      dataKey="A"
-                      stroke={COLORS.primary}
-                      fill={COLORS.primary}
-                      fillOpacity={0.6}
-                    />
-                    <Tooltip />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
             {/* Gender by Domain */}
             <Card>
               <CardHeader>
                 <CardTitle>{t.statistics.genderByDomain}</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="w-full min-w-0 overflow-hidden">
                 <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={detailed?.by_gender_domain || []}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
-                    <XAxis dataKey="domain" angle={-45} textAnchor="end" height={80} />
-                    <YAxis />
-                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }} />
-                    <Legend />
-                    <Bar dataKey="women" fill={GENDER_COLORS.women} name={t.statistics.women} radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="men" fill={GENDER_COLORS.men} name={t.statistics.men} radius={[4, 4, 0, 0]} />
-                  </BarChart>
+                    <BarChart data={(detailed?.by_gender_domain || []).map(d => ({ ...d, domain: translateDomain(d.domain) }))}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
+                      <XAxis dataKey="domain" angle={-45} textAnchor="end" height={80} />
+                      <YAxis />
+                      <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }} />
+                      <Legend />
+                      <Bar dataKey="women" fill={GENDER_COLORS.women} name={t.statistics.women} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="men" fill={GENDER_COLORS.men} name={t.statistics.men} radius={[4, 4, 0, 0]} />
+                    </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
@@ -537,107 +519,123 @@ export default function Statistics() {
                   <Heart className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{detailed?.most_messaged_domain || 'N/A'}</div>
+                  <div className="text-2xl font-bold">{translateDomain(detailed?.most_messaged_domain) || 'N/A'}</div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Top Domains by Visitor Messages */}
+            {/* Filterable Table "Aperçu Détaillé" */}
             <Card>
-              <CardHeader>
-                <CardTitle>{t.statistics.topDomainsByMessages}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={visitorViewsData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="views" fill={COLORS.blue} name={t.statistics.visitorViewsShort} />
-                    <Bar dataKey="messages" fill={COLORS.green} name={t.statistics.visitorMessagesShort} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              <CardHeader className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle>{t.statistics.detailedData || "Aperçu Détaillé"}</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">Analyse détaillée par Pays, Ville, Domaine, Métier, Profil et Genre</p>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <Select value={profileTagFilter} onValueChange={setProfileTagFilter}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue placeholder="Profil" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous Profils</SelectItem>
+                        <SelectItem value="artist">Artistes</SelectItem>
+                        <SelectItem value="professional">Professionnels</SelectItem>
+                        <SelectItem value="media">Médias</SelectItem>
+                      </SelectContent>
+                    </Select>
 
-            {/* Filterable Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.statistics.detailedData}</CardTitle>
-                <div className="flex gap-2 flex-wrap">
-                  <Select value={sectorFilter} onValueChange={setSectorFilter}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder={t.auth.sector} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.common.all}</SelectItem>
-                      {/* Populate sectors from overview if available */}
-                      {overview?.by_sector && Object.keys(overview.by_sector).filter(Boolean).map(s => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Select value={genderFilter} onValueChange={setGenderFilter}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder={t.statistics.gender} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t.common.all}</SelectItem>
+                        <SelectItem value="women">{t.statistics.women}</SelectItem>
+                        <SelectItem value="men">{t.statistics.men}</SelectItem>
+                      </SelectContent>
+                    </Select>
 
-                  <Select value={countryFilter} onValueChange={setCountryFilter}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder={t.statistics.country} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.common.all}</SelectItem>
-                      {[...new Set(filteredVisitorData.map(d => d.country))].filter(Boolean).map(country => (
-                        <SelectItem key={country} value={country}>{country}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Select value={countryFilter} onValueChange={setCountryFilter}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder={t.statistics.country} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t.common.all}</SelectItem>
+                        {[...new Set((detailed?.by_country_gender_domain || []).map(d => d.country))].filter(Boolean).map(country => (
+                          <SelectItem key={country} value={country}>{country}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-                  <Select value={genderFilter} onValueChange={setGenderFilter}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder={t.statistics.gender} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.common.all}</SelectItem>
-                      <SelectItem value="women">{t.statistics.women}</SelectItem>
-                      <SelectItem value="men">{t.statistics.men}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <Select value={domainFilter} onValueChange={setDomainFilter}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder={t.statistics.domain} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t.common.all}</SelectItem>
+                        {[...new Set((detailed?.by_country_gender_domain || []).map(d => d.domain))].filter(Boolean).map(domain => (
+                          <SelectItem key={domain} value={domain}>{domain}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-                  <Select value={domainFilter} onValueChange={setDomainFilter}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder={t.statistics.domain} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.common.all}</SelectItem>
-                      {[...new Set(filteredVisitorData.map(d => d.domain))].filter(Boolean).map(domain => (
-                        <SelectItem key={domain} value={domain}>{domain}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {/* Filter Summary Banner */}
+                <div className="bg-muted/40 p-3 rounded-lg flex flex-wrap gap-3 items-center text-xs font-medium border">
+                  <span className="text-foreground font-semibold">
+                    {genderFilter === 'women' ? 'Aperçu Filtre (Femmes uniquement) :' : genderFilter === 'men' ? 'Aperçu Filtre (Hommes uniquement) :' : 'Aperçu Filtre Global :'}
+                  </span>
+                  <Badge variant="secondary" className="font-bold">{filteredTotalMembers} Membres</Badge>
+                  <Badge variant="outline" className="text-purple-700 border-purple-200">{filteredTotalArtists} Artistes</Badge>
+                  <Badge variant="outline" className="text-emerald-700 border-emerald-200">{filteredTotalPros} Professionnels</Badge>
+                  <Badge variant="outline" className="text-blue-700 border-blue-200">{filteredTotalMedia} Médias</Badge>
+                  <span className="text-muted-foreground ml-auto">
+                    👁️ {filteredTotalViews} Vues • 💬 {filteredTotalMsgs} Messages
+                  </span>
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-96">
+                <ScrollArea className="h-[450px]">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="bg-muted/50">
                         <TableHead>{t.statistics.country}</TableHead>
-                        <TableHead>{t.statistics.gender}</TableHead>
+                        <TableHead>Ville</TableHead>
                         <TableHead>{t.statistics.domain}</TableHead>
+                        <TableHead>Métier (Secteur)</TableHead>
                         <TableHead>{t.statistics.artists}</TableHead>
-                        <TableHead>{t.statistics.visitorViewsShort}</TableHead>
-                        <TableHead>{t.statistics.visitorMessagesShort}</TableHead>
+                        <TableHead>Professionnels</TableHead>
+                        <TableHead>Médias</TableHead>
+                        <TableHead className="text-right">Engagement</TableHead>
+                        <TableHead className="text-right">Vues</TableHead>
+                        <TableHead className="text-right">Messages</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredVisitorData.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{item.country}</TableCell>
-                          <TableCell>{item.gender === 'women' ? t.statistics.women : t.statistics.men}</TableCell>
-                          <TableCell>{item.domain}</TableCell>
-                          <TableCell>{item.artist_count || 0}</TableCell>
-                          <TableCell>{item.visitor_views_count || 0}</TableCell>
-                          <TableCell>{item.visitor_messages_count || 0}</TableCell>
+                        <TableRow key={index} className="hover:bg-muted/30">
+                          <TableCell className="font-medium">{translateCountry(item.country)}</TableCell>
+                          <TableCell>{item.city || 'Non spécifié'}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs">
+                              {translateDomain(item.domain)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {item.sector || 'N/A'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-semibold text-purple-700">{item.artist_count || 0}</TableCell>
+                          <TableCell className="font-semibold text-emerald-700">{item.professional_count || 0}</TableCell>
+                          <TableCell className="font-semibold text-blue-700">{item.media_count || 0}</TableCell>
+                          <TableCell className="text-right font-bold text-amber-600">
+                            {item.engagement_score || ((item.visitor_views_count || 0) + (item.visitor_messages_count || 0) * 3)}
+                          </TableCell>
+                          <TableCell className="text-right">👁️ {item.visitor_views_count || 0}</TableCell>
+                          <TableCell className="text-right">💬 {item.visitor_messages_count || 0}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -674,10 +672,18 @@ export default function Statistics() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="flex">
+      <div className="flex relative">
+        {/* Mobile Backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
-          <div className="flex items-center justify-between p-4 border-b">
+        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r flex flex-col transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200 ease-in-out lg:sticky lg:top-16 lg:left-auto lg:bottom-auto lg:h-[calc(100vh-4rem)] lg:shrink-0 lg:z-30 lg:translate-x-0`}>
+          <div className="flex items-center justify-between p-4 border-b shrink-0 bg-card">
             <h2 className="text-lg font-semibold">{t.nav.statistics}</h2>
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="lg:hidden">
               <X className="h-4 w-4" />
@@ -697,28 +703,19 @@ export default function Statistics() {
                       setSidebarOpen(false);
                     }}
                   >
-                    <Icon className="h-4 w-4" />
-                    {section.label}
-                    {activeSection === section.id && <ChevronRight className="h-4 w-4 ml-auto" />}
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{section.label}</span>
+                    {activeSection === section.id && <ChevronRight className="h-4 w-4 ml-auto shrink-0" />}
                   </Button>
                 );
               })}
             </nav>
           </ScrollArea>
-        </div>
+        </aside>
 
         {/* Main Content */}
-        <div className="flex-1 lg:ml-0">
-          <div className="p-6">
-            {/* Error Display */}
-            {error && (
-              <Card className="mb-6 border-red-200 bg-red-50">
-                <CardContent className="pt-6">
-                  <p className="text-red-700 text-sm">{error}</p>
-                </CardContent>
-              </Card>
-            )}
-
+        <main className="flex-1 min-w-0 overflow-x-hidden">
+          <div className="p-4 sm:p-6 min-w-0">
             {/* Mobile menu button */}
             <div className="lg:hidden mb-4">
               <Button variant="outline" onClick={() => setSidebarOpen(true)} className="gap-2">
@@ -733,11 +730,12 @@ export default function Statistics() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
+              className="min-w-0 space-y-6"
             >
               {renderSection()}
             </motion.div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

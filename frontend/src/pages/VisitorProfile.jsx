@@ -25,7 +25,12 @@ const VisitorProfile = () => {
     const fetchVisitorData = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'}/api/users/${id}`);
+        const backendUrl = process.env.REACT_APP_BACKEND_URL;
+        const isLocalhostEnv = backendUrl && (backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1'));
+        const isBrowserOnLocalhost = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
+        const useBackendUrl = backendUrl && backendUrl !== 'undefined' && (!isLocalhostEnv || isBrowserOnLocalhost);
+        const baseUrl = useBackendUrl ? backendUrl : '';
+        const response = await axios.get(`${baseUrl}/api/users/${id}`);
         setVisitor(response.data);
       } catch (error) {
         console.error("Error fetching visitor:", error);
@@ -125,7 +130,16 @@ const VisitorProfile = () => {
 
                 <div className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4" />
-                  <span className="text-sm">{t.profile.memberSince} {new Date(visitor.created_at).getFullYear()}</span>
+                  <span className="text-sm">
+                    {t.profile.memberSince} {(() => {
+                      try {
+                        const d = visitor.created_at ? new Date(visitor.created_at) : new Date();
+                        return isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
+                      } catch (e) {
+                        return new Date().getFullYear();
+                      }
+                    })()}
+                  </span>
                 </div>
                 {visitor.website && (
                   <a href={visitor.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-primary transition-colors">

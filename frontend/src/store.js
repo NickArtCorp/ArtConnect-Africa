@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = '/api';
 
 // Track visited artists to avoid duplicate view tracking per session
 const _visitorViewedSet = new Set();
@@ -45,7 +45,7 @@ export const translations = {
       subtitle: 'The first platform dedicated to African artists. Showcase your work, find collaborators, and join a vibrant creative community across the continent.',
       exploreArtists: 'Explore Artists', joinCommunity: 'Join the Community',
       featuredArtists: 'Featured Artists', viewAll: 'View All',
-      stats: { artists: 'Artists', countries: 'Countries', sectors: 'Artistic Sectors', projects: 'Collaborations' },
+      stats: { artists: 'Members', countries: 'Countries', sectors: 'Artistic Sectors', projects: 'Collaborations' },
       features: {
         portfolio: { title: 'Digital Portfolio', desc: 'Showcase your work with documents, images, and videos' },
         network: { title: 'Pan-African Network', desc: 'Connect with artists from all over Africa' },
@@ -99,6 +99,8 @@ export const translations = {
     auth: {
       login: 'Sign In', register: 'Create Account', email: 'Email', password: 'Password',
       firstName: 'First Name', lastName: 'Last Name', country: 'Country', city: 'City',
+      countryResidence: 'Country of Residence', countryOrigin: 'Country of Origin',
+      diasporaCountry: 'Foreign Country of Residence', selectCountryOrigin: 'Select country of origin',
       subregion: 'Sub-region', gender: 'Gender', sector: 'Artistic Sector',
       domain: 'Domain/Specialty', yearStarted: 'Year Started', bio: 'Biography / Presentation',
       additionalInfo: 'Additional Information', website: 'Website',
@@ -122,7 +124,6 @@ export const translations = {
       presentationOrg: 'Presentation of the organization/institution',
       presentationIndividual: 'Presentation',
       biographyArtist: 'Biography',
-      missionDescription: 'Presentation of the organization/institution',
       personnePhysique: 'Individual (Personne physique)', personneMorale: 'Organization (Personne morale)', partenaire: 'Partner', visitor: 'Visitor',
       portfolioNetwork: 'Portfolio & Network', statsAccess: 'Statistics Access',
       exploreDiscover: 'Explore & Discover',
@@ -180,7 +181,11 @@ export const translations = {
       lookingFor: 'Looking for', apply: 'Apply', applications: 'applications',
       openProjects: 'Open Collaborations', myProjects: 'My Collaborations',
       upcoming: 'Upcoming', ongoing: 'Ongoing', past: 'Past', 
-      typeLocal: 'Local', typeIntra: 'Intra-African',
+      northIntra: 'North Africa (Intra-Regional)',
+      subsaharanIntra: 'Sub-Saharan Africa (Intra-Regional)',
+      subsaharanInter: 'Sub-Saharan Africa (Inter-Regional)',
+      westAfrica: 'West Africa', centralAfrica: 'Central Africa', eastAfrica: 'East Africa',
+      southernAfrica: 'Southern Africa', northSouth: 'Sub-Saharan Africa and North Africa', global: 'Africa-World Partnership',
       startDate: 'Start Date', endDate: 'End Date (Optional / Open-ended)',
       noProjects: 'No collaborations yet', noUpcoming: 'No upcoming collaborations',
       noOngoing: 'No ongoing collaborations', noPast: 'No past collaborations',
@@ -245,87 +250,50 @@ export const translations = {
       viewPublicStats: 'View public stats', processing: 'Processing...'
     },
     statistics: {
-      overview: 'Overview', collaborations: 'Collaborations', genderDomain: 'Gender & Domain',
-      visitors: 'Visitors', totalArtists: 'Total Artists', trendVsLastMonth: 'vs last month',
+      overview: 'General Overview', collaborations: 'Collaborations', genderDomain: 'Gender & Domain',
+      visitors: 'Visitors', totalArtists: 'Total Artists', totalCollaborations: 'Total Collaborations', total: 'Total', trendVsLastMonth: 'vs last month',
       visitorViews: 'Visitor Views', visitorMessages: 'Visitor Messages',
       mostMessaged: 'Most Messaged Domain', topDomainsByMessages: 'Top Domains by Visitor Messages',
       detailedData: 'Detailed Data', typeSplit: 'Type Split', monthlyEvolution: 'Monthly Evolution',
-      byGender: 'By Gender', bySector: 'By Sector', women: 'Women', men: 'Men', other: 'Other',
+      byGender: 'By Gender', women: 'Women', men: 'Men', other: 'Other',
       local: 'Local', intraAfrican: 'Intra-African',
       countryPairs: 'Country Pairs (Intra-African)', activePair: 'Most active pair',
       genderSplit: 'Gender Split', genderByDomain: 'Gender by Domain',
       loading: 'Loading statistics...', visitorViewsShort: 'Visitor Views', visitorMessagesShort: 'Visitor Messages',
       postsActivity: 'Posts Activity', featureInDev: 'Feature in development',
-      country: 'Country', gender: 'Gender', domain: 'Domain', artists: 'Artists',
-      geographicInsights: 'Geographic Insights',
-      totalCollaborations: 'Total', details: 'Details', countryPair: 'Country Pair',
-      failedToLoad: 'Failed to load statistics',
-      explorer: 'Statistics Explorer', refresh: 'Refresh', filters: 'Filters',
-      profileType: 'Account Type', all: 'All', professionals: 'Professionals', media: 'Media',
-      scope: 'Scope', cached24h: 'Cached (24h)', global: 'Global (entire platform)',
-      users: 'Users', cities: 'Cities', sectors: 'Sectors',
-      menWomen: 'Men / Women', artistsProsMedia: 'Artists / Pros / Media',
-      topCities: 'Top Cities', topSectors: 'Top Sectors', topDomains: 'Top Domains',
-      selectCountry: 'Select a country to view statistics', loadingV2: 'Loading statistics...',
-      error: 'Error', dashboard: 'Dashboard', cachedData: 'Cached Data',
-      totalPosts: 'Total Posts', totalCollaborations: 'Total Collaborations', totalEngagement: 'Total Engagement',
-      citiesTab: 'Cities', sectorsTab: 'Sectors', topArtistsTab: 'Top Artists',
-      genderDistribution: 'Gender Distribution', noData: 'No data available',
-      collaborationTypes: 'Collaboration Types', localCollabs: 'Local Collaborations',
-      intraAfricanCollabs: 'Intra-African Collaborations', artistsByCity: 'Artists by City',
-      noCityData: 'No city data available', artistsBySector: 'Artists by Sector',
-      noSectorData: 'No sector data available', topArtistsByEngagement: 'Top 20 Artists by Engagement',
-      noArtistsData: 'No artists data available', pts: 'pts',
-      // New translations for missing parts
-      countryDashboard: 'Country dashboard',
-      chooseCountryForDashboard: 'Choisis un pays pour voir le dashboard détaillé.',
-      chooseCountryForDashboardEn: 'Choose a country to view detailed dashboard.',
-      timeline: 'Timeline',
-      artistsTab: 'Artists',
-      selectCountryForTimeline: 'Select a country to view timeline',
-      loadingTimelineData: 'Loading timeline data...',
-      monthlyActivityTimeline: 'Monthly Activity Timeline',
-      newArtistsAndPosts: 'New Artists & Posts',
-      newArtists: 'New Artists',
-      posts: 'Posts',
-      collaborationsAndEngagement: 'Collaborations & Engagement',
-      engagementViews: 'Engagement Views',
-      totalNewArtists: 'Total New Artists',
-      selectCountryForCityData: 'Select a country to view city data',
-      loadingCityData: 'Loading city data...',
-      genderDistributionByCity: 'Gender Distribution by City',
-      selectCity: 'Select City',
-      chooseCity: 'Choose a city...',
-      artistsLabel: 'artists',
-      totalArtistsLabel: 'Total Artists',
-      messages: 'Messages',
-      views: 'Views',
-      noGenderData: 'No gender data available',
-      topSectorsInCity: 'Top Sectors in',
-      engagement: 'Engagement',
-      popularDomains: 'Popular Domains',
-      selectCountryForSectorData: 'Select a country to view sector data',
-      loadingSectorData: 'Loading sector data...',
-      sectorsDistribution: 'Sectors Distribution',
-      top5SectorsComparison: 'Top 5 Sectors Comparison',
-      detailedBreakdown: 'Detailed Breakdown',
-      noSectorDataLabel: 'No sector data',
-      totalArtistsInSectors: 'Total Artists in Sectors',
-      selectCountryLabel: 'Select Country',
-      loadingCountries: 'Loading countries...',
-      chooseCountry: 'Choose a country...',
-      topArtistsDirectory: 'Top Artists Directory',
-      searchPlaceholder: 'Search by name, sector, or domain...',
-      rank: 'Rank',
-      name: 'Name',
-      sector: 'Sector',
-      city: 'City',
-      noArtistsFound: 'No artists found matching your criteria',
-      showingArtists: 'Showing',
-      ofArtists: 'of',
-      avgEngagement: 'Avg Engagement',
-      totalViews: 'Total Views',
-      loadingArtistsData: 'Loading artists data...'
+      country: 'Country', gender: 'Gender', domain: 'Domain', artists: 'Artists', members: 'Members',
+      geographic: 'Detailed Overview',
+      collaborationAnalysis: 'Collaboration Analysis',
+      ecosystemMapping: 'Intra-African Creative Ecosystem Mapping',
+      entityA: 'Entity A',
+      entityB: 'Entity B',
+      noComparisonData: 'No detailed comparison data available for this specific pair. Please try "Morocco ↔ Egypt" or "Nigeria ↔ South Africa".',
+      sectoralDistribution: 'Sectoral Distribution of Projects',
+      annualVolume: 'Annual Collaboration Volume',
+      ratioInstitutional: 'Institutional vs Independent Ratio',
+      institutional: 'Institutional',
+      independent: 'Independent Collectives',
+      privateResidencies: 'Private Residencies',
+      keyProjects: 'Key Collaborative Projects',
+      projectTitle: 'Project Title',
+      type: 'Type',
+      year: 'Year',
+      status: 'Status',
+      active: 'Active',
+      hierarchicalEcosystem: 'Hierarchical Collaboration Ecosystem',
+      hierarchicalEcosystemDesc: 'Detailed breakdown of partnerships following the continental connectivity model.',
+      strategicFocus: 'Strategic Focus: Sub-Saharan Africa',
+      strategicFocusDesc: 'Strengthening the bridge between the Maghreb and Sub-Saharan Africa remains our priority, facilitating exchanges between Casablanca, Algiers, Cairo and centers like Lagos, Douala, and Johannesburg.',
+      regionalResilience: 'Regional Resilience',
+      regionalResilienceDesc: 'Intra-regional collaborations within West and Central Africa show the highest growth in 2024, driven by shared languages and proximity.',
+      collaborationVolumeByTier: 'Collaboration Volume by Tier',
+      visualArts: 'Visual Arts', music: 'Music', cinema: 'Cinema', literature: 'Literature', performance: 'Performance', fashion: 'Fashion',
+      maghreb: 'Maghreb', egypt: 'Egypt', westAfrica: 'West Africa', centralAfrica: 'Central Africa', eastAfrica: 'East Africa', southernAfrica: 'Southern Africa',
+      northAfrica: 'North Africa', subSaharanAfrica: 'Sub-Saharan Africa',
+      morocco: 'Morocco', algeria: 'Algeria', tunisia: 'Tunisia', libya: 'Libya', nigeria: 'Nigeria', senegal: 'Senegal',
+      coteDIvoire: "Cote d'Ivoire", ghana: 'Ghana', mali: 'Mali', cameroon: 'Cameroon', gabon: 'Gabon', drc: 'DRC',
+      congo: 'Congo', chad: 'Chad', kenya: 'Kenya', ethiopia: 'Ethiopia', uganda: 'Uganda', rwanda: 'Rwanda',
+      tanzania: 'Tanzania', southAfrica: 'South Africa', angola: 'Angola', zimbabwe: 'Zimbabwe', namibia: 'Namibia', botswana: 'Botswana'
     },
     common: {
       search: 'Search', filter: 'Filter', all: 'All', save: 'Save',
@@ -410,13 +378,13 @@ export const translations = {
     home: {
       tagline: 'Écosystème Artistique Africain',
       title1: 'Connecter.', title2: 'Créer.', title3: 'Collaborer.',
-      subtitle: "La première plateforme dédiée aux artistes africains. Présentez vos œuvres, trouvez des collaborateurs et rejoignez une communauté créative vibrante à travers le continent.",
-      exploreArtists: 'Explorer les Artistes', joinCommunity: 'Rejoindre la Communauté',
-      featuredArtists: 'Artistes en Vedette', viewAll: 'Voir Tout',
-      stats: { artists: 'Artistes', countries: 'Pays', sectors: 'Secteurs Artistiques', projects: 'Collaborations' },
+      subtitle: "La première plateforme dédiée aux acteurs africains. Présentez vos œuvres, trouvez des collaborateurs et rejoignez une communauté créative vibrante à travers le continent.",
+      exploreArtists: 'Explorer les Acteurs', joinCommunity: 'Rejoindre la Communauté',
+      featuredArtists: 'Acteurs en vedette', viewAll: 'Voir Tout',
+      stats: { artists: 'Membres', countries: 'Pays', sectors: 'Secteurs Artistiques', projects: 'Collaborations' },
       features: {
         portfolio: { title: 'Portfolio Numérique', desc: 'Présentez vos travaux avec documents, images et vidéos' },
-        network: { title: 'Réseau Panafricain', desc: "Connectez-vous avec des artistes de toute l'Afrique" },
+        network: { title: 'Réseau Panafricain', desc: "Connectez-vous avec des artistes et les professionnels de toute l'Afrique et des diasporas" },
         collaborate: { title: 'Collaborer', desc: 'Trouvez des partenaires pour vos projets artistiques' }
       },
       about: {
@@ -436,24 +404,24 @@ export const translations = {
         title: 'Nos Missions',
         m1: { title: 'Rapprocher les Acteurs', desc: 'Réunir les acteurs culturels africains par-delà les barrières linguistiques et culturelles.' },
         m2: { title: 'Communauté Forte', desc: 'Créer une communauté culturelle africaine forte et solidaire.' },
-        m3: { title: 'Collaboration Inter-régionale', desc: "Favoriser les collaborations entre l'Afrique du Nord, de l'Ouest, Centrale, de l'Est et Australe." },
-        m4: { title: 'Visibilité Mondiale', desc: 'Offrir aux artistes africains une visibilité sur le marché international.' }
+        m3: { title: 'Collaboration intra et inter-régionale', desc: "Favoriser les collaborations entre l'Afrique du Nord, de l'Ouest, Centrale, de l'Est et Australe." },
+        m4: { title: 'Visibilité Mondiale', desc: 'Offrir aux acteurs africains une visibilité sur le marché international.' }
       },
       coverage: {
         title: 'Couverture Géographique',
         north: 'Afrique du Nord',
         subSaharan: 'Afrique Subsaharienne',
         world: 'Reste du Monde',
-        description: 'De Casablanca au Cap, nous connectons tout le continent avec le monde.'
+        description: "Du caire au cap, nous connectons toute l'Afrique et les diasporas avec le reste du monde"
       },
       howToJoin: {
         title: 'Comment Rejoindre ?',
-        step1: { title: 'Créer un Profil', desc: 'Inscrivez-vous et mettez en avant votre parcours artistique.' },
-        step2: { title: 'Se Connecter', desc: 'Trouvez des collaborateurs et échangez avec la communauté.' },
-        step3: { title: 'Collaborer', desc: 'Lancez des projets et gagnez en visibilité panafricaine.' }
+        step1: { title: 'Créer un Profil', desc: 'Inscrivez-vous pour rejoindre notre communauté.' },
+        step2: { title: 'Se Connecter', desc: 'Échangez avec les membres de la communauté.' },
+        step3: { title: 'Collaborer', desc: 'Trouvez des partenaires pour vos projets.' }
       },
       testimonials: {
-        title: 'Ce que disent les artistes',
+        title: 'Ce que disent les acteurs',
         t1: { author: 'Amara (Sénégal)', content: "ArtConnect a changé ma vision de la collaboration. J'ai trouvé des partenaires au Maroc pour ma prochaine expo." },
         t2: { author: 'Kofi (Ghana)', content: "Le programme d'actions m'a aidé à financer mon dernier projet musical. Une vraie chance pour les créateurs africains." }
       },
@@ -467,7 +435,10 @@ export const translations = {
     auth: {
       login: 'Connexion', register: 'Créer un compte', email: 'Email',
       password: 'Mot de passe', firstName: 'Prénom', lastName: 'Nom',
-      country: 'Pays', city: 'Ville', subregion: 'Sous-région', gender: 'Genre',
+      country: 'Pays', city: 'Ville',
+      countryResidence: 'Pays de résidence', countryOrigin: 'Pays d\'origine',
+      diasporaCountry: 'Pays étranger de résidence', selectCountryOrigin: 'Sélectionnez le pays d\'origine',
+      subregion: 'Sous-région', gender: 'Genre',
       sector: 'Secteur Artistique', domain: 'Domaine/Spécialité',
       yearStarted: 'Année de début', bio: 'Biographie / Présentation',
       additionalInfo: 'Informations complémentaires', website: 'Site web',
@@ -549,7 +520,11 @@ export const translations = {
       lookingFor: 'Recherche', apply: 'Postuler', applications: 'candidatures',
       openProjects: 'Collaborations Ouvertes', myProjects: 'Mes Collaborations',
       upcoming: 'À venir', ongoing: 'En cours', past: 'Passés',
-      typeLocal: 'Locale', typeIntra: 'Intra-Africaine',
+      northIntra: 'Afrique du Nord (Intra-régional)',
+      subsaharanIntra: "Afrique Subsaharienne (Intra-régional)",
+      subsaharanInter: "Afrique Subsaharienne (Inter-régional)",
+      westAfrica: "Afrique de l'Ouest", centralAfrica: "Afrique Centrale", eastAfrica: "Afrique de l'Est",
+      southernAfrica: "Afrique Australe", northSouth: "Afrique Subsaharienne et Afrique du Nord", global: "Partenariat Afrique-Monde",
       startDate: 'Date de début', endDate: 'Date de fin (Optionnel / En continu)',
       noProjects: 'Aucune collaboration pour le moment', noUpcoming: 'Aucune collaboration à venir',
       noOngoing: 'Aucune collaboration en cours', noPast: 'Aucune collaboration passée',
@@ -614,87 +589,50 @@ export const translations = {
       viewPublicStats: 'Voir les stats publiques', processing: 'Traitement...'
     },
     statistics: {
-      overview: 'Aperçu', collaborations: 'Collaborations', genderDomain: 'Genre & Domaine',
-      visitors: 'Visiteurs', totalArtists: 'Total Artistes', trendVsLastMonth: 'vs mois dernier',
+      overview: 'Aperçu Général', collaborations: 'Collaborations', genderDomain: 'Genre & Domaine',
+      visitors: 'Visiteurs', totalArtists: 'Total Artistes', totalCollaborations: 'Total Collaborations', total: 'Total', trendVsLastMonth: 'vs mois dernier',
       visitorViews: 'Vues Visiteurs', visitorMessages: 'Messages Visiteurs',
       mostMessaged: 'Domaine le plus contacté', topDomainsByMessages: 'Top Domaines par Messages Visiteurs',
       detailedData: 'Données Détaillées', typeSplit: 'Répartition par Type', monthlyEvolution: 'Évolution Mensuelle',
-      byGender: 'Par Genre', bySector: 'Par Secteur', women: 'Femmes', men: 'Hommes', other: 'Autre',
+      byGender: 'Par Genre', women: 'Femmes', men: 'Hommes', other: 'Autre',
       local: 'Locale', intraAfrican: 'Intra-Africaine',
       countryPairs: 'Paires de Pays (Intra-Africain)', activePair: 'Paire la plus active',
       genderSplit: 'Répartition par Genre', genderByDomain: 'Genre par Domaine',
       loading: 'Chargement des statistiques...', visitorViewsShort: 'Vues Visiteurs', visitorMessagesShort: 'Messages Visiteurs',
       postsActivity: 'Activité des Posts', featureInDev: 'Fonctionnalité en développement',
-      country: 'Pays', gender: 'Genre', domain: 'Domaine', artists: 'Artistes',
-      geographicInsights: 'Aperçu Géographique',
-      totalCollaborations: 'Total', details: 'Détails', countryPair: 'Paire de Pays',
-      failedToLoad: 'Échec du chargement des statistiques',
-      explorer: 'Explorateur de Statistiques', refresh: 'Actualiser', filters: 'Filtres',
-      profileType: 'Type de compte', all: 'Tous', professionals: 'Professionnels', media: 'Médias',
-      scope: 'Portée', cached24h: 'En cache (24h)', global: 'Global (toute la plateforme)',
-      users: 'Utilisateurs', cities: 'Villes', sectors: 'Métiers',
-      menWomen: 'Hommes / Femmes', artistsProsMedia: 'Artistes / Pros / Médias',
-      topCities: 'Top Villes', topSectors: 'Top Métiers', topDomains: 'Top Domaines',
-      selectCountry: 'Sélectionnez un pays pour voir les statistiques', loadingV2: 'Chargement des statistiques...',
-      error: 'Erreur', dashboard: 'Tableau de bord', cachedData: 'Données en cache',
-      totalPosts: 'Total des posts', totalCollaborations: 'Total des collaborations', totalEngagement: 'Engagement total',
-      citiesTab: 'Villes', sectorsTab: 'Métiers', topArtistsTab: 'Top Artistes',
-      genderDistribution: 'Répartition par genre', noData: 'Aucune donnée disponible',
-      collaborationTypes: 'Types de collaboration', localCollabs: 'Collaborations locales',
-      intraAfricanCollabs: 'Collaborations intra-africaines', artistsByCity: 'Artistes par ville',
-      noCityData: 'Aucune donnée de ville disponible', artistsBySector: 'Artistes par secteur',
-      noSectorData: 'Aucune donnée de secteur disponible', topArtistsByEngagement: 'Top 20 artistes par engagement',
-      noArtistsData: 'Aucune donnée d\'artistes disponible', pts: 'pts',
-      // New translations for missing parts
-      countryDashboard: 'Tableau de bord pays',
-      chooseCountryForDashboard: 'Choisis un pays pour voir le tableau de bord détaillé.',
-      chooseCountryForDashboardEn: 'Choisis un pays pour voir le tableau de bord détaillé.',
-      timeline: 'Chronologie',
-      artistsTab: 'Artistes',
-      selectCountryForTimeline: 'Sélectionnez un pays pour voir la chronologie',
-      loadingTimelineData: 'Chargement des données de chronologie...',
-      monthlyActivityTimeline: 'Chronologie mensuelle des activités',
-      newArtistsAndPosts: 'Nouveaux artistes et posts',
-      newArtists: 'Nouveaux artistes',
-      posts: 'Posts',
-      collaborationsAndEngagement: 'Collaborations et engagement',
-      engagementViews: 'Engagement',
-      totalNewArtists: 'Total nouveaux artistes',
-      selectCountryForCityData: 'Sélectionnez un pays pour voir les données des villes',
-      loadingCityData: 'Chargement des données des villes...',
-      genderDistributionByCity: 'Répartition par genre par ville',
-      selectCity: 'Sélectionnez une ville',
-      chooseCity: 'Choisissez une ville...',
-      artistsLabel: 'artistes',
-      totalArtistsLabel: 'Total artistes',
-      messages: 'Messages',
-      views: 'Vues',
-      noGenderData: 'Aucune donnée de genre disponible',
-      topSectorsInCity: 'Top métiers dans',
-      engagement: 'Engagement',
-      popularDomains: 'Domaines populaires',
-      selectCountryForSectorData: 'Sélectionnez un pays pour voir les données des métiers',
-      loadingSectorData: 'Chargement des données des métiers...',
-      sectorsDistribution: 'Répartition des métiers',
-      top5SectorsComparison: 'Comparaison des 5 meilleurs métiers',
-      detailedBreakdown: 'Répartition détaillée',
-      noSectorDataLabel: 'Aucune donnée de métier',
-      totalArtistsInSectors: 'Total artistes par métier',
-      selectCountryLabel: 'Sélectionnez un pays',
-      loadingCountries: 'Chargement des pays...',
-      chooseCountry: 'Choisissez un pays...',
-      topArtistsDirectory: 'Répertoire des meilleurs artistes',
-      searchPlaceholder: 'Rechercher par nom, secteur ou domaine...',
-      rank: 'Rang',
-      name: 'Nom',
-      sector: 'Secteur',
-      city: 'Ville',
-      noArtistsFound: 'Aucun artiste trouvé correspondant à vos critères',
-      showingArtists: 'Affichage de',
-      ofArtists: 'sur',
-      avgEngagement: 'Engagement moyen',
-      totalViews: 'Total des vues',
-      loadingArtistsData: 'Chargement des données des artistes...'
+      country: 'Pays', gender: 'Genre', domain: 'Domaine', artists: 'Artistes', members: 'Membres',
+      geographic: 'Aperçu Détaillé',
+      collaborationAnalysis: 'Analyse des Collaborations',
+      ecosystemMapping: 'Cartographie de l\'Écosystème Créatif Intra-Africain',
+      entityA: 'Entité A',
+      entityB: 'Entité B',
+      noComparisonData: 'Aucune donnée de comparaison détaillée n\'est disponible pour cette paire spécifique. Veuillez essayer "Maroc ↔ Égypte" ou "Nigéria ↔ Afrique du Sud".',
+      sectoralDistribution: 'Répartition Sectorielle des Projets',
+      annualVolume: 'Volume Annuel de Collaboration',
+      ratioInstitutional: 'Ratio Institutionnel vs Indépendant',
+      institutional: 'Institutionnel',
+      independent: 'Collectifs Indépendants',
+      privateResidencies: 'Résidences Privées',
+      keyProjects: 'Projets Collaboratifs Clés',
+      projectTitle: 'Titre du Projet',
+      type: 'Type',
+      year: 'Année',
+      status: 'Statut',
+      active: 'Actif',
+      hierarchicalEcosystem: 'Écosystème de Collaboration Hiérarchique',
+      hierarchicalEcosystemDesc: 'Répartition détaillée des partenariats suivant le modèle de connectivité continentale.',
+      strategicFocus: 'Axe Stratégique : Afrique subsaharienne',
+      strategicFocusDesc: 'Renforcer le pont entre le Maghreb et l\'Afrique subsaharienne reste notre priorité, facilitant les échanges entre Casablanca, Alger, Le Caire et des centres comme Lagos, Douala et Johannesburg.',
+      regionalResilience: 'Résilience Régionale',
+      regionalResilienceDesc: 'Les collaborations intra-régionales en Afrique de l\'Ouest et Centrale affichent la plus forte croissance en 2024, portées par les langues communes et la proximité.',
+      collaborationVolumeByTier: 'Volume de Collaboration par Niveau',
+      visualArts: 'Arts Visuels', music: 'Musique', cinema: 'Cinéma', literature: 'Littérature', performance: 'Performance', fashion: 'Mode',
+      maghreb: 'Maghreb', egypt: 'Égypte', westAfrica: 'Afrique de l\'Ouest', centralAfrica: 'Afrique Centrale', eastAfrica: 'Afrique de l\'Est', southernAfrica: 'Afrique Australe',
+      northAfrica: 'Afrique du Nord', subSaharanAfrica: 'Afrique Subsaharienne',
+      morocco: 'Maroc', algeria: 'Algérie', tunisia: 'Tunisie', libya: 'Libye', nigeria: 'Nigéria', senegal: 'Sénégal',
+      coteDIvoire: "Côte d'Ivoire", ghana: 'Ghana', mali: 'Mali', cameroon: 'Cameroun', gabon: 'Gabon', drc: 'RDC',
+      congo: 'Congo', chad: 'Tchad', kenya: 'Kenya', ethiopia: 'Éthiopie', uganda: 'Ouganda', rwanda: 'Rwanda',
+      tanzania: 'Tanzanie', southAfrica: 'Afrique du Sud', angola: 'Angola', zimbabwe: 'Zimbabwe', namibia: 'Namibie', botswana: 'Botswana'
     },
     common: {
       search: 'Rechercher', filter: 'Filtrer', all: 'Tout', save: 'Enregistrer',
@@ -3691,8 +3629,9 @@ export const useAuthStore = create((set, get) => ({
       if (error.response?.status === 401 || error.response?.status === 403) {
         localStorage.removeItem('aca_token');
         set({ user: null, token: null });
+      } else {
+        console.error('Fetch user error:', error);
       }
-      console.error('Fetch user error:', error);
     }
   },
 
@@ -3744,21 +3683,23 @@ export const useThemeStore = create((set) => ({
 
 // Reference Data Store
 export const useReferenceStore = create((set, get) => ({
-  countries: [], subregions: [], sectors: [], domains: {}, genders: [], isLoaded: false,
+  countries: [], subregions: [], sectors: [], domains: [], genders: [], metiers: {}, isLoaded: false,
   fetchReferenceData: async () => {
     if (get().isLoaded) return;
     try {
-      const [countriesRes, subregionsRes, sectorsRes, domainsRes, gendersRes] = await Promise.all([
+      const [countriesRes, subregionsRes, sectorsRes, domainsRes, gendersRes, metiersRes] = await Promise.all([
         axios.get(`${API}/reference/countries`),
         axios.get(`${API}/reference/subregions`),
         axios.get(`${API}/reference/sectors`),
         axios.get(`${API}/reference/domains`),
-        axios.get(`${API}/reference/genders`)
+        axios.get(`${API}/reference/genders`),
+        axios.get(`${API}/reference/metiers`)
       ]);
       set({
         countries: countriesRes.data, subregions: subregionsRes.data,
-        sectors: sectorsRes.data, domains: domainsRes.data,
-        genders: gendersRes.data, isLoaded: true
+        sectors: sectorsRes.data,
+        domains: domainsRes.data,
+        genders: gendersRes.data, metiers: metiersRes.data, isLoaded: true
       });
     } catch (error) {
       console.error('Error fetching reference data:', error);
@@ -3779,7 +3720,9 @@ export const useArtistsStore = create((set, get) => ({
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => { if (value) params.append(key, value); });
       const response = await axios.get(`${API}/artists?${params}`);
-      set({ artists: response.data.artists, total: response.data.total, isLoading: false });
+      const artistsList = Array.isArray(response.data) ? response.data : (response.data.artists || []);
+      const totalCount = Array.isArray(response.data) ? response.data.length : (response.data.total || 0);
+      set({ artists: artistsList, total: totalCount, isLoading: false });
     } catch (error) {
       console.error('Error fetching artists:', error);
       set({ isLoading: false });
@@ -3962,8 +3905,6 @@ export const useStatisticsStore = create((set) => ({
   sectorStats: null,
   timelineData: null,
   compareData: null,
-  isLoadingV2: false,
-  errorV2: null,
   
   // V1 Fetch Methods
   fetchOverview: async () => {
@@ -3973,10 +3914,7 @@ export const useStatisticsStore = create((set) => ({
       set({ overview: response.data, isLoading: false });
     } catch (error) {
       console.error('Error fetching statistics:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to load overview';
-      console.error('Statistics error details:', errorMessage);
       set({ isLoading: false });
-      throw new Error(errorMessage);
     }
   },
   fetchDetailed: async (sector = null, profileTag = null) => {
@@ -3991,10 +3929,7 @@ export const useStatisticsStore = create((set) => ({
       set({ detailed: response.data, hasInstitutionAccess: true, isLoading: false });
     } catch (error) {
       console.error('Error fetching detailed statistics:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to load detailed statistics';
-      console.error('Detailed statistics error:', errorMessage);
       set({ isLoading: false, hasInstitutionAccess: false });
-      throw new Error(errorMessage);
     }
   },
   fetchCollaborationStats: async () => {
@@ -4012,108 +3947,95 @@ export const useStatisticsStore = create((set) => ({
       });
     } catch (error) {
       console.error('Error fetching collaboration statistics:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to load collaboration statistics';
-      console.error('Collaboration statistics error:', errorMessage);
       set({ isLoading: false });
-      throw new Error(errorMessage);
     }
   },
   
   // V2 Fetch Methods (Multi-level)
   fetchCountryStats: async (country) => {
+    if (!country) return;
     const token = useAuthStore.getState().token;
-    if (!token) {
-      set({ errorV2: 'Authentication required' });
-      return;
-    }
-    set({ isLoadingV2: true, errorV2: null });
+    set({ isLoadingCountry: true, errorCountry: null });
     try {
-      const response = await axios.get(`${API}/statistics/v2/by-country/${country}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.get(`${API}/statistics/v2/by-country/${encodeURIComponent(country)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
-      set({ countryStats: response.data, isLoadingV2: false });
+      set({ countryStats: response.data, isLoadingCountry: false });
     } catch (error) {
       console.error('Error fetching country statistics:', error);
-      set({ isLoadingV2: false, errorV2: error.message });
+      set({ isLoadingCountry: false, errorCountry: error.message });
     }
   },
   
   fetchCityStats: async (country, city) => {
+    if (!country || !city) return;
     const token = useAuthStore.getState().token;
-    if (!token) {
-      set({ errorV2: 'Authentication required' });
-      return;
-    }
-    set({ isLoadingV2: true, errorV2: null });
+    set({ isLoadingCity: true, errorCity: null });
     try {
-      const response = await axios.get(`${API}/statistics/v2/by-city/${country}/${city}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.get(`${API}/statistics/v2/by-city/${encodeURIComponent(country)}/${encodeURIComponent(city)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
-      set({ cityStats: response.data, isLoadingV2: false });
+      set({ cityStats: response.data, isLoadingCity: false });
     } catch (error) {
       console.error('Error fetching city statistics:', error);
-      set({ isLoadingV2: false, errorV2: error.message });
+      set({ isLoadingCity: false, errorCity: error.message });
     }
   },
   
   fetchSectorStats: async (country, sector) => {
+    if (!country) return;
     const token = useAuthStore.getState().token;
-    if (!token) {
-      set({ errorV2: 'Authentication required' });
-      return;
-    }
-    set({ isLoadingV2: true, errorV2: null });
+    set({ isLoadingSector: true, errorSector: null });
     try {
-      const response = await axios.get(`${API}/statistics/v2/by-country/${country}/sector/${sector}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.get(`${API}/statistics/v2/by-country/${encodeURIComponent(country)}/sector/${encodeURIComponent(sector || 'all')}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
-      set({ sectorStats: response.data, isLoadingV2: false });
+      set({ sectorStats: response.data, isLoadingSector: false });
     } catch (error) {
       console.error('Error fetching sector statistics:', error);
-      set({ isLoadingV2: false, errorV2: error.message });
+      set({ isLoadingSector: false, errorSector: error.message });
     }
   },
   
   fetchTimeline: async (country, period = 'monthly') => {
+    if (!country) return;
     const token = useAuthStore.getState().token;
-    if (!token) {
-      set({ errorV2: 'Authentication required' });
-      return;
-    }
-    set({ isLoadingV2: true, errorV2: null });
+    set({ isLoadingTimeline: true, errorTimeline: null });
     try {
-      const response = await axios.get(`${API}/statistics/v2/timeline/${country}?period=${period}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.get(`${API}/statistics/v2/timeline/${encodeURIComponent(country)}?period=${period}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
-      set({ timelineData: response.data, isLoadingV2: false });
+      set({ timelineData: response.data, isLoadingTimeline: false });
     } catch (error) {
       console.error('Error fetching timeline data:', error);
-      set({ isLoadingV2: false, errorV2: error.message });
+      set({ isLoadingTimeline: false, errorTimeline: error.message });
     }
   },
   
   fetchCompare: async (countries) => {
+    if (!countries) return;
     const token = useAuthStore.getState().token;
-    if (!token) {
-      set({ errorV2: 'Authentication required' });
-      return;
-    }
-    set({ isLoadingV2: true, errorV2: null });
+    set({ isLoadingCompare: true, errorCompare: null });
     try {
       const countryList = Array.isArray(countries) ? countries.join(',') : countries;
-      const response = await axios.get(`${API}/statistics/v2/compare?countries=${countryList}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.get(`${API}/statistics/v2/compare?countries=${encodeURIComponent(countryList)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
-      set({ compareData: response.data, isLoadingV2: false });
+      set({ compareData: response.data, isLoadingCompare: false });
     } catch (error) {
       console.error('Error fetching comparison data:', error);
-      set({ isLoadingV2: false, errorV2: error.message });
+      set({ isLoadingCompare: false, errorCompare: error.message });
     }
   },
   
   reset: () => set({
     overview: null, detailed: null, collaborations: null, genderByDomain: null, visitorInterest: null, isLoading: false,
-    countryStats: null, cityStats: null, sectorStats: null, timelineData: null, compareData: null, isLoadingV2: false, errorV2: null
+    countryStats: null, cityStats: null, sectorStats: null, timelineData: null, compareData: null,
+    isLoadingCountry: false, errorCountry: null,
+    isLoadingCity: false, errorCity: null,
+    isLoadingSector: false, errorSector: null,
+    isLoadingTimeline: false, errorTimeline: null,
+    isLoadingCompare: false, errorCompare: null
   })
 }));
 

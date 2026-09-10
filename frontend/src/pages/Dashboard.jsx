@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageCircle, Users, Settings, ArrowRight, Loader2, Upload, Plus, FileText, Image, Video, Trash2, MapPin, Calendar } from 'lucide-react';
+import { MessageCircle, Users, Settings, ArrowRight, Loader2, Upload, Plus, FileText, Image, Video, Trash2, MapPin, Calendar, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { getMediaUrl, translateSector, translateDomain } from '@/lib/utils';
@@ -41,8 +41,12 @@ export default function Dashboard() {
 
   const fullName = `${user.first_name} ${user.last_name}`;
   const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase();
-  const unreadCount = conversations.reduce((acc, conv) => acc + conv.unread_count, 0);
-  const portfolio = user.portfolio || { documents: [], images: [], videos: [] };
+  const unreadCount = (conversations || []).reduce((acc, conv) => acc + (conv.unread_count || 0), 0);
+  const portfolio = {
+    documents: user?.portfolio?.documents || [],
+    images: user?.portfolio?.images || [],
+    videos: user?.portfolio?.videos || []
+  };
   const avatarUrl = getMediaUrl(user.avatar);
 
   const handleFileUpload = async (e) => {
@@ -118,9 +122,21 @@ export default function Dashboard() {
 
               <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  <span>{user.country}</span>
+                  <MapPin className="w-4 h-4 shrink-0" />
+                  <span>
+                    {user.city ? `${user.city}, ` : ''}
+                    {user.country === 'Diaspora' && user.diaspora_country ? `${user.country} (${user.diaspora_country})` : user.country}
+                  </span>
                 </div>
+
+                {user.country_origin && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Globe className="w-4 h-4 shrink-0" />
+                    <span>
+                      {t.auth.countryOrigin || "Pays d'origine"}: {user.country_origin}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 space-y-2">

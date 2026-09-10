@@ -1,38 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { useStatisticsStore, useLanguageStore } from '@/store';
+import { Loader2, AlertCircle, Briefcase, Users, Tv } from 'lucide-react';
+import { useStatisticsStore } from '@/store';
 
 const COLORS = {
-  primary: '#7C3AED',
-  blue: '#3B82F6',
-  green: '#10B981',
-  orange: '#F59E0B',
-  pink: '#EC4899'
+  artists: '#7C3AED',
+  professionals: '#10B981',
+  media: '#3B82F6',
 };
-
-const COLOR_ARRAY = [
-  COLORS.blue,
-  COLORS.primary,
-  COLORS.green,
-  COLORS.orange,
-  COLORS.pink
-];
 
 /**
  * SectorComparison Component
- * Compares sectors within a country by artist count and engagement
- * Displays both bar chart and sector distribution
+ * Compares domains/fields within a country by Artistes, Professionnels, and Médias count
  */
 export default function SectorComparison({ country }) {
-  const { sectorStats, isLoadingV2, errorV2, fetchSectorStats } = useStatisticsStore();
-  const { t } = useLanguageStore();
-  const [selectedSector, setSelectedSector] = useState(null);
+  const { sectorStats, isLoadingSector, errorSector, fetchSectorStats } = useStatisticsStore();
 
   useEffect(() => {
     if (country) {
@@ -44,29 +31,29 @@ export default function SectorComparison({ country }) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-muted-foreground text-center">{t.statistics.selectCountryForSectorData}</p>
+          <p className="text-muted-foreground text-center">Sélectionnez un pays pour afficher les domaines</p>
         </CardContent>
       </Card>
     );
   }
 
-  if (isLoadingV2) {
+  if (isLoadingSector) {
     return (
       <Card>
         <CardContent className="pt-6 flex items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>{t.statistics.loadingSectorData}</span>
+          <span>Chargement des domaines...</span>
         </CardContent>
       </Card>
     );
   }
 
-  if (errorV2) {
+  if (errorSector) {
     return (
       <Card className="border-red-200">
         <CardContent className="pt-6 flex items-center gap-2">
           <AlertCircle className="h-4 w-4 text-red-500" />
-          <span className="text-red-500">{t.statistics.error}: {errorV2}</span>
+          <span className="text-red-500">Erreur: {errorSector}</span>
         </CardContent>
       </Card>
     );
@@ -74,67 +61,77 @@ export default function SectorComparison({ country }) {
 
   // Prepare data for visualization
   const sectors = sectorStats?.by_sector || [];
-  const chartData = sectors.slice(0, 10).map((s, idx) => ({
-    ...s,
-    name: s.sector || 'Unknown',
-    artists: s.artist_count,
-    fill: COLOR_ARRAY[idx % COLOR_ARRAY.length]
+  const chartData = sectors.slice(0, 3).map((s) => ({
+    name: s.sector || s.domain || 'Général',
+    artists: s.artist_count || 0,
+    professionals: s.professional_count || 0,
+    media: s.media_count || 0,
+    engagement: s.engagement || 0
   }));
 
-  // Radar data (for top 5)
-  const radarData = sectors.slice(0, 5).map(s => ({
-    subject: s.sector || 'Unknown',
-    value: s.artist_count,
-    fullMark: Math.max(...sectors.map(x => x.artist_count)) || 100
+  // Radar data (for top 3)
+  const radarData = sectors.slice(0, 3).map(s => ({
+    subject: s.sector || s.domain || 'Général',
+    Artistes: s.artist_count || 0,
+    Professionnels: s.professional_count || 0,
   }));
 
   const totalArtists = sectors.reduce((sum, s) => sum + (s.artist_count || 0), 0);
+  const totalPros = sectors.reduce((sum, s) => sum + (s.professional_count || 0), 0);
+  const totalMedia = sectors.reduce((sum, s) => sum + (s.media_count || 0), 0);
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>{t.statistics.sectorsDistribution}</CardTitle>
+          <CardTitle>Répartition par Domaine & Métier - {country}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Bar Chart */}
+          {/* Bar Chart comparing Artists, Professionals, Media */}
           <div>
-            <h4 className="text-sm font-medium mb-3">{t.statistics.artistsBySector}</h4>
+            <h4 className="text-sm font-semibold mb-3">Nombre d'Artistes, Professionnels et Médias par domaine</h4>
             {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                  <XAxis dataKey="name" angle={-35} textAnchor="end" height={70} />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="artists" name={t.statistics.artists}>
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
+                  <Legend />
+                  <Bar dataKey="artists" name="Artistes" fill={COLORS.artists} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="professionals" name="Professionnels" fill={COLORS.professionals} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="media" name="Médias" fill={COLORS.media} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-center text-muted-foreground">{t.statistics.noData}</p>
+              <p className="text-center text-muted-foreground">Aucune donnée disponible</p>
             )}
           </div>
 
-          {/* Radar Chart for Top 5 Sectors */}
+          {/* Radar Chart comparing Top 3 Fields */}
           {radarData.length > 0 && (
             <div>
-              <h4 className="text-sm font-medium mb-3">{t.statistics.top5SectorsComparison}</h4>
-              <ResponsiveContainer width="100%" height={300}>
+              <h4 className="text-sm font-semibold mb-3">Comparaison des Top 3 Domaines (Artistes vs Pros)</h4>
+              <ResponsiveContainer width="100%" height={280}>
                 <RadarChart data={radarData}>
-                  <PolarGrid stroke="#333" />
+                  <PolarGrid stroke="#e2e8f0" />
                   <PolarAngleAxis dataKey="subject" />
                   <PolarRadiusAxis angle={90} domain={[0, 'auto']} />
                   <Radar
-                    name={t.statistics.artists}
-                    dataKey="value"
-                    stroke={COLORS.primary}
-                    fill={COLORS.primary}
-                    fillOpacity={0.6}
+                    name="Artistes"
+                    dataKey="Artistes"
+                    stroke={COLORS.artists}
+                    fill={COLORS.artists}
+                    fillOpacity={0.5}
                   />
+                  <Radar
+                    name="Professionnels"
+                    dataKey="Professionnels"
+                    stroke={COLORS.professionals}
+                    fill={COLORS.professionals}
+                    fillOpacity={0.5}
+                  />
+                  <Legend />
                   <Tooltip />
                 </RadarChart>
               </ResponsiveContainer>
@@ -143,48 +140,53 @@ export default function SectorComparison({ country }) {
 
           {/* Detailed Table */}
           <div>
-            <h4 className="text-sm font-medium mb-3">{t.statistics.detailedBreakdown}</h4>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <h4 className="text-sm font-semibold mb-3">Détail par domaine</h4>
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {sectors.length > 0 ? (
                 sectors.map((sector, idx) => {
-                  const percentage = totalArtists > 0 
-                    ? Math.round((sector.artist_count / totalArtists) * 100) 
-                    : 0;
+                  const artCount = sector.artist_count || 0;
+                  const proCount = sector.professional_count || 0;
+                  const medCount = sector.media_count || 0;
+
                   return (
                     <div
                       key={sector.sector || idx}
-                      className="flex items-center justify-between p-2 border rounded hover:bg-muted/50 transition"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg hover:bg-muted/40 transition gap-2"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{sector.sector || 'Unknown'}</p>
+                        <p className="font-semibold text-sm truncate">{sector.sector || 'Général'}</p>
                       </div>
-                      <div className="flex items-center gap-2 ml-2">
-                        <div className="w-32 bg-muted rounded-full h-1.5 overflow-hidden">
-                          <div
-                            className="h-full"
-                            style={{
-                              width: `${percentage}%`,
-                              backgroundColor: COLOR_ARRAY[idx % COLOR_ARRAY.length]
-                            }}
-                          />
-                        </div>
-                        <Badge variant="secondary" className="whitespace-nowrap">
-                          {sector.artist_count} ({percentage}%)
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="text-xs gap-1 border-purple-300 text-purple-700 bg-purple-50">
+                          <Users className="h-3 w-3" />
+                          {artCount} artistes
+                        </Badge>
+                        <Badge variant="outline" className="text-xs gap-1 border-emerald-300 text-emerald-700 bg-emerald-50">
+                          <Briefcase className="h-3 w-3" />
+                          {proCount} pros
+                        </Badge>
+                        <Badge variant="outline" className="text-xs gap-1 border-blue-300 text-blue-700 bg-blue-50">
+                          <Tv className="h-3 w-3" />
+                          {medCount} médias
                         </Badge>
                       </div>
                     </div>
                   );
                 })
               ) : (
-                <p className="text-center text-muted-foreground text-sm">{t.statistics.noSectorDataLabel}</p>
+                <p className="text-center text-muted-foreground text-sm">Aucune donnée de domaine</p>
               )}
             </div>
           </div>
 
           {/* Summary */}
-          <div className="pt-4 border-t flex justify-between items-center">
-            <span className="font-medium">{t.statistics.totalArtistsInSectors}</span>
-            <Badge variant="default" className="text-base">{totalArtists}</Badge>
+          <div className="pt-4 border-t flex flex-wrap justify-between items-center text-sm gap-2">
+            <span className="font-semibold text-muted-foreground">Totaux par catégorie dans les domaines :</span>
+            <div className="flex gap-2">
+              <Badge variant="default" className="bg-purple-600">{totalArtists} Artistes</Badge>
+              <Badge variant="default" className="bg-emerald-600">{totalPros} Professionnels</Badge>
+              <Badge variant="default" className="bg-blue-600">{totalMedia} Médias</Badge>
+            </div>
           </div>
         </CardContent>
       </Card>

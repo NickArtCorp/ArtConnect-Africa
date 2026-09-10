@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 
 export default function Projects() {
   const { projects, fetchProjects, createProject, applyToProject, isLoading } = useProjectsStore();
-  const { sectors, domains, fetchReferenceData } = useReferenceStore();
+  const { sectors, domains, metiers, fetchReferenceData } = useReferenceStore();
   const { user } = useAuthStore();
   const { t } = useLanguageStore();
   
@@ -25,7 +25,7 @@ export default function Projects() {
   const [applyMessage, setApplyMessage] = useState('');
   const [newProject, setNewProject] = useState({
     title: '', description: '', sector: '', looking_for: [],
-    collaboration_type: 'local', start_date: '', end_date: '', location: ''
+    collaboration_type: 'west_africa', start_date: '', end_date: '', location: ''
   });
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function Projects() {
     if (result.success) {
       toast.success(t.projects.projectCreated);
       setCreateOpen(false);
-      setNewProject({ title: '', description: '', sector: '', looking_for: [], collaboration_type: 'local', start_date: '', end_date: '', location: '' });
+      setNewProject({ title: '', description: '', sector: '', looking_for: [], collaboration_type: 'west_africa', start_date: '', end_date: '', location: '' });
     } else {
       toast.error(result.error);
     }
@@ -60,7 +60,7 @@ export default function Projects() {
     }
   };
 
-  const currentDomains = newProject.sector ? (domains[newProject.sector] || []) : [];
+  const currentDomains = newProject.sector ? (metiers[newProject.sector] || []) : [];
 
   const toggleLookingFor = (domain) => {
     setNewProject(prev => ({
@@ -71,9 +71,9 @@ export default function Projects() {
     }));
   };
 
-  const upcomingProjects = projects.filter(p => p.status === 'upcoming');
-  const ongoingProjects = projects.filter(p => p.status === 'ongoing');
-  const pastProjects = projects.filter(p => p.status === 'past');
+  const upcomingProjects = (projects || []).filter(p => p.status === 'upcoming');
+  const ongoingProjects = (projects || []).filter(p => p.status === 'ongoing');
+  const pastProjects = (projects || []).filter(p => p.status === 'past');
 
   const renderProjectCard = (project, index) => {
     const creator = project.creator;
@@ -82,9 +82,17 @@ export default function Projects() {
     const isOwn = user?.id === project.creator_id;
     
     // Type visual logic
-    let typeEmoji = "🏠";
-    let typeLabel = t.projects.typeLocal;
-    if (project.collaboration_type === "intra_african") { typeEmoji = "🌍"; typeLabel = t.projects.typeIntra; }
+    let typeEmoji = "🏛️";
+    let typeLabel = t.projects.northIntra || "North Africa (Intra-Regional)";
+    if (project.collaboration_type === "north_intra") { typeEmoji = "🏛️"; typeLabel = t.projects.northIntra; }
+    else if (project.collaboration_type === "subsaharan_intra") { typeEmoji = "🌍"; typeLabel = t.projects.subsaharanIntra; }
+    else if (project.collaboration_type === "subsaharan_inter") { typeEmoji = "🔄"; typeLabel = t.projects.subsaharanInter; }
+    else if (project.collaboration_type === "west_africa") { typeEmoji = "🌊"; typeLabel = t.projects.westAfrica; }
+    else if (project.collaboration_type === "central_africa") { typeEmoji = "🌳"; typeLabel = t.projects.centralAfrica; }
+    else if (project.collaboration_type === "east_africa") { typeEmoji = "🏔️"; typeLabel = t.projects.eastAfrica; }
+    else if (project.collaboration_type === "southern_africa") { typeEmoji = "☀️"; typeLabel = t.projects.southernAfrica; }
+    else if (project.collaboration_type === "north_south") { typeEmoji = "🤝"; typeLabel = t.projects.northSouth; }
+    else if (project.collaboration_type === "global") { typeEmoji = "🌐"; typeLabel = t.projects.global; }
 
     return (
       <motion.div
@@ -111,7 +119,20 @@ export default function Projects() {
           </div>
           
           <div className="flex flex-wrap gap-2 items-center">
-            <Badge className="bg-primary/10 text-primary border-0">{project.sector}</Badge>
+            <Badge className="bg-primary/10 text-primary border-0">
+              {t.common.isFrench ? (
+                {
+                  "Visual Arts": "Arts Visuels",
+                  "Performing Arts": "Arts du Spectacle",
+                  "Music": "Musique",
+                  "Literature": "Littérature",
+                  "Cinema & Media": "Cinéma & Médias",
+                  "Fashion & Design": "Mode & Design",
+                  "Digital & New Media": "Numérique & Nouveaux Médias",
+                  "Craft & Cultural Heritage": "Artisanat & Patrimoine Culturel"
+                }[project.sector] || project.sector
+              ) : project.sector}
+            </Badge>
             <Badge variant="outline" className="text-xs">{typeEmoji} {typeLabel}</Badge>
             {project.location && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -126,10 +147,24 @@ export default function Projects() {
         {/* Dates */}
         <div className="text-xs text-muted-foreground mb-4 space-y-1">
           {project.start_date && (
-            <p><strong>{t.projects.starts}:</strong> {new Date(project.start_date).toLocaleDateString(t.common.langCode === 'fr' ? 'fr-FR' : 'en-US')}</p>
+            <p><strong>{t.projects.starts}:</strong> {(() => {
+              try {
+                const d = new Date(project.start_date);
+                return isNaN(d.getTime()) ? project.start_date : d.toLocaleDateString(t.common.langCode === 'fr' ? 'fr-FR' : 'en-US');
+              } catch (e) {
+                return project.start_date;
+              }
+            })()}</p>
           )}
           {project.end_date && (
-            <p><strong>{t.projects.ends}:</strong> {new Date(project.end_date).toLocaleDateString(t.common.langCode === 'fr' ? 'fr-FR' : 'en-US')}</p>
+            <p><strong>{t.projects.ends}:</strong> {(() => {
+              try {
+                const d = new Date(project.end_date);
+                return isNaN(d.getTime()) ? project.end_date : d.toLocaleDateString(t.common.langCode === 'fr' ? 'fr-FR' : 'en-US');
+              } catch (e) {
+                return project.end_date;
+              }
+            })()}</p>
           )}
         </div>
 
@@ -137,7 +172,7 @@ export default function Projects() {
           <div className="mb-4">
             <p className="text-xs text-muted-foreground mb-2">{t.projects.lookingFor}:</p>
             <div className="flex flex-wrap gap-1">
-              {project.looking_for.map((domain) => (
+              {(project.looking_for || []).map((domain) => (
                 <Badge key={domain} variant="outline" className="text-xs">
                   {domain}
                 </Badge>
@@ -257,18 +292,29 @@ export default function Projects() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>{t.auth.sector} *</Label>
+                    <Label>{t.auth.domain || 'Domaine'} *</Label>
                     <Select 
                       value={newProject.sector} 
                       onValueChange={(v) => setNewProject({...newProject, sector: v, looking_for: []})}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={t.auth.selectSector} />
+                        <SelectValue placeholder={t.auth.selectDomain || 'Sélectionnez votre domaine'} />
                       </SelectTrigger>
                       <SelectContent>
-                        {sectors.map((s) => (
-                          <SelectItem key={s.name} value={s.name}>
-                            {t.common.isFrench ? (s.name_fr || s.name) : s.name}
+                        {domains.map((d) => (
+                          <SelectItem key={d} value={d}>
+                            {t.common.isFrench ? (
+                              {
+                                "Visual Arts": "Arts Visuels",
+                                "Performing Arts": "Arts du Spectacle",
+                                "Music": "Musique",
+                                "Literature": "Littérature",
+                                "Cinema & Media": "Cinéma & Médias",
+                                "Fashion & Design": "Mode & Design",
+                                "Digital & New Media": "Numérique & Nouveaux Médias",
+                                "Craft & Cultural Heritage": "Artisanat & Patrimoine Culturel"
+                              }[d] || d
+                            ) : d}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -282,11 +328,18 @@ export default function Projects() {
                       onValueChange={(v) => setNewProject({...newProject, collaboration_type: v})}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={t.projects.typeLocal} />
+                        <SelectValue placeholder={t.projects.northIntra} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="local">{t.projects.typeLocal}</SelectItem>
-                        <SelectItem value="intra_african">{t.projects.typeIntra}</SelectItem>
+                        <SelectItem value="north_intra">{t.projects.northIntra}</SelectItem>
+                        <SelectItem value="subsaharan_intra">{t.projects.subsaharanIntra}</SelectItem>
+                        <SelectItem value="subsaharan_inter">{t.projects.subsaharanInter}</SelectItem>
+                        <SelectItem value="west_africa">{t.projects.westAfrica}</SelectItem>
+                        <SelectItem value="central_africa">{t.projects.centralAfrica}</SelectItem>
+                        <SelectItem value="east_africa">{t.projects.eastAfrica}</SelectItem>
+                        <SelectItem value="southern_africa">{t.projects.southernAfrica}</SelectItem>
+                        <SelectItem value="north_south">{t.projects.northSouth}</SelectItem>
+                        <SelectItem value="global">{t.projects.global}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -325,12 +378,12 @@ export default function Projects() {
                       <div className="flex flex-wrap gap-2">
                         {currentDomains.map((d) => (
                           <Badge
-                            key={d.name}
-                            variant={newProject.looking_for.includes(d.name) ? 'default' : 'outline'}
+                            key={d}
+                            variant={newProject.looking_for.includes(d) ? 'default' : 'outline'}
                             className="cursor-pointer"
-                            onClick={() => toggleLookingFor(d.name)}
+                            onClick={() => toggleLookingFor(d)}
                           >
-                            {t.common.isFrench ? (d.name_fr || d.name) : d.name}
+                            {d}
                           </Badge>
                         ))}
                       </div>

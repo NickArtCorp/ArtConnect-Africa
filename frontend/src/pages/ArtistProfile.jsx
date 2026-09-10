@@ -33,7 +33,12 @@ export default function ArtistProfile() {
     const fetchArtistData = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'}/api/artists/${id}`);
+        const backendUrl = process.env.REACT_APP_BACKEND_URL;
+        const isLocalhostEnv = backendUrl && (backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1'));
+        const isBrowserOnLocalhost = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
+        const useBackendUrl = backendUrl && backendUrl !== 'undefined' && (!isLocalhostEnv || isBrowserOnLocalhost);
+        const baseUrl = useBackendUrl ? backendUrl : '';
+        const response = await axios.get(`${baseUrl}/api/artists/${id}`);
         setArtist(response.data);
       } catch (error) {
         console.error("Error fetching artist:", error);
@@ -51,8 +56,13 @@ export default function ArtistProfile() {
       const fetchArtistPosts = async () => {
         setIsPostsLoading(true);
         try {
+          const backendUrl = process.env.REACT_APP_BACKEND_URL;
+          const isLocalhostEnv = backendUrl && (backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1'));
+          const isBrowserOnLocalhost = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
+          const useBackendUrl = backendUrl && backendUrl !== 'undefined' && (!isLocalhostEnv || isBrowserOnLocalhost);
+          const baseUrl = useBackendUrl ? backendUrl : '';
           const response = await axios.get(
-            `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'}/api/posts?author_id=${id}`,
+            `${baseUrl}/api/posts?author_id=${id}`,
             {
               headers: token ? { Authorization: `Bearer ${token}` } : {}
             }
@@ -214,8 +224,21 @@ export default function ArtistProfile() {
                     <div className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center">
                       <MapPin className="w-4 h-4" />
                     </div>
-                    <span className="text-sm font-medium">{artist.city}, {artist.country}</span>
+                    <span className="text-sm font-medium">
+                      {artist.city}, {artist.country === 'Diaspora' && artist.diaspora_country ? `${artist.country} (${artist.diaspora_country})` : artist.country}
+                    </span>
                   </div>
+
+                  {artist.country_origin && (
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <div className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                      <span className="text-sm font-medium">
+                        {t.auth.countryOrigin || "Pays d'origine"}: {artist.country_origin}
+                      </span>
+                    </div>
+                  )}
                   
                   {artist.phone && (
                     <div className="flex items-center gap-3 text-muted-foreground">
@@ -246,7 +269,16 @@ export default function ArtistProfile() {
                     <div className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center">
                       <Calendar className="w-4 h-4" />
                     </div>
-                    <span className="text-sm font-medium">{t.profile.memberSince} {new Date(artist.created_at).getFullYear()}</span>
+                    <span className="text-sm font-medium">
+                      {t.profile.memberSince} {(() => {
+                        try {
+                          const d = artist.created_at ? new Date(artist.created_at) : new Date();
+                          return isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
+                        } catch (e) {
+                          return new Date().getFullYear();
+                        }
+                      })()}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -455,7 +487,15 @@ export default function ArtistProfile() {
                             </div>
                             <div className="text-right">
                               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                                {collab.start_date ? new Date(collab.start_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short', year: 'numeric' }) : 'Ongoing'}
+                                {(() => {
+                                  if (!collab.start_date) return 'Ongoing';
+                                  try {
+                                    const d = new Date(collab.start_date);
+                                    return isNaN(d.getTime()) ? collab.start_date : d.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short', year: 'numeric' });
+                                  } catch (e) {
+                                    return collab.start_date;
+                                  }
+                                })()}
                               </p>
                             </div>
                           </div>

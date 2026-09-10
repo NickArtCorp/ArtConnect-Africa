@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   Heart, MessageCircle, Share2, MoreHorizontal, Send, 
-  Image, Video, FileText, Loader2, Plus, Trash2, X
+  Image, Video, FileText, Loader2, Plus, Trash2, X, Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -26,14 +26,92 @@ function CreatePostDialog({ onClose }) {
   const [preview, setPreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
+  
+  // Camera capture state
+  const [stream, setStream] = useState(null);
+  const videoRef = useRef(null);
+
+  const startCamera = async () => {
+    try {
+      setFile(null);
+      setPreview(null);
+      
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } 
+      });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error("Camera access error:", err);
+      toast.error(t.common?.langCode === 'fr' || t.feed?.community === 'Communauté' ? "Impossible d'accéder à la caméra" : "Unable to access camera");
+      setContentType('image');
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const capturedFile = new File([blob], `camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
+          setFile(capturedFile);
+          setPreview(URL.createObjectURL(capturedFile));
+          stopCamera();
+        }
+      }, 'image/jpeg', 0.95);
+    }
+  };
+
+  useEffect(() => {
+    if (contentType === 'camera') {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [contentType]);
+
+  useEffect(() => {
+    return () => {
+      if (preview && preview.startsWith('blob:')) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
-      const reader = new FileReader();
-      reader.onloadend = () => setPreview(reader.result);
-      reader.readAsDataURL(selectedFile);
+      setPreview(URL.createObjectURL(selectedFile));
+    }
+  };
+
+  const handleClearPreview = () => {
+    if (preview && preview.startsWith('blob:')) {
+      URL.revokeObjectURL(preview);
+    }
+    setFile(null);
+    setPreview(null);
+    if (contentType === 'camera') {
+      startCamera();
     }
   };
 
@@ -44,7 +122,9 @@ function CreatePostDialog({ onClose }) {
     
     let result;
     if (file) {
-      result = await uploadPost(file, contentType, textContent);
+      // For camera captured photos, contentType should be uploaded as 'image'
+      const uploadType = contentType === 'camera' ? 'image' : contentType;
+      result = await uploadPost(file, uploadType, textContent);
     } else {
       result = await createPost({ content_type: 'text', text_content: textContent });
     }
@@ -62,7 +142,7 @@ function CreatePostDialog({ onClose }) {
   return (
     <div className="space-y-4">
       {/* Content type selector */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button
           variant={contentType === 'text' ? 'default' : 'outline'}
           size="sm"
@@ -84,6 +164,13 @@ function CreatePostDialog({ onClose }) {
         >
           <Video className="w-4 h-4 mr-1" /> Video
         </Button>
+        <Button
+          variant={contentType === 'camera' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setContentType('camera')}
+        >
+          <Camera className="w-4 h-4 mr-1" /> Camera
+        </Button>
       </div>
 
       {/* Text content */}
@@ -95,29 +182,50 @@ function CreatePostDialog({ onClose }) {
         className="resize-none"
       />
 
-      {/* File upload */}
-      {contentType !== 'text' && (
+      {/* Camera Capture Stream */}
+      {contentType === 'camera' && !preview && (
+        <div className="relative overflow-hidden rounded-lg bg-black border border-border">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-64 object-cover"
+          />
+          <Button
+            type="button"
+            onClick={capturePhoto}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full gap-2 shadow-lg"
+          >
+            <Camera className="w-4 h-4" />
+            {t.common?.langCode === 'fr' || t.feed?.community === 'Communauté' ? "Prendre Photo" : "Take Photo"}
+          </Button>
+        </div>
+      )}
+
+      {/* File upload or Camera Preview */}
+      {contentType !== 'text' && (contentType !== 'camera' || preview) && (
         <div>
           <input
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept={contentType === 'image' ? 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp,image/tiff,image/heic,image/heif,image/avif' : 'video/mp4,video/mov,video/webm,video/ogv'}
+            accept={contentType === 'image' ? 'image/*' : 'video/*'}
             className="hidden"
           />
           
           {preview ? (
-            <div className="relative">
-              {contentType === 'image' ? (
-                <img src={preview} alt="Preview" className="w-full h-48 object-cover rounded-lg" />
+            <div className="relative border border-border rounded-lg overflow-hidden">
+              {contentType === 'image' || contentType === 'camera' ? (
+                <img src={preview} alt="Preview" className="w-full h-48 object-cover" />
               ) : (
-                <video src={preview} className="w-full h-48 object-cover rounded-lg" controls />
+                <video src={preview} className="w-full h-48 object-cover" controls />
               )}
               <Button
                 variant="destructive"
                 size="icon"
-                className="absolute top-2 right-2"
-                onClick={() => { setFile(null); setPreview(null); }}
+                className="absolute top-2 right-2 rounded-full h-8 w-8 shadow-md"
+                onClick={handleClearPreview}
               >
                 <X className="w-4 h-4" />
               </Button>

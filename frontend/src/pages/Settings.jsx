@@ -43,10 +43,15 @@ export default function Settings() {
       return;
     }
     fetchReferenceData();
+    const popularDiaspora = ["France", "Belgique", "Canada", "États-Unis", "Royaume-Uni", "Allemagne", "Suisse", "Italie", "Espagne"];
+    const isPopular = popularDiaspora.includes(user.diaspora_country || '');
     setFormData({
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       country: user.country || '',
+      country_origin: user.country_origin || '',
+      diaspora_country: user.diaspora_country ? (isPopular ? user.diaspora_country : 'Autre') : '',
+      custom_diaspora_country: user.diaspora_country ? (isPopular ? '' : user.diaspora_country) : '',
       city: user.city || '',
       subregion: user.subregion || '',
       sector: user.sector || '',
@@ -116,16 +121,26 @@ export default function Settings() {
     e.preventDefault();
     setSaving(true);
     
+    const finalDiasporaCountry = formData.country === 'Diaspora'
+      ? (formData.diaspora_country === 'Autre' ? formData.custom_diaspora_country : formData.diaspora_country)
+      : '';
+
     // Only send fields that have actually changed or are not empty
     const changedData = {};
-    Object.keys(formData).forEach(key => {
-      // If the value in formData is different from the value in the user object
-      if (formData[key] !== (user[key] || '')) {
+    const fieldsToCompare = {
+      ...formData,
+      diaspora_country: finalDiasporaCountry
+    };
+    delete fieldsToCompare.custom_diaspora_country;
+
+    Object.keys(fieldsToCompare).forEach(key => {
+      // If the value in fieldsToCompare is different from the value in the user object
+      if (fieldsToCompare[key] !== (user[key] || '')) {
         // Special handling for reference person fields to allow nulls
         if (key === 'reference_person_email' || key === 'reference_person_name') {
-          changedData[key] = formData[key] || null;
+          changedData[key] = fieldsToCompare[key] || null;
         } else {
-          changedData[key] = formData[key];
+          changedData[key] = fieldsToCompare[key];
         }
       }
     });
@@ -249,29 +264,80 @@ export default function Settings() {
               </div>
             )}
 
-            {/* Country */}
-            <div className="space-y-2">
-              <Label>{t.auth.country}</Label>
-              <Select value={formData.country || undefined} onValueChange={handleCountryChange}>
-                <SelectTrigger data-testid="settings-country">
-                  <SelectValue placeholder={t.auth.selectCountry} />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {countries.map((c) => (
-                    <SelectItem key={c.name} value={c.name}>
-                      {t.common.isFrench ? (c.name_fr || c.name) : c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formData.subregion && (
-                <p className="text-sm text-muted-foreground">
-                  {t.auth.subregion}: {t.common.isFrench 
-                    ? (countries.find(c => c.name === formData.country)?.subregion_fr || formData.subregion)
-                    : formData.subregion}
-                </p>
-              )}
+            {/* Country / Residence and Origin */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Country of Residence */}
+              <div className="space-y-2">
+                <Label>{t.auth.countryResidence || 'Pays de résidence actuel'}</Label>
+                <Select value={formData.country || undefined} onValueChange={handleCountryChange}>
+                  <SelectTrigger data-testid="settings-country">
+                    <SelectValue placeholder={t.auth.selectCountry} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {countries.map((c) => (
+                      <SelectItem key={c.name} value={c.name}>
+                        {t.common.isFrench ? (c.name_fr || c.name) : c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.subregion && (
+                  <p className="text-sm text-muted-foreground">
+                    {t.auth.subregion}: {t.common.isFrench 
+                      ? (countries.find(c => c.name === formData.country)?.subregion_fr || formData.subregion)
+                      : formData.subregion}
+                  </p>
+                )}
+              </div>
+
+              {/* Country of Origin */}
+              <div className="space-y-2">
+                <Label>{t.auth.countryOrigin || "Pays d'origine"}</Label>
+                <Select value={formData.country_origin || undefined} onValueChange={(value) => setFormData({ ...formData, country_origin: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t.auth.selectCountryOrigin || "Sélectionnez le pays d'origine"} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {countries.filter(c => c.name !== 'Diaspora').map((c) => (
+                      <SelectItem key={c.name} value={c.name}>
+                        {t.common.isFrench ? (c.name_fr || c.name) : c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
+            {/* Diaspora Country field */}
+            {formData.country === 'Diaspora' && (
+              <div className="p-4 bg-secondary/30 border border-border/50 rounded-xl space-y-4">
+                <div className="space-y-2">
+                  <Label>{t.auth.diasporaCountry || 'Pays étranger de résidence'}</Label>
+                  <Select value={formData.diaspora_country || undefined} onValueChange={(v) => setFormData({ ...formData, diaspora_country: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t.common.isFrench ? "Sélectionnez le pays étranger" : "Select foreign country"} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {["France", "Belgique", "Canada", "États-Unis", "Royaume-Uni", "Allemagne", "Suisse", "Italie", "Espagne", "Autre"].map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.diaspora_country === 'Autre' && (
+                  <div className="space-y-2">
+                    <Label>{t.common.isFrench ? "Saisissez le nom du pays" : "Enter country name"}</Label>
+                    <Input 
+                      name="custom_diaspora_country" 
+                      value={formData.custom_diaspora_country || ''} 
+                      onChange={(e) => setFormData({ ...formData, custom_diaspora_country: e.target.value })} 
+                      placeholder="Ex: Luxembourg"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* City */}
             <div className="space-y-2">

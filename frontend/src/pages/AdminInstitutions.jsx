@@ -3,12 +3,16 @@ import { useLanguageStore, useAuthStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, RefreshCw, Copy, Check, Users, Search } from 'lucide-react';
+import { Loader2, RefreshCw, Copy, Check, Users, Search, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const apiUrlEnv = process.env.REACT_APP_API_URL;
+const isLocalhostEnv = apiUrlEnv && (apiUrlEnv.includes('localhost') || apiUrlEnv.includes('127.0.0.1'));
+const isBrowserOnLocalhost = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
+const useApiUrl = apiUrlEnv && apiUrlEnv !== 'undefined' && (!isLocalhostEnv || isBrowserOnLocalhost);
+const API_URL = useApiUrl ? apiUrlEnv : '';
 
 export default function AdminInstitutions() {
   const { t } = useLanguageStore();
@@ -72,11 +76,17 @@ export default function AdminInstitutions() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent inline-block">
-          {t.admin.institutions}
-        </h1>
-        <p className="text-muted-foreground mt-2">{t.admin.manageAccess}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent inline-block">
+            {t.admin.institutions}
+          </h1>
+          <p className="text-muted-foreground mt-2">{t.admin.manageAccess}</p>
+        </div>
+        <Button onClick={() => navigate('/admin/create-partner')} className="rounded-full gap-2 shadow-lg shadow-primary/20">
+          <Plus className="w-4 h-4" />
+          {t.admin.createPartner || 'Créer Code Partenaire'}
+        </Button>
       </div>
 
       <div className="relative mb-6">

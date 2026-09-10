@@ -158,6 +158,20 @@ function App() {
                 </InstitutionStatsRoute>
               </ApprovalRoute>
             } />
+            <Route path="/statistics/geographic/:region" element={
+              <ApprovalRoute>
+                <InstitutionStatsRoute>
+                  <Statistics />
+                </InstitutionStatsRoute>
+              </ApprovalRoute>
+            } />
+            <Route path="/statistics/geographic/:region/:country" element={
+              <ApprovalRoute>
+                <InstitutionStatsRoute>
+                  <Statistics />
+                </InstitutionStatsRoute>
+              </ApprovalRoute>
+            } />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/feed" element={
               <ApprovalRoute><VisitorRestrictedRoute><Feed /></VisitorRestrictedRoute></ApprovalRoute>

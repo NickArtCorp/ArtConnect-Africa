@@ -263,7 +263,14 @@ const getTagLabel = (tag) => {
                             <p className={`text-xs mt-1 ${
                               isSent ? 'text-primary-foreground/70' : 'text-muted-foreground'
                             }`}>
-                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {(() => {
+                                try {
+                                  const d = msg.created_at ? new Date(msg.created_at) : new Date();
+                                  return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                } catch (e) {
+                                  return '';
+                                }
+                              })()}
                             </p>
                           </div>
                         </div>

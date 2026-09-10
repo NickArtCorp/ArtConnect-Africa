@@ -11,11 +11,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 function PersonnePhysiqueForm({ onSuccess }) {
   const { t } = useLanguageStore();
-  const { countries, sectors, domains, genders, fetchReferenceData } = useReferenceStore();
+  const { countries, domains, metiers, genders, fetchReferenceData } = useReferenceStore();
   const { register, isLoading, error } = useAuthStore();
   const [formData, setFormData] = useState({
     email: '', password: '', first_name: '', last_name: '',
-    country: '', city: '', subregion: '', gender: '', sector: '', domain: '',
+    country: '', country_origin: '', diaspora_country: '', custom_diaspora_country: '', city: '', subregion: '', gender: '', domain: '', profession: '',
     bio: '', additional_info: '', role: 'personne_physique',
     profile_tag: 'artist', reference_person_name: '', reference_person_email: '',
     phone: '', address: '', website: ''
@@ -38,33 +38,25 @@ function PersonnePhysiqueForm({ onSuccess }) {
     setFormData({ ...formData, country: value, subregion: country?.subregion || '' });
   };
 
-  const handleSectorChange = (value) =>
-    setFormData({ ...formData, sector: value, domain: '' });
+  const handleDomainChange = (value) =>
+    setFormData({ ...formData, domain: value, profession: '' });
 
   const handleProfileTagChange = (value) => {
-    setFormData({ ...formData, profile_tag: value, domain: '' });
+    setFormData({ ...formData, profile_tag: value, domain: '', profession: '' });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const finalDiasporaCountry = formData.country === 'Diaspora' 
+      ? (formData.diaspora_country === 'Autre' ? formData.custom_diaspora_country : formData.diaspora_country)
+      : '';
     const cleanedData = { 
-      ...formData
+      ...formData,
+      diaspora_country: finalDiasporaCountry
     };
     const result = await register(cleanedData);
     if (result.success) onSuccess('personne_physique');
   };
-
-  const currentDomains = formData.sector ? (domains[formData.sector] || []) : [];
-  
-  // Filter domains based on profile_tag
-  // Professionals can have "Multidisciplinary", but artists and media can only have one
-  const availableDomains = formData.profile_tag === 'professional' 
-    ? currentDomains
-    : currentDomains.filter(d => {
-        const lowerName = d.name.toLowerCase();
-        const lowerNameFr = (d.name_fr || '').toLowerCase();
-        return lowerName !== 'multidisciplinary' && lowerNameFr !== 'multidisciplinaire';
-      });
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 bg-card p-8 rounded-2xl border border-border/50">
@@ -94,7 +86,7 @@ function PersonnePhysiqueForm({ onSuccess }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>{t.auth.country} *</Label>
+          <Label>{t.auth.countryResidence || 'Pays de résidence'} *</Label>
           <Select value={formData.country || undefined} onValueChange={handleCountryChange}>
             <SelectTrigger><SelectValue placeholder={t.auth.selectCountry} /></SelectTrigger>
             <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
@@ -106,6 +98,49 @@ function PersonnePhysiqueForm({ onSuccess }) {
         </div>
 
         <div className="space-y-2">
+          <Label>{t.auth.countryOrigin || "Pays d'origine"} *</Label>
+          <Select value={formData.country_origin || undefined} onValueChange={(value) => setFormData({ ...formData, country_origin: value })}>
+            <SelectTrigger><SelectValue placeholder={t.auth.selectCountryOrigin || "Sélectionnez le pays d'origine"} /></SelectTrigger>
+            <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
+              {countries.filter(c => c.name !== 'Diaspora').map((c) => (
+                <SelectItem key={c.name} value={c.name}>{t.common.isFrench ? (c.name_fr || c.name) : c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {formData.country === 'Diaspora' && (
+        <div className="p-4 bg-secondary/30 border border-border/50 rounded-xl space-y-4">
+          <div className="space-y-2">
+            <Label>{t.auth.diasporaCountry || 'Pays étranger de résidence'} *</Label>
+            <Select value={formData.diaspora_country || undefined} onValueChange={(v) => setFormData({ ...formData, diaspora_country: v })}>
+              <SelectTrigger><SelectValue placeholder={t.common.isFrench ? "Sélectionnez le pays étranger" : "Select foreign country"} /></SelectTrigger>
+              <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
+                {["France", "Belgique", "Canada", "États-Unis", "Royaume-Uni", "Allemagne", "Suisse", "Italie", "Espagne", "Autre"].map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {formData.diaspora_country === 'Autre' && (
+            <div className="space-y-2">
+              <Label>{t.common.isFrench ? "Saisissez le nom du pays" : "Enter country name"} *</Label>
+              <Input 
+                name="custom_diaspora_country" 
+                value={formData.custom_diaspora_country || ''} 
+                onChange={(e) => setFormData({ ...formData, custom_diaspora_country: e.target.value })} 
+                placeholder="Ex: Luxembourg"
+                required
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
           <Label>{t.auth.gender} *</Label>
           <Select value={formData.gender || undefined} onValueChange={(v) => setFormData({ ...formData, gender: v })}>
             <SelectTrigger><SelectValue placeholder={t.auth.selectGender} /></SelectTrigger>
@@ -116,11 +151,11 @@ function PersonnePhysiqueForm({ onSuccess }) {
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label>{t.auth.city}</Label>
-        <Input name="city" value={formData.city} onChange={handleChange} placeholder={t.auth.city} />
+        <div className="space-y-2">
+          <Label>{t.auth.city} *</Label>
+          <Input name="city" value={formData.city} onChange={handleChange} placeholder={t.auth.city} required />
+        </div>
       </div>
 
       {formData.subregion && (
@@ -134,32 +169,48 @@ function PersonnePhysiqueForm({ onSuccess }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>{t.auth.sector} *</Label>
-          <Select value={formData.sector || undefined} onValueChange={handleSectorChange}>
-            <SelectTrigger><SelectValue placeholder={t.auth.selectSector} /></SelectTrigger>
+          <Label>Domaine *</Label>
+          <Select value={formData.domain || undefined} onValueChange={handleDomainChange}>
+            <SelectTrigger><SelectValue placeholder="Sélectionnez un domaine" /></SelectTrigger>
             <SelectContent position="popper" sideOffset={4} className="z-[100]">
-              {sectors.map((s) => (
-                <SelectItem key={s.name} value={s.name}>{t.common.isFrench ? (s.name_fr || s.name) : s.name}</SelectItem>
+              {domains.map((d) => (
+                <SelectItem key={d} value={d}>{d}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
-          <Label>{t.auth.domain} *</Label>
+          <Label>Métier *</Label>
           <Select
-            value={formData.domain || undefined}
-            onValueChange={(v) => setFormData({ ...formData, domain: v })}
-            disabled={!formData.sector}
+            value={formData.profession || undefined}
+            onValueChange={(v) => setFormData({ ...formData, profession: v })}
+            disabled={!formData.domain}
           >
-            <SelectTrigger><SelectValue placeholder={t.auth.selectDomain} /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Sélectionnez un métier" /></SelectTrigger>
             <SelectContent position="popper" sideOffset={4} className="z-[100]">
-              {availableDomains.map((d) => (
-                <SelectItem key={d.name} value={d.name}>{t.common.isFrench ? (d.name_fr || d.name) : d.name}</SelectItem>
+              {(metiers[formData.domain] || []).map((m) => (
+                <SelectItem key={m} value={m}>{m}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Label>Métier *</Label>
+        <Select
+          value={formData.profession || undefined}
+          onValueChange={(v) => setFormData({ ...formData, profession: v })}
+          disabled={!formData.domain}
+        >
+          <SelectTrigger><SelectValue placeholder="Sélectionnez un métier" /></SelectTrigger>
+          <SelectContent position="popper" sideOffset={4} className="z-[100]">
+            {(metiers[formData.domain] || []).map((m) => (
+              <SelectItem key={m} value={m}>{m}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
@@ -261,9 +312,10 @@ function PersonneMoraleForm({ onSuccess }) {
   const { register, isLoading, error } = useAuthStore();
   const [formData, setFormData] = useState({
     email: '', password: '',
-    organization_name: '', country: '', city: '', subregion: '',
+    organization_name: '', country: '', country_origin: '', diaspora_country: '', custom_diaspora_country: '', city: '', subregion: '',
     gender: 'Male', sector: 'Arts & Culture', domain: 'Institution',
     bio: '', role: 'personne_morale',
+    profile_tag: 'professional',
     reference_person_name: '', reference_person_email: '', employees_count: '',
     phone: '', address: '', website: ''
   });
@@ -293,8 +345,12 @@ function PersonneMoraleForm({ onSuccess }) {
     if (getWordCount(formData.bio) > wordLimit) {
       return; // Should be blocked by UI but just in case
     }
+    const finalDiasporaCountry = formData.country === 'Diaspora' 
+      ? (formData.diaspora_country === 'Autre' ? formData.custom_diaspora_country : formData.diaspora_country)
+      : '';
     const cleanedData = { 
       ...formData,
+      diaspora_country: finalDiasporaCountry,
       reference_person_email: formData.reference_person_email || null,
       reference_person_name: formData.reference_person_name || null,
       employees_count: formData.employees_count ? parseInt(formData.employees_count) : null
@@ -334,20 +390,78 @@ function PersonneMoraleForm({ onSuccess }) {
       </div>
 
       <div className="space-y-2">
-        <Label>{t.auth.country} *</Label>
-        <Select value={formData.country || undefined} onValueChange={handleCountryChange}>
-          <SelectTrigger><SelectValue placeholder={t.auth.selectCountry} /></SelectTrigger>
-          <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
-            {countries.map((c) => (
-              <SelectItem key={c.name} value={c.name}>{t.common.isFrench ? (c.name_fr || c.name) : c.name}</SelectItem>
-            ))}
+        <Label>{t.auth.profileTag} *</Label>
+        <Select 
+          value={formData.profile_tag} 
+          onValueChange={(value) => setFormData({ ...formData, profile_tag: value })}
+          required
+        >
+          <SelectTrigger><SelectValue placeholder={t.auth.profileTag} /></SelectTrigger>
+          <SelectContent position="popper" sideOffset={4} className="z-[100]">
+            <SelectItem value="professional">{t.auth.professionalTag}</SelectItem>
+            <SelectItem value="media">{t.auth.mediaTag}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>{t.auth.countryResidence || 'Pays d\'établissement/résidence'} *</Label>
+          <Select value={formData.country || undefined} onValueChange={handleCountryChange}>
+            <SelectTrigger><SelectValue placeholder={t.auth.selectCountry} /></SelectTrigger>
+            <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
+              {countries.map((c) => (
+                <SelectItem key={c.name} value={c.name}>{t.common.isFrench ? (c.name_fr || c.name) : c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>{t.auth.countryOrigin || "Pays d'origine/fondation"} *</Label>
+          <Select value={formData.country_origin || undefined} onValueChange={(value) => setFormData({ ...formData, country_origin: value })}>
+            <SelectTrigger><SelectValue placeholder={t.auth.selectCountryOrigin || "Sélectionnez le pays d'origine"} /></SelectTrigger>
+            <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
+              {countries.filter(c => c.name !== 'Diaspora').map((c) => (
+                <SelectItem key={c.name} value={c.name}>{t.common.isFrench ? (c.name_fr || c.name) : c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {formData.country === 'Diaspora' && (
+        <div className="p-4 bg-secondary/30 border border-border/50 rounded-xl space-y-4">
+          <div className="space-y-2">
+            <Label>{t.auth.diasporaCountry || 'Pays étranger de résidence'} *</Label>
+            <Select value={formData.diaspora_country || undefined} onValueChange={(v) => setFormData({ ...formData, diaspora_country: v })}>
+              <SelectTrigger><SelectValue placeholder={t.common.isFrench ? "Sélectionnez le pays étranger" : "Select foreign country"} /></SelectTrigger>
+              <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
+                {["France", "Belgique", "Canada", "États-Unis", "Royaume-Uni", "Allemagne", "Suisse", "Italie", "Espagne", "Autre"].map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {formData.diaspora_country === 'Autre' && (
+            <div className="space-y-2">
+              <Label>{t.common.isFrench ? "Saisissez le nom du pays" : "Enter country name"} *</Label>
+              <Input 
+                name="custom_diaspora_country" 
+                value={formData.custom_diaspora_country || ''} 
+                onChange={(e) => setFormData({ ...formData, custom_diaspora_country: e.target.value })} 
+                placeholder="Ex: Luxembourg"
+                required
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
-        <Label>{t.auth.city}</Label>
-        <Input name="city" value={formData.city} onChange={handleChange} placeholder={t.auth.city} />
+        <Label>{t.auth.city} *</Label>
+        <Input name="city" value={formData.city} onChange={handleChange} placeholder={t.auth.city} required />
       </div>
 
       {formData.subregion && (
@@ -423,7 +537,7 @@ function VisitorForm({ onSuccess }) {
   const { register, isLoading, error } = useAuthStore();
   const [formData, setFormData] = useState({
     email: '', password: '', first_name: '', last_name: '',
-    country: '', city: '', subregion: '',
+    country: '', diaspora_country: '', custom_diaspora_country: '', city: '', subregion: '',
     gender: null, sector: null, domain: null,
     visitor_type: 'individual',
     organization_name: '',
@@ -461,8 +575,12 @@ function VisitorForm({ onSuccess }) {
     if (formData.visitor_type === 'organisation' && getWordCount(formData.bio) > wordLimit) {
       return;
     }
+    const finalDiasporaCountry = formData.country === 'Diaspora' 
+      ? (formData.diaspora_country === 'Autre' ? formData.custom_diaspora_country : formData.diaspora_country)
+      : '';
     const cleanedData = { 
       ...formData,
+      diaspora_country: finalDiasporaCountry,
       reference_person_email: formData.reference_person_email || null,
       reference_person_name: formData.reference_person_name || null
     };
@@ -551,7 +669,7 @@ function VisitorForm({ onSuccess }) {
       </div>
 
       <div className="space-y-2">
-        <Label>{t.auth.country} *</Label>
+        <Label>{t.auth.countryResidence || t.auth.country} *</Label>
         <Select value={formData.country || undefined} onValueChange={handleCountryChange}>
           <SelectTrigger><SelectValue placeholder={t.auth.selectCountry} /></SelectTrigger>
           <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
@@ -562,9 +680,38 @@ function VisitorForm({ onSuccess }) {
         </Select>
       </div>
 
+      {formData.country === 'Diaspora' && (
+        <div className="p-4 bg-secondary/30 border border-border/50 rounded-xl space-y-4">
+          <div className="space-y-2">
+            <Label>{t.auth.diasporaCountry || 'Pays étranger de résidence'} *</Label>
+            <Select value={formData.diaspora_country || undefined} onValueChange={(v) => setFormData({ ...formData, diaspora_country: v })}>
+              <SelectTrigger><SelectValue placeholder={t.common.isFrench ? "Sélectionnez le pays étranger" : "Select foreign country"} /></SelectTrigger>
+              <SelectContent position="popper" sideOffset={4} className="z-[100] max-h-60">
+                {["France", "Belgique", "Canada", "États-Unis", "Royaume-Uni", "Allemagne", "Suisse", "Italie", "Espagne", "Autre"].map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {formData.diaspora_country === 'Autre' && (
+            <div className="space-y-2">
+              <Label>{t.common.isFrench ? "Saisissez le nom du pays" : "Enter country name"} *</Label>
+              <Input 
+                name="custom_diaspora_country" 
+                value={formData.custom_diaspora_country || ''} 
+                onChange={(e) => setFormData({ ...formData, custom_diaspora_country: e.target.value })} 
+                placeholder="Ex: Luxembourg"
+                required
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
-        <Label>{t.auth.city}</Label>
-        <Input name="city" value={formData.city} onChange={handleChange} placeholder={t.auth.city} />
+        <Label>{t.auth.city} *</Label>
+        <Input name="city" value={formData.city} onChange={handleChange} placeholder={t.auth.city} required />
       </div>
 
       {formData.subregion && (

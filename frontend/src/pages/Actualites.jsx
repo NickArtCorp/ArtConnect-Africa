@@ -7,7 +7,11 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const apiUrlEnv = process.env.REACT_APP_API_URL;
+const isLocalhostEnv = apiUrlEnv && (apiUrlEnv.includes('localhost') || apiUrlEnv.includes('127.0.0.1'));
+const isBrowserOnLocalhost = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
+const useApiUrl = apiUrlEnv && apiUrlEnv !== 'undefined' && (!isLocalhostEnv || isBrowserOnLocalhost);
+const API_URL = useApiUrl ? apiUrlEnv : '';
 
 export default function Actualites() {
   const { t } = useLanguageStore();
@@ -21,7 +25,7 @@ export default function Actualites() {
     const fetchNews = async () => {
       try {
         const response = await axios.get(`${API_URL}/api/news`);
-        setNews(response.data);
+        setNews(response.data || []);
       } catch (error) {
         console.error('Error fetching news:', error);
       } finally {
@@ -105,7 +109,14 @@ export default function Actualites() {
                 <CardHeader className="space-y-1">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                     <Calendar className="w-3 h-3" />
-                    {new Date(item.created_at).toLocaleDateString()}
+                    {(() => {
+                      try {
+                        const d = item.created_at ? new Date(item.created_at) : new Date();
+                        return isNaN(d.getTime()) ? '' : d.toLocaleDateString();
+                      } catch (e) {
+                        return '';
+                      }
+                    })()}
                   </div>
                   <CardTitle className="text-xl line-clamp-2 group-hover:text-primary transition-colors">
                     {item.title}

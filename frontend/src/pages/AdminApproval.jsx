@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, CheckCircle, XCircle, Eye, Mail, Plus } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Eye, Mail, Plus, Database, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { translateSector, translateDomain } from '@/lib/utils';
 import axios from 'axios';
+import { toast } from 'sonner';
 
 function AdminApproval() {
   const { t, language } = useLanguageStore();
@@ -24,7 +25,11 @@ function AdminApproval() {
   const [showDetails, setShowDetails] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+  const apiUrlEnv = process.env.REACT_APP_API_URL;
+  const isLocalhostEnv = apiUrlEnv && (apiUrlEnv.includes('localhost') || apiUrlEnv.includes('127.0.0.1'));
+  const isBrowserOnLocalhost = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
+  const useApiUrl = apiUrlEnv && apiUrlEnv !== 'undefined' && (!isLocalhostEnv || isBrowserOnLocalhost);
+  const API_BASE_URL = useApiUrl ? apiUrlEnv : '/api';
 
   // Fetch pending approvals
   useEffect(() => {
@@ -117,6 +122,40 @@ function AdminApproval() {
     }
   };
 
+  const handleSeedData = async () => {
+    if (!window.confirm('Voulez-vous vraiment ajouter 850 utilisateurs fictifs pour tester les statistiques ?')) return;
+    
+    setIsProcessing(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/admin/seed-dummy-data`, {}, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      toast.success(`Succès ! ${response.data.count} utilisateurs au total.`);
+    } catch (error) {
+      console.error('Error seeding data:', error);
+      toast.error('Erreur lors de la génération des données');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleClearData = async () => {
+    if (!window.confirm('Voulez-vous vraiment supprimer TOUS les utilisateurs fictifs ?')) return;
+    
+    setIsProcessing(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/admin/clear-dummy-data`, {}, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      toast.success(`${response.data.count} utilisateurs fictifs supprimés.`);
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      toast.error('Erreur lors de la suppression des données');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -138,10 +177,30 @@ function AdminApproval() {
               {t.admin.reviewRegistrations}
             </p>
           </div>
-          <Button onClick={() => navigate('/admin/create-partner')} className="rounded-full gap-2">
-            <Plus className="w-4 h-4" />
-            {t.admin.createPartner}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleSeedData} 
+              disabled={isProcessing}
+              className="rounded-full gap-2 border-primary/20 hover:bg-primary/5"
+            >
+              <Database className="w-4 h-4" />
+              Générer membres
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleClearData} 
+              disabled={isProcessing}
+              className="rounded-full gap-2 border-red-200 hover:bg-red-50 text-red-600"
+            >
+              <Trash2 className="w-4 h-4" />
+              Supprimer fictifs
+            </Button>
+            <Button onClick={() => navigate('/admin/create-partner')} className="rounded-full gap-2">
+              <Plus className="w-4 h-4" />
+              {t.admin.createPartner}
+            </Button>
+          </div>
         </div>
 
         {successMessage && (

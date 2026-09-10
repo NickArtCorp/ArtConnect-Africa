@@ -50,10 +50,18 @@ export function PostCard({ post, onLike, onDelete, currentUser }) {
     }
   };
 
-  const timeAgo = formatDistanceToNow(new Date(post.created_at), {
-    addSuffix: true,
-    locale: t.common.langCode === 'fr' ? fr : enUS
-  });
+  let timeAgo = '';
+  try {
+    const d = post.created_at ? new Date(post.created_at) : new Date();
+    const validDate = isNaN(d.getTime()) ? new Date() : d;
+    timeAgo = formatDistanceToNow(validDate, {
+      addSuffix: true,
+      locale: t.common.langCode === 'fr' ? fr : enUS
+    });
+  } catch (err) {
+    console.error("Error formatting date:", err);
+    timeAgo = '';
+  }
 
   return (
     <motion.div

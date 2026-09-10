@@ -1,13 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Users, MessageCircle, Eye, TrendingUp, MapPin, Zap, Loader2 
+  Users, Eye, TrendingUp, MapPin, Zap, Loader2, Briefcase, Tv
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, LineChart, Line, Area, AreaChart
+  Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { useStatisticsStore, useLanguageStore } from '@/store';
 
@@ -19,10 +18,14 @@ const COLORS = {
   orange: '#F59E0B'
 };
 
+/**
+ * CountryStatsOverview Component
+ * Displays comprehensive statistics for a selected country
+ * Includes: overview cards, gender distribution, city breakdown
+ */
 export default function CountryStatsOverview({ country }) {
-  const { countryStats, isLoadingV2, errorV2, fetchCountryStats } = useStatisticsStore();
+  const { countryStats, isLoadingCountry, errorCountry, fetchCountryStats } = useStatisticsStore();
   const { t } = useLanguageStore();
-  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     if (country) {
@@ -34,28 +37,28 @@ export default function CountryStatsOverview({ country }) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-muted-foreground text-center">{t.statistics.selectCountry}</p>
+          <p className="text-muted-foreground text-center">{t.common.all}</p>
         </CardContent>
       </Card>
     );
   }
 
-  if (isLoadingV2) {
+  if (isLoadingCountry) {
     return (
       <Card>
         <CardContent className="pt-6 flex items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>{t.statistics.loadingV2}</span>
+          <span>{t.common.loading}</span>
         </CardContent>
       </Card>
     );
   }
 
-  if (errorV2) {
+  if (errorCountry) {
     return (
       <Card className="border-red-200">
         <CardContent className="pt-6">
-          <p className="text-red-500">{t.statistics.error}: {errorV2}</p>
+          <p className="text-red-500">Error: {errorCountry}</p>
         </CardContent>
       </Card>
     );
@@ -63,226 +66,175 @@ export default function CountryStatsOverview({ country }) {
 
   if (!countryStats) return null;
 
-  const { overview, by_city, by_sector, by_domain, top_artists, subregion } = countryStats;
+  const {
+    overview = {},
+    by_city = [],
+    by_sector = [],
+    by_domain = [],
+    top_artists = [],
+    subregion = ''
+  } = countryStats;
 
-  const genderData = Object.entries(overview.by_gender || {}).map(([key, value]) => ({
-    name: key === 'Male' ? t.statistics.men : key === 'Female' ? t.statistics.women : key,
+  // Prepare data for charts
+  const genderData = Object.entries(overview?.by_gender || {}).map(([key, value]) => ({
+    name: key === 'Male' ? (t.statistics?.men || 'Hommes') : key === 'Female' ? (t.statistics?.women || 'Femmes') : key,
     value,
     fill: key === 'Male' ? COLORS.male : COLORS.female
   }));
 
-  const cityData = by_city.slice(0, 10).map(item => ({
+  const cityData = (by_city || []).slice(0, 3).map(item => ({
     city: item.city || 'Unknown',
-    artists: item.artist_count
+    artists: item.artist_count || 0,
+    pros: item.professional_count || 0,
+    media: item.media_count || 0
   }));
 
-  const sectorData = by_sector.slice(0, 8).map(item => ({
+  const sectorData = (by_sector || []).slice(0, 3).map(item => ({
     sector: item.sector || 'Unknown',
-    artists: item.artist_count
+    artists: item.artist_count || 0
   }));
 
   return (
     <div className="space-y-6">
+      {/* Header with country info */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>{country} {t.statistics.dashboard}</CardTitle>
+              <CardTitle>{country} Dashboard</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 <MapPin className="inline h-3 w-3 mr-1" />
                 {subregion}
               </p>
             </div>
             {countryStats?.cached && (
-              <Badge variant="outline">{t.statistics.cachedData}</Badge>
+              <Badge variant="outline">Cached Data</Badge>
             )}
           </div>
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Overview Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.statistics.totalArtists}</CardTitle>
+            <CardTitle className="text-xs font-medium">Artistes</CardTitle>
             <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overview.total_artists}</div>
+            <div className="text-2xl font-bold">{overview.total_artists || 0}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.statistics.totalPosts}</CardTitle>
-            <TrendingUp className="h-4 w-4 text-orange" />
+            <CardTitle className="text-xs font-medium">Professionnels</CardTitle>
+            <Briefcase className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overview.total_posts}</div>
+            <div className="text-2xl font-bold">{overview.total_professionals || 0}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.statistics.totalCollaborations}</CardTitle>
-            <Zap className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-xs font-medium">Médias</CardTitle>
+            <Tv className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overview.collaborations.total}</div>
+            <div className="text-2xl font-bold">{overview.total_media || 0}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t.statistics.totalEngagement}</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs font-medium">Posts</CardTitle>
+            <TrendingUp className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overview.total_views + overview.total_messages}</div>
+            <div className="text-2xl font-bold">{overview.total_posts || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium">Collaborations</CardTitle>
+            <Zap className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.collaborations?.total || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium">Engagement Total</CardTitle>
+            <Eye className="h-4 w-4 text-slate-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{(overview.total_views || 0) + (overview.total_messages || 0)}</div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">{t.statistics.overview}</TabsTrigger>
-          <TabsTrigger value="cities">{t.statistics.citiesTab}</TabsTrigger>
-          <TabsTrigger value="sectors">{t.statistics.sectorsTab}</TabsTrigger>
-          <TabsTrigger value="topArtists">{t.statistics.topArtistsTab}</TabsTrigger>
-        </TabsList>
+      {/* Overview Analytics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Gender Distribution Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t.statistics?.genderSplit || 'Répartition par Genre'}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {genderData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={genderData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={85}
+                    dataKey="value"
+                    label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {genderData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-center text-muted-foreground py-10">Aucune donnée de genre disponible</p>
+            )}
+          </CardContent>
+        </Card>
 
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t.statistics.genderDistribution}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {genderData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={genderData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                      label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
-                    >
-                      {genderData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-center text-muted-foreground">{t.statistics.noData}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t.statistics.collaborationTypes}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>{t.statistics.localCollabs}</span>
-                  <Badge>{overview.collaborations.local}</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t.statistics.intraAfricanCollabs}</span>
-                  <Badge variant="secondary">{overview.collaborations.intra_african}</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="cities" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t.statistics.artistsByCity}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {cityData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={cityData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="city" angle={-45} textAnchor="end" height={80} />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="artists" fill={COLORS.primary} name={t.statistics.artists} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-center text-muted-foreground">{t.statistics.noCityData}</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="sectors" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t.statistics.artistsBySector}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {sectorData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={sectorData} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="sector" type="category" width={150} />
-                    <Tooltip />
-                    <Bar dataKey="artists" fill={COLORS.primary} name={t.statistics.artists} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-center text-muted-foreground">{t.statistics.noSectorData}</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="topArtists" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t.statistics.topArtistsByEngagement}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {top_artists && top_artists.length > 0 ? (
-                  top_artists.map((artist, idx) => (
-                    <div key={artist.artist_id} className="border rounded p-3 hover:bg-muted/50 transition">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm">#{idx + 1}</span>
-                            <span className="font-medium">{artist.name}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {artist.sector} · {artist.domain}
-                          </p>
-                        </div>
-                        <Badge>{artist.engagement_score} {t.statistics.pts}</Badge>
-                      </div>
-                      <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
-                        <span>👁️ {artist.views}</span>
-                        <span>💬 {artist.messages}</span>
-                        <span>❤️ {artist.likes}</span>
-                        <span>🤝 {artist.collaborations}</span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-center text-muted-foreground">{t.statistics.noArtistsData}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        {/* Profiles by City Preview Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Profils et Médias par Ville</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {cityData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={cityData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="city" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="artists" fill={COLORS.primary} name="Artistes" />
+                  <Bar dataKey="pros" fill="#10B981" name="Professionnels" />
+                  <Bar dataKey="media" fill="#3B82F6" name="Médias" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-center text-muted-foreground py-10">Aucune donnée de ville disponible</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

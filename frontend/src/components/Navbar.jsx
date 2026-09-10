@@ -154,6 +154,15 @@ export function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link to="/admin/create-partner" className="flex items-center gap-3 py-2.5 cursor-pointer">
+                      <PlusCircle className="w-4 h-4 text-primary" />
+                      <div>
+                        <p className="font-medium leading-none">{t.admin.createPartner || 'Créer Code Partenaire'}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Générer un accès statistiques</p>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to="/admin/news" className="flex items-center gap-3 py-2.5 cursor-pointer">
                       <PlusCircle className="w-4 h-4 text-primary" />
                       <div>
@@ -326,6 +335,10 @@ export function Navbar() {
                     <Link to="/admin/institutions" className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 text-primary font-bold text-sm" onClick={() => setMobileMenuOpen(false)}>
                       <Users className="w-4 h-4" />
                       {t.admin.institutions}
+                    </Link>
+                    <Link to="/admin/create-partner" className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 text-primary font-bold text-sm" onClick={() => setMobileMenuOpen(false)}>
+                      <PlusCircle className="w-4 h-4" />
+                      {t.admin.createPartner || 'Créer Code Partenaire'}
                     </Link>
                   </div>
                 </div>

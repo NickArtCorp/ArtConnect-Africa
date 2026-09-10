@@ -21,7 +21,12 @@ export function getMediaUrl(url) {
   if (url.startsWith('/uploads/')) {
     // Convert /uploads/... to /api/uploads/... for proper ingress routing
     const apiPath = url.replace('/uploads/', '/api/uploads/');
-    return `${process.env.REACT_APP_BACKEND_URL}${apiPath}`;
+    const backendUrl = process.env.REACT_APP_BACKEND_URL;
+    const isLocalhostEnv = backendUrl && (backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1'));
+    const isBrowserOnLocalhost = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
+    const useBackendUrl = backendUrl && backendUrl !== 'undefined' && (!isLocalhostEnv || isBrowserOnLocalhost);
+    const base = useBackendUrl ? backendUrl : '';
+    return `${base}${apiPath}`;
   }
   
   // Default: return as is

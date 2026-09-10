@@ -373,7 +373,7 @@ export default function Home() {
                   ))}
                 </div>
                 <p className="text-sm font-medium">
-                  Rejoint par des artistes de <span className="text-primary">54 pays</span>
+                  {language === 'fr' ? 'Rejoint par des acteurs de ' : 'Joined by actors from '}<span className="text-primary">54 pays</span>
                 </p>
               </div>
             </motion.div>

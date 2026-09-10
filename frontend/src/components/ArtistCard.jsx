@@ -78,7 +78,7 @@ export function ArtistCard({ artist, featured = false }) {
             <div className="flex items-center gap-3 text-xs text-white/60">
               <span className="flex items-center gap-1">
                 <MapPin className="w-3 h-3" />
-                {artist.country}
+                {artist.country === 'Diaspora' && artist.diaspora_country ? `${artist.country} (${artist.diaspora_country})` : artist.country}
               </span>
               {artist.visitor_views_count !== undefined && (
                 <span className="flex items-center gap-1" title={t.statistics.visitorViews}>
@@ -104,9 +104,15 @@ export function ArtistCard({ artist, featured = false }) {
 }
 
 export function ArtistCardCompact({ artist, onClick }) {
+  const { language } = useLanguageStore();
+  const { sectors } = useReferenceStore();
   const initials = `${artist.first_name?.[0] || ''}${artist.last_name?.[0] || ''}`.toUpperCase();
   const fullName = `${artist.first_name} ${artist.last_name}`;
   const avatarUrl = getMediaUrl(artist.avatar);
+
+  const displayCountry = artist.country === 'Diaspora' && artist.diaspora_country
+    ? `${artist.country} (${artist.diaspora_country})`
+    : artist.country;
 
   return (
     <button
@@ -120,7 +126,7 @@ export function ArtistCardCompact({ artist, onClick }) {
       </Avatar>
       <div className="flex-1 min-w-0">
         <h4 className="font-medium truncate">{fullName}</h4>
-        <p className="text-sm text-muted-foreground truncate">{translateSector(artist.sector, sectors, language)} • {artist.country}</p>
+        <p className="text-sm text-muted-foreground truncate">{translateSector(artist.sector, sectors, language)} • {displayCountry}</p>
       </div>
     </button>
   );

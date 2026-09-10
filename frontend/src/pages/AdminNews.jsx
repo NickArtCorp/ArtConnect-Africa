@@ -10,7 +10,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const apiUrlEnv = process.env.REACT_APP_API_URL;
+const isLocalhostEnv = apiUrlEnv && (apiUrlEnv.includes('localhost') || apiUrlEnv.includes('127.0.0.1'));
+const isBrowserOnLocalhost = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
+const useApiUrl = apiUrlEnv && apiUrlEnv !== 'undefined' && (!isLocalhostEnv || isBrowserOnLocalhost);
+const API_URL = useApiUrl ? apiUrlEnv : '';
 
 export default function AdminNews() {
   const { t } = useLanguageStore();
@@ -37,7 +41,7 @@ export default function AdminNews() {
   const fetchNews = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/news`);
-      setNews(response.data);
+      setNews(response.data || []);
     } catch (error) {
       toast.error(t.admin.fetchFailed);
     } finally {
